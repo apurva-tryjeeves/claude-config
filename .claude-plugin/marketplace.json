@@ -1,0 +1,11 @@
+{
+  "name": "claude-config",
+  "owner": { "name": "JeevesInc" },
+  "plugins": [
+    {
+      "name": "jeeves-shared",
+      "source": "./plugins/jeeves-shared",
+      "description": "Shared Claude Code skills and agents for JeevesInc engineering."
+    }
+  ]
+}

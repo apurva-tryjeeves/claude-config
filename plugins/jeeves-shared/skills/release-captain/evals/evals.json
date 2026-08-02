@@ -1,0 +1,26 @@
+{
+  "skill_name": "jeeves-release-notify",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "branch-cutoff-single-stage",
+      "prompt": "I'm release captain for the 17-June-2026 release. Branch cut-off just happened — draft the Slack update for it. Notion page: https://app.notion.com/p/tryjeeves/17-June-2026-Release-37a1edd5ce8c80f7a962d72887c68bb2",
+      "expected_output": "A single Slack-formatted message for the Branch Cut-off Complete stage, with the correct header/status/environment/closing line for that stage, a deduped+normalized service list pulled from the Notion page's Tickets table, and a link to the Notion release page. Ambiguous shorthand repo names (e.g. 'pts', 'exp-man') should be flagged for user confirmation rather than silently guessed. No other stage should be drafted unprompted, and no Slack message should actually be sent.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "eval_name": "deployment-complete-single-stage",
+      "prompt": "deployment is done for the 17-June-2026 release, can you draft the deployment complete message for our release channel? here's the notion page https://app.notion.com/p/tryjeeves/17-June-2026-Release-37a1edd5ce8c80f7a962d72887c68bb2",
+      "expected_output": "A single Slack-formatted message for the Deployment Complete stage (correct emoji/status/environment/closing line), with a deduped+normalized service list from the same Notion page, the release page link, and ambiguous shorthand flagged for confirmation instead of guessed. No Slack message should actually be sent.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "eval_name": "all-three-stages",
+      "prompt": "can you draft all three release status updates (branch cutoff complete, deployment in progress, deployment complete) for this release page: https://app.notion.com/p/tryjeeves/17-June-2026-Release-37a1edd5ce8c80f7a962d72887c68bb2",
+      "expected_output": "Three distinct Slack-formatted messages, one per stage, each with the correct per-stage header/status/environment/closing line and the same normalized service list and Notion link. Ambiguous shorthand flagged for confirmation. No Slack message should actually be sent.",
+      "files": []
+    }
+  ]
+}
