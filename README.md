@@ -191,18 +191,19 @@ Several skills record facts they discover back into their own files:
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
 | `notion-templates` | `skills/notion-templates/references/release-page.md` |
 
-A git install keeps the plugin in Claude Code's cache, which updates replace.
-To keep those edits and share them, install from a local clone instead:
+Claude Code clones the marketplace to `~/.claude/plugins/marketplaces/jeeves-local`
+and runs the plugin from a versioned copy under
+`~/.claude/plugins/cache/jeeves-local/jeeves/<version>/`, so recorded facts stay
+there until the next version lands. To keep and share them, open a PR from your
+own clone of the repo:
 
 ```bash
-git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/apurva-tryjeeves/claude-config
+git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/claude-config
+cd ~/github/claude-config && git checkout -b <branch>
+diff -ru jeeves ~/.claude/plugins/cache/jeeves-local/jeeves/<version> --exclude .claude-plugin
 ```
 
-```text
-/plugin marketplace add ~/github/apurva-tryjeeves/claude-config
-/plugin install jeeves@jeeves-local
-```
-
-Edits then land in the clone — commit them on a branch, open a PR, and bump
-`version` in `jeeves/.claude-plugin/plugin.json` so teammates' next
-`/plugin marketplace update` picks them up.
+Copy the changed files the diff lists into `jeeves/`, bump `version` in
+`jeeves/.claude-plugin/plugin.json`, then commit, push and open a PR. Once it
+merges, `/plugin marketplace update jeeves-local` brings the new version to
+everyone.
