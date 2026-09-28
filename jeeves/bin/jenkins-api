@@ -1,0 +1,161 @@
+#!/bin/bash
+# Usage: jenkins-api <subcommand> [args]
+#        jenkins-api <raw-api-path> [curl args]
+#
+# Thin wrapper over dev Jenkins' REST API. It sources the secrets, supplies the
+# internal CA and credentials, and percent-encodes `tree=` filters — so the
+# command that lands in the session log stays short and carries no token:
+#
+#   jenkins-api status deploy-DEVELOP-environment
+#   jenkins-api builds wallet-service/development 10
+#   jenkins-api log deploy-DEVELOP-environment 44088
+#   jenkins-api queue
+#
+# Subcommands
+#   status <job> [build]   result/duration/timestamp for a build (default: lastBuild)
+#   builds <job> [n]       the newest n builds (default 10)
+#   log    <job> <build>   the build's console text
+#   queue                  what is waiting to run, and why
+#   queued <queue-id>      the build number a trigger's queue item became
+#   crumb                  a CSRF crumb, ready to pass as -H on a POST
+#   url    <job> [build]   print the browser URL, no request made
+#
+# After triggering a build, resolve its queue id with `queued` and pass that
+# build number to `status`/`log` — bare `status <job>` reports lastBuild, which
+# on a shared job is whoever ran most recently.
+#
+# A <job> is the path after /job/, with nested folders separated by "/":
+#   deploy-DEVELOP-environment
+#   wallet-service/development
+#
+# Anything not matching a subcommand is treated as a raw API path, with any
+# extra arguments passed through to curl:
+#   jenkins-api "job/<job>/api/json?tree=builds%5Bnumber%5D"
+#
+# Environment
+#   JENKINS_ENV_FILE   secrets file to source (default ~/.config/jeeves/jenkins/dev.env)
+
+set -uo pipefail
+
+ENV_FILE="${JENKINS_ENV_FILE:-$HOME/.config/jeeves/jenkins/dev.env}"
+
+if [ ! -r "$ENV_FILE" ]; then
+  echo "jenkins-api: cannot read $ENV_FILE" >&2
+  exit 1
+fi
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+
+for var in JENKINS_URL JENKINS_USER JENKINS_TOKEN JENKINS_CACERT; do
+  if [ -z "${!var:-}" ]; then
+    echo "jenkins-api: $var is unset in $ENV_FILE" >&2
+    exit 1
+  fi
+done
+
+if [ ! -r "$JENKINS_CACERT" ]; then
+  echo "jenkins-api: CA certificate missing at $JENKINS_CACERT" >&2
+  echo "  regenerate: security find-certificate -c tryjeeves -p /Library/Keychains/System.keychain > $JENKINS_CACERT" >&2
+  exit 1
+fi
+
+# Expand "folder/job" into Jenkins' /job/<a>/job/<b> path form.
+job_path() {
+  local out="" seg
+  local IFS=/
+  for seg in $1; do
+    [ -n "$seg" ] && out="$out/job/$seg"
+  done
+  printf '%s' "${out#/}"
+}
+
+# curl refuses to send [ ] { } unencoded and fails with no request sent, so
+# encode them here rather than leaving it to every caller.
+#
+# Build each value in its own variable before passing it to api(). macOS ships
+# bash 3.2, which brace-expands `"$(fn "a[b]{0,5}")"` despite the quoting and
+# splits it into two arguments — curl then reads the second as another URL.
+encode_tree() {
+  printf '%s' "$1" | sed -e 's/\[/%5B/g' -e 's/\]/%5D/g' -e 's/{/%7B/g' -e 's/}/%7D/g'
+}
+
+api() {
+  if [ -n "${JENKINS_API_DRYRUN:-}" ]; then
+    printf 'URL: %s\n' "$JENKINS_URL/$1"
+    printf 'extra args: %s\n' "$#"
+    return 0
+  fi
+  curl -sS --fail-with-body --cacert "$JENKINS_CACERT" \
+    -u "$JENKINS_USER:$JENKINS_TOKEN" "$JENKINS_URL/$1" "${@:2}"
+}
+
+usage() {
+  sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-0}"
+}
+
+cmd="${1:-}"
+[ -z "$cmd" ] && usage 1
+shift || true
+
+case "$cmd" in
+  status)
+    [ $# -ge 1 ] || { echo "jenkins-api status <job> [build]" >&2; exit 1; }
+    path=$(job_path "$1")
+    tree=$(encode_tree 'tree=number,result,building,timestamp,duration,displayName')
+    api "$path/${2:-lastBuild}/api/json?$tree"
+    ;;
+  builds)
+    [ $# -ge 1 ] || { echo "jenkins-api builds <job> [n]" >&2; exit 1; }
+    path=$(job_path "$1")
+    raw="tree=builds[number,result,duration,timestamp]{0,${2:-10}}"
+    tree=$(encode_tree "$raw")
+    api "$path/api/json?$tree"
+    ;;
+  log)
+    [ $# -ge 2 ] || { echo "jenkins-api log <job> <build>" >&2; exit 1; }
+    path=$(job_path "$1")
+    api "$path/$2/consoleText"
+    ;;
+  queue)
+    tree=$(encode_tree 'tree=items[why,blocked,stuck,task[name]]')
+    api "queue/api/json?$tree"
+    ;;
+  queued)
+    # Turns the queue id from a trigger's Location header into that build's
+    # number, so later status/log calls name the build you started. Takes the
+    # bare id or the whole Location URL. Jenkins keeps a queue item for about
+    # five minutes after its build starts, so resolve it right after the POST.
+    [ $# -ge 1 ] || { echo "jenkins-api queued <queue-id>" >&2; exit 1; }
+    # Tolerates a bare id or a Location header value, CR and all.
+    qid=$(printf '%s' "$1" | tr -d '[:space:]')
+    qid="${qid%/}"; qid="${qid##*/}"
+    if ! item=$(api "queue/item/$qid/api/json" 2>/dev/null); then
+      echo "jenkins-api: queue item $qid is no longer listed — Jenkins keeps one for about five minutes after the build starts. Match your build by its parameters instead (see the skill's build-ops reference)." >&2
+      exit 1
+    fi
+    printf '%s' "$item" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+number = (d.get("executable") or {}).get("number")
+print(number if number else "waiting: " + (d.get("why") or "in queue"))
+'
+    ;;
+  crumb)
+    # Prints "Jenkins-Crumb:<value>", ready to pass straight to curl as -H.
+    api "crumbIssuer/api/json" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["crumbRequestField"] + ":" + d["crumb"])'
+    ;;
+  url)
+    [ $# -ge 1 ] || { echo "jenkins-api url <job> [build]" >&2; exit 1; }
+    path=$(job_path "$1")
+    printf '%s/%s/%s/\n' "$JENKINS_URL" "$path" "${2:-lastBuild}"
+    ;;
+  -h | --help | help)
+    usage 0
+    ;;
+  *)
+    raw="${cmd#/}"
+    path=$(encode_tree "$raw")
+    api "$path" "$@"
+    ;;
+esac

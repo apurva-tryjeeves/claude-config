@@ -1,0 +1,69 @@
+---
+name: sonar-fix
+description: Clear a failing SonarCloud quality gate on a JeevesInc pull request — read the gate, fix every open issue and hotspot, close the coverage-on-new-code gap, verify locally, commit and push. Trigger when a PR's Sonar check is red, a quality gate is blocking a merge, or the user asks to fix Sonar issues or new-code coverage.
+---
+
+# Sonar Fix
+
+Fix the SonarCloud quality gate for a pull request end to end.
+
+## Inputs
+- **PR number** — take it from the request; ask which PR when none is given.
+- **Repo** — take it from the request, else infer it from the current git repo:
+  ```bash
+  gh repo view --json nameWithOwner -q .nameWithOwner
+  ```
+- **SonarCloud auth** — the `SONAR_TOKEN` env var (a read-only user token from sonarcloud.io → My Account → Security). Export it from your shell profile (see the marketplace README) so every shell has it. Confirm it's set:
+  ```bash
+  [ -n "$SONAR_TOKEN" ]
+  ```
+  That pattern reports true/false while keeping the value itself out of any output. When it's unset, ask the user to export `SONAR_TOKEN` and restart the session.
+  Use the token only inside `curl -u "$SONAR_TOKEN:"` for every SonarCloud call — keep it confined to that flag, out of any other output or commit.
+
+## Steps
+
+1. **Resolve project.** Read `sonar-project.properties` at the repo root for `sonar.projectKey` and `sonar.organization`.
+
+2. **Read the gate.** Query these three sources with `curl -u "$SONAR_TOKEN:"` against `sonarcloud.io`, and list every failed condition and every issue/hotspot before changing anything:
+
+   | Source | Endpoint | What it gives you |
+   |---|---|---|
+   | Gate conditions | `api/qualitygates/project_status?projectKey=<key>&pullRequest=<pr-number>` | Each condition's own `errorThreshold` — set per-project (e.g. `new_coverage` can require 50% on one project, 100% on another); treat this response as the source of truth for the actual number |
+   | Open issues | `api/issues/search?componentKeys=<key>&pullRequest=<pr-number>&statuses=OPEN,CONFIRMED&ps=100` | Rule, component, line, message for each `CODE_SMELL`/`BUG`/`VULNERABILITY` |
+   | Security hotspots | `api/hotspots/search?projectKey=<key>&pullRequest=<pr-number>&ps=100` | Findings behind a red `new_security_hotspots_reviewed` condition — a distinct SonarCloud concept, not returned by `issues/search` |
+
+3. **Fix each issue by rule.** Consult the `sonar-proactive-rules` skill (and its `references/sonar-ts-rules-catalog.md`) for what each rule id requires. Apply the minimal, behavior-preserving change (e.g. S7776 → `Set`+`.has()`, S6582 → optional chaining, S6606 → `??=`/`??`, S3776 → extract a helper — note `?.` and `??` each cost a cognitive-complexity point, so extraction, not just rewriting a condition, is what actually lowers S3776).
+
+4. **Fix coverage-on-new-code failures.** When the `new_coverage` condition is red (below the `errorThreshold` read in step 2): run the repo's tests with coverage and find the uncovered new lines. If the file is a bootstrap/entry point already in jest.config `coveragePathIgnorePatterns` (e.g. `start-*.ts`, `main.ts`, `server.ts`, barrels), add it to `sonar.coverage.exclusions` in `sonar-project.properties` (keep the two lists in sync). Otherwise, add tests until coverage on the new/changed lines clears that project's actual threshold.
+
+5. **Verify locally** before committing:
+   ```bash
+   npx tsc --noEmit
+   npx eslint <changed files>
+   ```
+   Run `eslint --fix` for pure formatting, then run the repo's test command with coverage — confirm all tests pass and coverage on changed files clears the threshold from step 2.
+
+6. **Commit exactly the files you edited**, staged explicitly by path (leave `*.postman_collection.json` unstaged if it appears among changes). Follow the `git-preferences` skill for commit message style and the co-author trailer.
+
+7. **Push** the branch, then follow the `git-preferences` skill's Checks poller section (per-repo cadence from its `references/ci-check-timing.md`, `gh pr view <pr-number> --json statusCheckRollup` polling, `ScheduleWakeup` dynamic loop) until the SonarCloud check reaches a terminal state, and report pass/fail. A one-line rewrite that "should" fix S3776 sometimes doesn't (the `?.`/`??` cost cancels it out) — re-read the gate (step 2) and iterate against the live result rather than trusting local reasoning about whether a fix worked.
+
+## Notes
+- SonarCloud projects here are private: the GitHub check annotations carry locations but NOT rule messages — the API (with the token) is the only reliable source of the actual issue text.
+- Confirm every condition in the gate response individually shows `status: OK` — clearing the gate needs all conditions green, not just the one just fixed.
+- A call to `api/qualitygates/project_status` returning `{"errors":[{"msg":"Project doesn't exist"}]}` signals a missing/unsent `SONAR_TOKEN` on this private project, even when the project key is correct — reissue the same call with `-u "$SONAR_TOKEN:"` attached.
+
+## Report the outcome
+
+Icons, linking and value-rendering vocabulary live in the shared
+`../../references/output-style.md` — follow it rather than inventing a format.
+
+- **Verdict line first** — icon, the gate's state, and the PR as a link:
+  `✅ quality gate passing — [#534](https://github.com/JeevesInc/<repo>/pull/534)`.
+- **Table the conditions** — columns `Condition | Threshold | Actual | Result`,
+  one row per gate condition, so a still-red condition is visible at a glance.
+- **Table the fixes** — columns `Rule | File | Change`, one row per issue
+  cleared, with the rule id linked per the shared doc's SonarCloud pattern.
+
+Answer with the verdict and the tables, then stop — leave out the `curl` calls
+made, the full issue list already fixed, and "want me to keep polling?"
+follow-ups.

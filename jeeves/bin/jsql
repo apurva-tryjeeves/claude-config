@@ -1,0 +1,161 @@
+#!/bin/bash
+# Usage: jsql <env>[/<database>] <sql> [database]
+# Envs: dev-01..dev-20, preprod, prod
+#
+# Name the database up front as <env>/<database> so it reads before the SQL:
+#   jsql dev-07/accounting_07 "SELECT ..."
+# The trailing positional form still works and takes precedence:
+#   jsql dev-07 "SELECT ..." accounting_07
+# With neither, the database is MYSQL_DB from the env's secrets file.
+#
+# Shared overrides (JEEVES_SECRETS_DIR, JEEVES_DB_HOST, JEEVES_DB_PORT) are
+# defined in lib/jsql-common.sh. Specific to this command:
+#   JEEVES_DB_HOST      connect to this host instead of the secret file's
+#                       MYSQL_HOST (e.g. a tunnel endpoint)
+#   JEEVES_DB_PORT      connect on this port instead of the file's MYSQL_PORT
+#   MYSQL_CLIENT        path to the mysql client binary
+#                       (default: the pinned mysql-client@8.4 keg, else the
+#                        first `mysql` on PATH)
+
+ENV=$1
+SQL=$2
+DB=$3
+
+# Accept "<env>/<database>" so the target reads before the SQL. An explicit
+# 3rd argument still wins, keeping the original call form intact.
+case "$ENV" in
+  */*)
+    [ -z "$DB" ] && DB="${ENV#*/}"
+    ENV="${ENV%%/*}"
+    ;;
+esac
+
+# Read the statement from stdin when no SQL argument is given (or it is "-"),
+# so a heredoc can carry it unquoted and unindented.
+if [ -z "$SQL" ] || [ "$SQL" = "-" ]; then
+  if [ ! -t 0 ]; then
+    SQL=$(cat)
+  fi
+fi
+
+if [ -z "$ENV" ] || [ -z "$SQL" ]; then
+  echo "Usage: jsql <env>[/<database>] <sql> [database]" >&2
+  echo "       jsql <env>[/<database>] <<'SQL'  ... SQL" >&2
+  exit 1
+fi
+
+_BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_LIB="$_BIN_DIR/../lib/jsql-common.sh"
+if [ ! -f "$_LIB" ]; then
+  echo "Shared library not found: $_LIB" >&2
+  echo "jsql runs from the plugin's bin/, with lib/ as its sibling." >&2
+  exit 1
+fi
+source "$_LIB"
+
+SECRETS_DIR="$JEEVES_SECRETS_DIR"
+
+case "$ENV" in
+  dev-*) SECRET_FILE="$SECRETS_DIR/develop-${ENV#dev-}.env" ;;
+  preprod) SECRET_FILE="$SECRETS_DIR/preprod.env" ;;
+  prod) SECRET_FILE="$SECRETS_DIR/prod.env" ;;
+  *) SECRET_FILE="$SECRETS_DIR/${ENV}.env" ;;
+esac
+
+if [ ! -f "$SECRET_FILE" ]; then
+  echo "Secret file not found: $SECRET_FILE" >&2
+  echo "Pull credentials first, or set JEEVES_SECRETS_DIR to the directory holding them." >&2
+  exit 1
+fi
+
+source "$SECRET_FILE"
+
+# Let the environment override the endpoint from the secret file, so a tunnel or
+# port-forward can be targeted without editing (or re-pulling) credentials.
+MYSQL_HOST="${JEEVES_DB_HOST:-$MYSQL_HOST}"
+MYSQL_PORT="${JEEVES_DB_PORT:-$MYSQL_PORT}"
+
+TARGET_DB="${DB:-$MYSQL_DB}"
+
+# Colour policy: JEEVES_DB_COLOR=always|never|auto. Default is always, so the
+# env's risk styling shows up in agent session logs too, not just a terminal.
+# Use auto to restrict colour to a real terminal; NO_COLOR disables it
+# outright, per no-color.org.
+case "${JEEVES_DB_COLOR:-always}" in
+  never)  _COLOR=0 ;;
+  auto)   [ -t 2 ] && _COLOR=1 || _COLOR=0 ;;
+  *)      _COLOR=1 ;;
+esac
+[ -n "${NO_COLOR:-}" ] && _COLOR=0
+
+if [ "$_COLOR" = 1 ]; then
+  _DBC=$'\033[1;33m'; _DIM=$'\033[2m'; _OFF=$'\033[0m'; _ERRC=$'\033[31m'
+else
+  _DBC=""; _DIM=""; _OFF=""; _ERRC=""
+fi
+
+# Colour the env by how much damage a statement can do there, so the risk is
+# legible on every query: dev green, preprod yellow, prod inverse red.
+case "$ENV" in
+  prod)
+    _NOTE="read replica"
+    [ "$_COLOR" = 1 ] && { _ENVC=$'\033[1;41;97m'; _LBL=" $ENV "; _NOTEC=$'\033[31m'; } \
+                      || { _ENVC=""; _LBL="$ENV"; _NOTEC=""; }
+    ;;
+  preprod)
+    _NOTE="writes land on shared data"
+    [ "$_COLOR" = 1 ] && { _ENVC=$'\033[1;33m'; _NOTEC=$'\033[33m'; } \
+                      || { _ENVC=""; _NOTEC=""; }
+    _LBL="$ENV"
+    ;;
+  *)
+    _NOTE=""; _NOTEC=""; _LBL="$ENV"
+    [ "$_COLOR" = 1 ] && _ENVC=$'\033[1;32m' || _ENVC=""
+    ;;
+esac
+
+# Announce the target before the results, so the env and database are visible
+# without re-reading the command. Goes to stderr, leaving stdout pipeable.
+printf '%s%s%s %s·%s %s%s%s' \
+  "$_ENVC" "$_LBL" "$_OFF" "$_DIM" "$_OFF" "$_DBC" "$TARGET_DB" "$_OFF" >&2
+[ -n "$_NOTE" ] && printf '  %s%s%s' "$_NOTEC" "$_NOTE" "$_OFF" >&2
+printf '\n' >&2
+
+# Resolve the mysql client, preferring a pinned 8.4 client: the Jeeves servers
+# authenticate with mysql_native_password, which the 9.x client dropped as a
+# built-in (it fails with "Authentication plugin 'mysql_native_password' cannot
+# be loaded"). Homebrew's `mysql` on PATH is often 9.x, so it is the last resort
+# rather than the first choice.
+if [ -n "$MYSQL_CLIENT" ]; then
+  MYSQL_BIN="$MYSQL_CLIENT"
+else
+  for _candidate in \
+    /opt/homebrew/opt/mysql-client@8.4/bin/mysql \
+    /usr/local/opt/mysql-client@8.4/bin/mysql
+  do
+    [ -x "$_candidate" ] && { MYSQL_BIN="$_candidate"; break; }
+  done
+  [ -z "$MYSQL_BIN" ] && command -v mysql >/dev/null 2>&1 && MYSQL_BIN=$(command -v mysql)
+fi
+
+if [ -z "$MYSQL_BIN" ]; then
+  echo "mysql client not found. Install it (brew install mysql-client@8.4) or set MYSQL_CLIENT to its path." >&2
+  exit 1
+fi
+
+STDERR_FILE=$(mktemp)
+"$MYSQL_BIN" \
+  -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASS" \
+  --ssl-mode=REQUIRED "$TARGET_DB" -e "$SQL" 2>"$STDERR_FILE"
+STATUS=$?
+
+# Surface real errors (connection/auth/SQL) but drop the known insecure-password noise.
+if [ "$_COLOR" = 1 ]; then
+  grep -v "Using a password on the command line interface can be insecure" "$STDERR_FILE" \
+    | while IFS= read -r _l; do printf '%s%s%s\n' "$_ERRC" "$_l" "$_OFF"; done >&2
+else
+  grep -v "Using a password on the command line interface can be insecure" "$STDERR_FILE" >&2
+fi
+rm -f "$STDERR_FILE"
+
+exit $STATUS

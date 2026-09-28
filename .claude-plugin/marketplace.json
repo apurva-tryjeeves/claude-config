@@ -1,11 +1,11 @@
 {
-  "name": "claude-config",
-  "owner": { "name": "JeevesInc" },
+  "name": "jeeves-local",
+  "owner": { "name": "Apurva Singh", "email": "apurva@tryjeeves.com" },
   "plugins": [
     {
-      "name": "jeeves-shared",
-      "source": "./plugins/jeeves-shared",
-      "description": "Shared Claude Code skills and agents for JeevesInc engineering."
+      "name": "jeeves",
+      "source": "./jeeves",
+      "description": "Skills and agents for JeevesInc engineering work — Linear, Jenkins, MySQL, OpenSearch, AWS secrets, releases, and the git/PR, logging, SQS and SonarCloud conventions."
     }
   ]
 }
