@@ -17,7 +17,7 @@ is current.
 | wallet-service | Product - Wallet (`WAL`) | Jeeves Embedded Wallet Solution (Privy) |
 | sequelize-db-models | Product - Wallet (`WAL`) | _(none confirmed yet)_ |
 | jeeves-simulation-server | Product - Wallet (`WAL`) | Jeeves Embedded Wallet Solution (Privy) |
-| accounting-service | EPD - Accounting ERP (`ACC`) | Accounting Backlog, Accounting Usability & Engagement |
+| accounting-service | EPD - Accounting ERP (`ACC`) | Accounting Backlog, Accounting Usability & Engagement, Accounting Multi-ERP Provider Support, Accounting Tech Debts (bugs and tech debt) |
 | jeeves-ai | EPD - Accounting ERP (`ACC`) | Accounting Usability & Engagement |
 | jeeves-web | EPD - Accounting ERP (`ACC`) (confirmed for accounting-v2 work; other areas of jeeves-web may map to different teams) | Accounting Usability & Engagement |
 | backend | Product - Wallet (`WAL`) | Jeeves Embedded Wallet Solution (Privy) |

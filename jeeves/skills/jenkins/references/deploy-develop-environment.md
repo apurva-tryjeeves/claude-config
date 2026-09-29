@@ -211,7 +211,7 @@ a clean single-service build appears for it.
 | Service | Min | Max | Mean | Sample size |
 |---|---|---|---|---|
 | api | 4m27s | 12m06s | 8m56s | 15 |
-| accounting | 4m02s | 4m02s | 4m02s | 1 |
+| accounting | 4m02s | 4m38s | 4m20s | 2 |
 | billpay | 2m10s | 6m49s | 4m29s | 5 |
 | cards | 6m49s | 10m48s | 8m57s | 4 |
 | cms | 6m33s | 12m43s | 9m38s | 2 |
