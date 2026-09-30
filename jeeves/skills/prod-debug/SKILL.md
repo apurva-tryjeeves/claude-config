@@ -11,7 +11,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
 | Source | Reach it with |
 | --- | --- |
 | Prod logs | `mcp__opensearch-prod__*` |
-| Prod MySQL | `jsql prod/<service_db> "<sql>"` |
+| Prod MySQL | `jsql prod/<service_db> '<sql>'` |
 | Service code | the `service-investigator` agent, one per service |
 
 ## Start here
@@ -26,7 +26,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
 
 - **Logs** → Skill `opensearch` — indices, `@timestamp` / `app_name.keyword` /
   `log` fields, the two trace ids, the `match_phrase` pattern.
-- **DB access** → Skill `mysql` — the `jsql <env>/<database> "<sql>"` wrapper
+- **DB access** → Skill `mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
 - **Reusable queries** → `../../references/queries.md` — SQL and OpenSearch
   strings the user has shared. Read it before composing a query, and append a
@@ -45,7 +45,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
    pull the error plus its surrounding breadcrumbs.
 4. **Prod DB.** Inspect the state the flow left behind with `SELECT`s:
    ```bash
-   jsql prod/wallet "<SELECT ...>"
+   jsql prod/wallet '<SELECT ...>'
    ```
 5. **Map the code.** From the ticket and the `app_name`s in the logs, identify
    the services involved and fan out the **`service-investigator`** agent —

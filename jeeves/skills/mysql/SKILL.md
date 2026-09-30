@@ -59,7 +59,7 @@ fields from the prod read-replica credentials stored in Keeper, `chmod 600`.
 3. Confirm access:
 
    ```bash
-   jsql dev-13 "SELECT 1;"
+   jsql dev-13 'SELECT 1'
    ```
 
 `jsql` ships in this plugin's `bin/`, which Claude Code puts on the Bash
@@ -68,31 +68,51 @@ no setup.
 
 ## Running queries
 
-Name the target as `<env>/<database>` in the first argument, so it reads
+Name the target as `<env>/<service>` in the first argument, so it reads
 before the SQL. Env names take the short form: `dev-01` … `dev-20`, `preprod`,
-`prod`. Omit the database to use the env's default from its secrets file.
+`prod`. On a dev env the wrapper appends the env number, so `dev-07/accounting`
+targets `accounting_07`; a name already ending in a number passes through
+unchanged. On preprod and prod, write the full database name. Omit the
+database to use the env's default from its secrets file.
 
-Keep short probes on one line as an argument:
+The command text is logged verbatim, so its shape is what the user reads:
 
-```bash
-jsql dev-07/accounting_07 "SHOW TABLES;"
-```
+- Wrap the SQL in **single quotes**, and write string values in **double
+  quotes** (`"448f…"`) — MySQL reads both quote styles as strings (no
+  `ANSI_QUOTES` in `sql_mode`), and single quotes keep the shell out of the
+  statement, so backticks and `$` reach MySQL untouched.
+- Leave off the trailing `;` — the wrapper sends one statement per call.
+- Keep a short probe on one line:
 
-Feed anything longer through a heredoc, flush-left and one clause per line —
-the command text is logged verbatim, so this is what the user reads:
+  ```bash
+  jsql dev-07/accounting 'SHOW TABLES'
+  ```
 
-```bash
-jsql dev-07/accounting_07 <<'SQL'
-DELETE FROM company_accounting_categories
-WHERE id IN (
-  'aaee1e71-28eb-46fe-8788-4f6b9de06e4b',
-  '0ff9929f-43d3-4f2a-a9ac-ec3ca84dd66e'
-);
-SQL
-```
+- Open anything longer with the quote on the command line, then write the SQL
+  flush-left, one clause per line, and close the quote on its own line:
 
-Quoting `SQL` in `<<'SQL'` keeps the shell out of the statement, so `$`,
-backticks and `!` reach MySQL untouched.
+  ```bash
+  jsql dev-07/accounting '
+  SELECT jeevesVendorId, companyId, isGlCodeMapped,
+         isSupplierMapped, isTaxRateMapped,
+         trackingCategories, createdAt
+  FROM vendor
+  WHERE jeevesVendorId = "448f9b5d-b31a-4d98-a789-509fbe74d4a3"
+  '
+  ```
+
+- When a value itself contains an apostrophe (`"O'Brien"`), feed the SQL
+  through a quoted heredoc instead, which holds any character:
+
+  ```bash
+  jsql dev-07/billpay <<'SQL'
+  SELECT id FROM vendors WHERE companyName = "O'Brien Ltd"
+  SQL
+  ```
+
+When a task needs several queries, give each its own Bash call and send them
+together in one message — they run in parallel, and each shows as its own
+command block with its own `<env> · <database>` header and results.
 
 The wrapper passes SQL through unmodified — the server decides what runs, and
 each statement succeeds exactly as far as that env's MySQL user permits.
@@ -137,16 +157,17 @@ query time, so an SSH tunnel or port-forward can be targeted while still using
 that env's credentials:
 
 ```bash
-JEEVES_DB_HOST=127.0.0.1 JEEVES_DB_PORT=13306 jsql dev-13 "SELECT 1;"
+JEEVES_DB_HOST=127.0.0.1 JEEVES_DB_PORT=13306 jsql dev-13 'SELECT 1'
 ```
 
 ## Selecting the service database
 
-Each env hosts one MySQL database **per service**, named `<service>_<envNum>`:
+Each env hosts one MySQL database **per service**, named `<service>_<envNum>`.
+On dev envs, name the service and the wrapper adds the number:
 
 ```bash
-jsql dev-20/stablecoin_20 "SELECT ..."
-jsql dev-20/wallet_20 "SELECT ..."
+jsql dev-20/stablecoin 'SELECT ...'
+jsql dev-20/wallet 'SELECT ...'
 ```
 
 **Default:** connect to the database matching the **active service repo**, per
@@ -203,7 +224,7 @@ active = stablecoin: options → `stablecoin_<n>` (Recommended), `wallet_<n>`,
 Discover databases on any env with:
 
 ```bash
-jsql <env> "SHOW DATABASES;"
+jsql <env> 'SHOW DATABASES'
 ```
 
 preprod/prod schema names may differ from the `_<n>` dev convention — confirm
@@ -241,14 +262,14 @@ against a table:
    it directly:
 
    ```bash
-   jsql <env>/<db> "SHOW TABLES;"
-   jsql <env>/<db> "DESCRIBE <table>;"
+   jsql <env>/<service> 'SHOW TABLES'
+   jsql <env>/<service> 'DESCRIBE <table>'
    ```
 
    For enum-like columns, confirm the values actually in use:
 
    ```bash
-   jsql <env>/<db> "SELECT DISTINCT <col> FROM <table> LIMIT 20;"
+   jsql <env>/<service> 'SELECT DISTINCT <col> FROM <table> LIMIT 20'
    ```
 3. **Write the schema note in this same turn, before reporting results.** Any
    turn that ran `SHOW TABLES`, `DESCRIBE` or `SELECT DISTINCT` to learn a
@@ -349,4 +370,5 @@ present and none truncated, rounded or reordered.
 Run the query on its own — the command text is logged verbatim, so `echo`
 banners, section separators and label lines around it double what the user
 reads. The wrapper's `<env> · <database>` header already names the target. Run
-one query per call rather than chaining several behind separators.
+one query per call, sending several calls together in one message, rather
+than chaining queries behind separators.

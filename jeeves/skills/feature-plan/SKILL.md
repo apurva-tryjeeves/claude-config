@@ -15,7 +15,7 @@ This skill produces the plan those read from.
 
 ## Read these first
 
-- **DB access** → Skill `mysql` — the `jsql <env>/<database> "<sql>"` wrapper
+- **DB access** → Skill `mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
 - **Reusable queries** → `../../references/queries.md` — read it before
   composing a query, and append a new one there in the same turn the user
@@ -35,7 +35,7 @@ This skill produces the plan those read from.
 4. **Data shape.** Connect to a **dev-xx** database (ask which env) and inspect
    the rows and key patterns the feature has to fit:
    ```bash
-   jsql dev-20/wallet_20 "<SELECT ...>"
+   jsql dev-20/wallet '<SELECT ...>'
    ```
 5. **Write the plan.** One section per microservice — changes, new or changed
    APIs, DB migrations, config, inter-service contracts, risks — plus a

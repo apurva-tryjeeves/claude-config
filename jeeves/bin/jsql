@@ -2,10 +2,11 @@
 # Usage: jsql <env>[/<database>] <sql> [database]
 # Envs: dev-01..dev-20, preprod, prod
 #
-# Name the database up front as <env>/<database> so it reads before the SQL:
-#   jsql dev-07/accounting_07 "SELECT ..."
+# Name the database up front as <env>/<database> so it reads before the SQL.
+# On dev envs the service name alone is enough; the env number is appended:
+#   jsql dev-07/accounting 'SELECT ...'      (targets accounting_07)
 # The trailing positional form still works and takes precedence:
-#   jsql dev-07 "SELECT ..." accounting_07
+#   jsql dev-07 'SELECT ...' accounting
 # With neither, the database is MYSQL_DB from the env's secrets file.
 #
 # Shared overrides (JEEVES_SECRETS_DIR, JEEVES_DB_HOST, JEEVES_DB_PORT) are
@@ -27,6 +28,18 @@ case "$ENV" in
   */*)
     [ -z "$DB" ] && DB="${ENV#*/}"
     ENV="${ENV%%/*}"
+    ;;
+esac
+
+# On a dev env, a bare service name gets the env's number appended, so
+# dev-07/accounting targets accounting_07. A name that already ends in a
+# number passes through, as do preprod and prod, whose names differ.
+case "$ENV" in
+  dev-*)
+    case "$DB" in
+      ""|*_[0-9]*) ;;
+      *) DB="${DB}_${ENV#dev-}" ;;
+    esac
     ;;
 esac
 

@@ -16,7 +16,7 @@ optionally with a new product account, chained by a shared PK.
 ## Read these first
 
 - **Schema** → `references/wallet-schema.md` — the table chain and shared PK, wallet-type values, where each provider stores its identity, the stablecoin `providerAccountDetails` shape, and column enums.
-- **DB access** → Skill `mysql` — the `jsql <env>/<database>` wrapper and the heredoc form used here for anything longer than a short probe.
+- **DB access** → Skill `mysql` — the `jsql <env>/<service>` wrapper and the single-quoted multi-line form used here for anything longer than a short probe.
 
 ## Flow
 
@@ -28,16 +28,16 @@ Walk these in order, gathering answers before composing any query.
    - **New** → generate a shared UUID; the flow inserts a `product_accounts` row. Ask the wallet type to fill `productType` / `baseCurrency` from the wallet-type table.
    - **Existing** → ask for the `productAccountId`; that id becomes the shared PK. Skip the `product_accounts` insert. Read its type so the instrument matches:
      ```bash
-     jsql dev-NN/product_account_NN <<'SQL'
+     jsql dev-NN/product_account '
      SELECT id, companyId, productType, baseCurrency
      FROM product_accounts
-     WHERE id = '<productAccountId>';
-     SQL
+     WHERE id = "<productAccountId>"
+     '
      ```
 
 3. **Choose the provider** — show the full list and let the user pick:
    ```bash
-   jsql dev-NN/wallet_NN "SELECT id, providerName FROM providers ORDER BY providerName;"
+   jsql dev-NN/wallet 'SELECT id, providerName FROM providers ORDER BY providerName'
    ```
    Use the chosen row's `id` as `providerId`.
 
@@ -45,15 +45,15 @@ Walk these in order, gathering answers before composing any query.
    - **Stablecoin (JSS)** → build `providerAccountDetails` from the matching wallet in `stablecoin_<n>`, following the shape in the schema reference, and confirm the values with the user. Skip the linked-bank-account insert.
    - **Fiat providers (Bridge, Qitech, Airwallex, …)** → confirm the bank details for the linked-bank-account row. Pull a real sample for that provider and ask if it's correct or needs editing:
      ```bash
-     jsql dev-NN/wallet_NN <<'SQL'
+     jsql dev-NN/wallet '
      SELECT lba.bankAccountDetails
      FROM wallet_instrument_provider_linked_bank_accounts lba
      JOIN wallet_instrument_provider_accounts pa
        ON pa.id = lba.walletInstrumentProviderAccountId
-     WHERE pa.providerId = '<PROVIDER_ID>'
+     WHERE pa.providerId = "<PROVIDER_ID>"
      ORDER BY lba.createdAt DESC
-     LIMIT 1;
-     SQL
+     LIMIT 1
+     '
      ```
      Reuse it as-is, or apply the edits the user asks for.
 
@@ -71,7 +71,9 @@ Walk these in order, gathering answers before composing any query.
 
 Generate one shared UUID (or reuse the existing productAccountId) plus three fresh ones
 (provider account, linked bank, external bank ref). Include the first INSERT only for a
-**new** product account. Escape inner JSON quotes as `\"` in the shell.
+**new** product account. Run each database's INSERTs through a quoted heredoc
+(`jsql dev-NN/product_account <<'SQL'`, `jsql dev-NN/wallet <<'SQL'`) so the
+single-quoted values and the JSON's double quotes pass through as written.
 
 ```sql
 -- product_account_<n>  (NEW product account only)
@@ -104,35 +106,35 @@ VALUES ('<LINKED_BANK>', '<PROV_ACCT>', '<PROV_LINKED>', 'topup', <bankCurrency>
 ## Verify & report
 
 ```bash
-jsql dev-NN/product_account_NN <<'SQL'
+jsql dev-NN/product_account '
 SELECT id, companyId, productType, accountStatus, kycStatus
 FROM product_accounts
-WHERE id = '<SHARED>';
-SQL
+WHERE id = "<SHARED>"
+'
 ```
 
 ```bash
-jsql dev-NN/wallet_NN <<'SQL'
+jsql dev-NN/wallet '
 SELECT id, companyId, instrumentType, accountStatus, KYCStatus
 FROM wallet_instruments
-WHERE id = '<SHARED>';
-SQL
+WHERE id = "<SHARED>"
+'
 ```
 
 ```bash
-jsql dev-NN/wallet_NN <<'SQL'
+jsql dev-NN/wallet '
 SELECT id, walletInstrumentId, providerId, providerAccountDetails
 FROM wallet_instrument_provider_accounts
-WHERE walletInstrumentId = '<SHARED>';
-SQL
+WHERE walletInstrumentId = "<SHARED>"
+'
 ```
 
 ```bash
-jsql dev-NN/wallet_NN <<'SQL'
+jsql dev-NN/wallet '
 SELECT id, walletInstrumentProviderAccountId, type, status
 FROM wallet_instrument_provider_linked_bank_accounts
-WHERE walletInstrumentProviderAccountId = '<PROV_ACCT>';
-SQL
+WHERE walletInstrumentProviderAccountId = "<PROV_ACCT>"
+'
 ```
 
 Report the rows in a table with columns `Service | Table | Record` — one row per record — confirming the product account and wallet instrument share the PK.

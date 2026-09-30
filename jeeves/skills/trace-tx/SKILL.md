@@ -10,9 +10,9 @@ timeline.
 
 | Environment | DB access | Logs |
 | --- | --- | --- |
-| prod | `jsql prod/<database> "<sql>"` | `mcp__opensearch-prod__*` |
-| preprod | `jsql preprod/<database> "<sql>"` | `mcp__opensearch-dev__*` |
-| dev-01…dev-20 | `jsql dev-NN/<service>_NN "<sql>"` | `mcp__opensearch-dev__*` |
+| prod | `jsql prod/<database> '<sql>'` | `mcp__opensearch-prod__*` |
+| preprod | `jsql preprod/<database> '<sql>'` | `mcp__opensearch-dev__*` |
+| dev-01…dev-20 | `jsql dev-NN/<service> '<sql>'` | `mcp__opensearch-dev__*` |
 
 - **Read-only throughout** — keep every query a `SELECT`.
 - **DB rules** → Skill `mysql`, for the wrapper and per-service database selection.
@@ -28,7 +28,7 @@ timeline.
 ## Establish the inputs
 - **Transaction id** — usually a UUID, taken from the request. Ask for it when none is given.
 - **Environment** — `dev-NN`, `preprod` or `prod`. When the request names one, use it for every query; otherwise ask via `AskUserQuestion`, offering the workspace repos' envs first.
-- **Env number** — derive `<n>` from the env name (`dev-20` → `20`) to build the `<service>_<n>` database names.
+- **Target** — on dev, name the service (`dev-20/wallet`); the wrapper appends the env number. On preprod and prod, name the full database.
 
 ## Gather (query each in parallel where possible)
 1. **wallet_<n>** — the wallet transaction and its sub-transactions, provider references, and status. Search by the id, then by any provider reference ids that turn up.
