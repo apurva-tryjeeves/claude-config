@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Look up, create, update, and query Linear issues for JeevesInc, and draft issue/comment replies tailored to engineering, product, or customer-support audiences. Trigger when the user references a Linear ticket (e.g. WAL-1234, ACC-1234) or URL, asks to create/update an issue, asks for their open tickets or cycle status, or asks to draft/post a reply on a ticket.
+description: Look up, create, update, and query Linear issues for JeevesInc, and draft issue/comment replies tailored to engineering, product, or customer-support audiences. Trigger when the user references a Linear ticket (e.g. WAL-1234, ACC-1234) or URL, starts work on a ticket, asks to create/update an issue, asks for their open tickets or cycle status, or asks to draft/post a reply on a ticket.
 ---
 
 # Linear
@@ -52,6 +52,28 @@ Filter by type when the request is about progress ("what's in flight" →
 user names one. Confirm a team's live states with
 `mcp__linear__list_issue_statuses` before relying on this table for a team
 outside the two above.
+
+## Ways of working
+
+### Start work on a ticket
+
+When the user starts work on a ticket (picks it up, branches for it, or asks
+to implement it), get it ready before writing any code:
+
+1. Fetch the ticket with `mcp__linear__get_issue` and check that it has an
+   **estimate**, a **cycle**, and a **project**.
+2. For each one that's missing, fetch live options and narrow them down as
+   described in "Team, project, estimate, cycle" below.
+3. Use one `AskUserQuestion` call for everything you need:
+   - One question for each missing field, with the suggested options.
+   - "Move this ticket to `In Progress`?" if its state type is `backlog`,
+     `triage` or `unstarted`.
+4. Save the answers in one `mcp__linear__save_issue` call: the missing
+   fields, plus `state: "In Progress"` if the user said yes. Then continue
+   with the work.
+
+If the ticket already has all three fields and is `started` or later, go
+straight to the work.
 
 ## Look up a ticket
 
