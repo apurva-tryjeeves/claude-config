@@ -11,7 +11,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
 | Source | Reach it with |
 | --- | --- |
 | Prod logs | `mcp__opensearch-prod__*` |
-| Prod MySQL | `jsql prod/<service_db> '<sql>'` |
+| Prod MySQL | `jsql prod/<database> '<sql>'` |
 | Service code | the `service-investigator` agent, one per service |
 
 ## Start here

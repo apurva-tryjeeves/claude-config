@@ -7,6 +7,8 @@ description: Cut a hot-fix branch off a Jeeves service's production branch (main
 
 Ship one or more already-merged fixes straight to production, bypassing the
 normal release train. Run this from inside the target service's local repo.
+The flow ends at a pushed `hot-fix/…` branch, with no pull request into
+`main`/`master`.
 
 ## 1. Sync local branches with origin
 
@@ -112,6 +114,10 @@ Push the branch straight to origin:
 git push -u origin hot-fix/<ticket-id>_<context>
 ```
 
+**The pushed branch is the finished hotfix.** Deployment ships
+`hot-fix/<ticket-id>_<context>` as it stands, without a pull request into
+`main`/`master`, so stop at the push.
+
 ## 5. Report the result
 
 Icons, linking and value-rendering vocabulary live in the shared
@@ -122,9 +128,8 @@ Icons, linking and value-rendering vocabulary live in the shared
 - **Table the cherry-picks** — columns `Commit` (short sha linked to
   `https://github.com/JeevesInc/<repo>/commit/<sha>`), `Subject`, and `Result`
   (✅ applied clean · ⚠️ conflict resolved), one row per commit in pick order.
-- **Link the branch** so it opens in one click, using the PR-create URL against
-  the production branch:
-  `https://github.com/JeevesInc/<repo>/compare/<prod-branch>...hot-fix/<ticket-id>_<context>?expand=1`.
+- **Link the branch** so it opens in one click:
+  `https://github.com/JeevesInc/<repo>/tree/hot-fix/<ticket-id>_<context>`.
 
 That hands the branch off to deployment. Answer with the verdict, the table and
 the branch link, then stop — leave out the git commands run, diff stats, and

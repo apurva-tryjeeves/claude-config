@@ -5,11 +5,11 @@ description: Query Jeeves MySQL dev/preprod/prod databases via the jsql wrapper 
 
 # Jeeves MySQL — Dev/Prod Database Access
 
-| Env | Secrets file | Writes |
-| --- | --- | --- |
-| dev-01…dev-20 | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
-| preprod | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
-| prod | `$JEEVES_SECRETS_DIR/prod.env` | Rejected by the server (read replica, `ERROR 1290`) |
+| Env | Target | Secrets file | Writes |
+| --- | --- | --- | --- |
+| dev-01…dev-20 | `dev-NN/<service>` | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
+| preprod | `preprod/<database>` | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
+| prod | `prod/<database>` | `$JEEVES_SECRETS_DIR/prod.env` | Rejected by the server (read replica, `ERROR 1290`) |
 
 The wrapper sends statements straight to MySQL, so **the server is the only
 thing that stops a write**. Read intent from the table above before running
@@ -78,7 +78,7 @@ database to use the env's default from its secrets file.
 The command text is logged verbatim, so its shape is what the user reads:
 
 - Wrap the SQL in **single quotes**, and write string values in **double
-  quotes** (`"448f…"`) — MySQL reads both quote styles as strings (no
+  quotes** (`"<id>"`) — MySQL reads both quote styles as strings (no
   `ANSI_QUOTES` in `sql_mode`), and single quotes keep the shell out of the
   statement, so backticks and `$` reach MySQL untouched.
 - Leave off the trailing `;` — the wrapper sends one statement per call.
