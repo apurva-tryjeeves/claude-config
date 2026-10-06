@@ -6,8 +6,15 @@ description: Structured logging conventions for Jeeves microservices — logger 
 # Structured Logging — Jeeves Microservices
 
 Structured-logging conventions for services on `@jeevesinc/jeeves-telemetry`
-(currently pino + OTel under the hood) or an equivalent repo-local logging
-wrapper.
+(pino + OTel under the hood). Write new code with its `getLogger`.
+
+| Logger in the repo | Call order | Repos |
+|---|---|---|
+| `@jeevesinc/jeeves-telemetry` `getLogger` (pino) | fields object first, message last — rule 4 below | most services |
+| winston `createLogger` (`src/config/winston.js`) | message first, metadata object second | authentication-service, open-banking-service |
+
+In a winston repo, keep winston's order on existing loggers and use
+`getLogger` for new modules.
 
 ## 1. One logger per module, created once
 
@@ -59,7 +66,7 @@ the job the code does, not after how or when it's currently invoked.
 
 ## 4. Fields object first, message last
 
-The structured logger takes the fields object first and the human-readable
+The `jeeves-telemetry` (pino) logger takes the fields object first and the human-readable
 message last — the message lands in `msg`, the fields land as queryable
 top-level keys.
 

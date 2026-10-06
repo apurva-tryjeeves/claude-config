@@ -5,9 +5,12 @@ description: Look up, create, update, and query Linear issues for JeevesInc, and
 
 # Linear
 
-Workspace: `jeeves` (https://linear.app/jeeves). Use the `mcp__linear__*` tools
-for everything below — always confirm an issue's current state and content
-with these tools before acting on it.
+Workspace: `jeeves` (https://linear.app/jeeves). The Linear tools come from
+whichever Linear server is connected — `mcp__linear__*` (the project's Linear
+MCP) or `mcp__claude_ai_Linear__*` (the claude.ai connector); both take the
+same parameters. Tool names below use the `mcp__linear__` form; call the
+connected one. Always confirm an issue's current state and content with these
+tools before acting on it.
 
 ## Common teams
 
@@ -190,11 +193,16 @@ user something they already answered. Cycle is never stable enough to cache
 (it rolls over roughly every two weeks), so always resolve it live regardless
 of what's in the reference file.
 
-**Update the reference file whenever you confirm something new**: after the
-user confirms a repo's team/project (via `AskUserQuestion` or otherwise),
-add or update that repo's row in `references/repo-team-project-map.md` in
-the same turn — don't leave it for later. This is how the file grows from
-"none confirmed yet" into a fast path for future tickets.
+Read the reference file from your clone of the plugin
+(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/linear/references/repo-team-project-map.md`)
+when it exists — it carries rows not yet released — else this skill's own copy.
+
+**Record what you confirm**: after the user confirms a repo's team/project
+(via `AskUserQuestion` or otherwise), add or update that repo's row in the
+clone's copy of `repo-team-project-map.md`, leave the change uncommitted, and
+tell the user it is ready to review and push. When the clone is missing,
+report the row instead. This is how the file grows into a fast path for
+future tickets.
 
 For anything not already covered by the reference file, fetch the real
 options first, then ask with `AskUserQuestion` so the user picks from what
@@ -222,20 +230,21 @@ from a past run of this skill.
   active team can easily have
   10-30+ open projects, so don't hand the raw list to `AskUserQuestion`.
   Narrow first: use `query` with a keyword from the ticket title/description,
-  or filter the fetched list yourself by relevance, down to ≤4 real
+  or filter the fetched list yourself by relevance, down to ≤3 real
   candidates, then ask via `AskUserQuestion` with those plus a "No project"
-  option — confirm the match with the user rather than taking the top result
+  option (4 options in all) — confirm the match with the user rather than taking the top result
   silently, and fetch a fresh project list for each new ticket in the
   session. When narrowing still leaves more than 4 plausible matches (or
   nothing narrows well), fall back to printing the full project list as a
   table in chat and asking the user to name or number their pick, rather
   than truncating the options silently.
 - **Estimate** (story points): this workspace uses a points scale (`1`, `2`,
-  `3`, `5`, `8`, …), not a time estimate. Ask via `AskUserQuestion` with that
-  scale as options (plus "No estimate") unless the user already gave a
-  number — confirm the value with the user rather than assuming one.
-- **Cycle**: fetch `mcp__linear__list_cycles` (`teamId`, `type: "current"`)
-  fresh, then ask via `AskUserQuestion` offering the current cycle by its
+  `3`, `5`, `8`, …), not a time estimate. Ask via `AskUserQuestion` with
+  `1`, `2`, `3`, `5` as the four options — the automatic "Other" covers `8`,
+  larger values and "No estimate" — unless the user already gave a number.
+- **Cycle**: `mcp__linear__list_cycles` takes the team's UUID, not its name —
+  take it from `get_issue`'s `teamId` or from `list_teams`. Fetch
+  `list_cycles` (`teamId: <uuid>`, `type: "current"`) fresh, then ask via `AskUserQuestion` offering the current cycle by its
   actual returned name (cycle names/dates roll over roughly every two weeks,
   so never hardcode or recall a name from a previous session) alongside
   "Backlog (no cycle)" — default to suggesting the current cycle for work
@@ -251,8 +260,8 @@ Use `mcp__linear__list_issues` for anything shaped like "my open WAL tickets,"
 - `assignee: "me"` for the current user's tickets, `assignee: null` for unassigned.
 - `team`, `state`, `label`, `project`, `cycle`, `priority` narrow the query — pass
   whichever the user's phrasing implies.
-- Request only the `fields` actually needed for the report (default response
-  omits `description`, which is usually not needed for a list view).
+- Pass `fields` with only what the report needs — the default response
+  includes a truncated `description`, which a list view rarely uses.
 
 Present results as a table: `ID | Title | Status | Priority` at minimum, adding
 columns (assignee, project, due date) the request calls for.

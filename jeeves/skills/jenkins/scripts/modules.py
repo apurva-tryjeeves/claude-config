@@ -22,9 +22,9 @@ The built string goes to stdout and a summary to stderr, so
 """
 import argparse, sys
 
-# Positional order the job reads MODULES in. The table in
-# references/deploy-develop-environment.md lists the same services — update
-# both together when the job's service list changes.
+# Positional order the job reads MODULES in. Source of truth: jenkins-library
+# vars/jeevesPlatformInfo.groovy, the `modules` map filtered to a non-empty
+# `giturl` and no `standaloneHelmRelease`. Update this list when that changes.
 SERVICES = [
     ("api", "backend"),
     ("frontend", ""),
@@ -73,10 +73,10 @@ SERVICES = [
 NAMES = [s for s, _ in SERVICES]
 MODES = ("latest", "rebuild")
 
-# Default branch the form pre-fills: `main` for these, `development` for the rest.
-# The pipeline builds and deploys only enabled services, so a disabled triple's
-# branch and mode are never read.
-MAIN_BRANCH = {"simulationserver", "utvservice", "aiweb"}
+# Branch the form pre-fills in a disabled triple: `main` for these, `development`
+# for the rest. The pipeline builds and deploys only enabled services, so a
+# disabled triple's branch and mode are never read.
+MAIN_BRANCH = {"simulationserver", "aiweb"}
 
 
 def default_branch(name):
@@ -95,7 +95,8 @@ def parse(modules):
         sys.exit(
             f"MODULES holds {len(fields)} fields ({len(fields)/3:.2f} triples); "
             f"the job reads {expected} ({len(SERVICES)} services x 3). "
-            "Rebuild it with --only/--set so every service keeps its position."
+            "Rebuild it with --set so every service keeps its position, and re-check "
+            "SERVICES against jenkins-library jeevesPlatformInfo."
         )
     return [fields[i : i + 3] for i in range(0, expected, 3)]
 
@@ -125,8 +126,8 @@ def service_index(name):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--set", metavar="SERVICE=BRANCH[:MODE]", action="append", default=[],
-                   help="enable a service at a branch; repeatable. MODE defaults to latest on the "
-                        "service's default branch and rebuild on any other branch")
+                   help="enable a service at a branch; repeatable. MODE defaults to latest on "
+                        "`development` and rebuild on any other branch")
     p.add_argument("--decode", metavar="MODULES", help="print what a MODULES string resolves to; '-' reads stdin")
     p.add_argument("--list", action="store_true", help="print the positional service order")
     args = p.parse_args()
@@ -154,7 +155,9 @@ def main():
         if not branch:
             sys.exit(f"--set {item!r} needs a branch, as SERVICE=BRANCH[:MODE]")
         idx = service_index(name)
-        mode = mode or ("latest" if branch == default_branch(name) else "rebuild")
+        # The pipeline rebuilds every branch except `development`; `latest` there
+        # only adds ecr.resolveLatestTag, which can fail the build.
+        mode = mode or ("latest" if branch == "development" else "rebuild")
         if mode not in MODES:
             sys.exit(f"mode {mode!r} is not one of {', '.join(MODES)}")
         triples[idx] = ["true", branch, mode]

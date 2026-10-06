@@ -130,8 +130,9 @@ case "$cmd" in
     # Tolerates a bare id or a Location header value, CR and all.
     qid=$(printf '%s' "$1" | tr -d '[:space:]')
     qid="${qid%/}"; qid="${qid##*/}"
+    if [ -n "${JENKINS_API_DRYRUN:-}" ]; then api "queue/item/$qid/api/json"; exit 0; fi
     if ! item=$(api "queue/item/$qid/api/json" 2>/dev/null); then
-      echo "jenkins-api: queue item $qid is no longer listed — Jenkins keeps one for about five minutes after the build starts. Match your build by its parameters instead (see the skill's build-ops reference)." >&2
+      echo "jenkins-api: queue item $qid is no longer listed — Jenkins keeps one for about five minutes after the build starts. Match your build by its ENVIRONMENT and MODULES parameters instead (see \"Name the build you mean\" in the jenkins skill)." >&2
       exit 1
     fi
     printf '%s' "$item" | python3 -c '
@@ -143,6 +144,7 @@ print(number if number else "waiting: " + (d.get("why") or "in queue"))
     ;;
   crumb)
     # Prints "Jenkins-Crumb:<value>", ready to pass straight to curl as -H.
+    if [ -n "${JENKINS_API_DRYRUN:-}" ]; then api "crumbIssuer/api/json"; exit 0; fi
     api "crumbIssuer/api/json" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["crumbRequestField"] + ":" + d["crumb"])'
     ;;
   url)

@@ -15,7 +15,7 @@ the release's date and duplicate the `(template)` child found there.
 Check this table first for the release month. When its row is present, fetch
 that page ID directly. When it is absent, resolve it by fetching the quarter
 page (or the Releases root) and following the `<Month> <Year> Releases` child,
-then add the row here in the same turn.
+then record the row (see the skill's "Record what you resolve").
 
 | Month | Month page ID | Quarter page ID | `(template)` child ID |
 |---|---|---|---|
@@ -53,7 +53,7 @@ For a hotfix touching several repos:
 |---|---|
 | Release Info › Release captain | `@`-mention of the captain, then ` - co-captain @<name>` when there is one. A hotfix usually runs with the single captain who wrote the fix |
 | Release Info › Devops | Left blank until DevOps is assigned |
-| Release Info › QA | The four default QA mentions below, carried over from the template |
+| Release Info › QA | Left empty — clear the mentions the template pre-fills |
 | Release Info › Release Status | One of `NEXT WEEK`, `IN PROGRESS`, `RELEASED`. A weekly page scaffolded ahead of its date opens at `NEXT WEEK`; a hotfix page created on the day it ships opens at `IN PROGRESS` |
 | Release Info › Environment | The Pre-Prod block below, carried over unchanged |
 | Release Info › Release Playbook, Approved by | Left blank for the captain to fill |
@@ -101,10 +101,11 @@ from the release captain or from GitHub rather than from the page.
 
 ## Defaults to carry over
 
-### QA mentions
+### Notion user IDs
 
-Carry all four into every release page. Add a row the first time a new QA owner
-appears on a page, in the same turn their ID is resolved.
+Lookup for the per-ticket "QA owner on Pre Prod" mention. Record a new person
+the first time their ID is resolved (see the skill's "Record what you
+resolve").
 
 | Name | Email | Notion user ID |
 |---|---|---|
@@ -115,8 +116,8 @@ appears on a page, in the same turn their ID is resolved.
 
 ### Release captains
 
-Resolve an unlisted captain with `notion-get-users`, then add their row here in
-the same turn.
+Resolve an unlisted captain with `notion-get-users`, then record their row (see
+the skill's "Record what you resolve").
 
 | Name | Email | Notion user ID |
 |---|---|---|
@@ -124,8 +125,9 @@ the same turn.
 
 ### POD names
 
-Seen so far: `Money`, `Megapod`, `Payments`, `Wallet`. Add each new POD here
-the first time it appears in a Tickets table.
+Seen so far: `Money`, `Megapod`, `Payments`, `Wallet`. Record each new POD the
+first time it appears in a Tickets table (see the skill's "Record what you
+resolve").
 
 ### Pre-Prod environment
 
@@ -189,7 +191,7 @@ Notion's defaults.
 |---|---|
 | Release captain | <mention-user url="user://CAPTAIN-UUID"/> |
 | Devops | |
-| QA | <mention-user url="user://5bd7ff63-1260-4926-b199-8288bc1a222b"/> <mention-user url="user://5d644217-8efe-4a75-95d2-bf64aa4c8dcc"/> <mention-user url="user://5c443944-9cd2-4163-8373-c0d5d566ca05"/> <mention-user url="user://311d872b-594c-8113-92a8-000299d8b4bd"/> |
+| QA | |
 | Release Status | NEXT WEEK |
 | | |
 | Environment | `Pre-Prod:`<br>API: [http://preprod.test.jeev.es/](http://preprod.test.jeev.es/)<br>Frontend: [https://preprod.dev.tryjeeves.com/client/web/login](https://preprod.dev.tryjeeves.com/client/web/login)<br>CMS: [http://admin-preprod.dev.jeeves.vpn/](http://admin-preprod.dev.jeeves.vpn/) |

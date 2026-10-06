@@ -6,63 +6,65 @@ description: Cut a hot-fix branch off a Jeeves service's production branch (main
 # Hotfix Release
 
 Ship one or more already-merged fixes straight to production, bypassing the
-normal release train. Run this from inside the target service's local repo.
+normal release train. Run this from inside the target service's local repo
+(`${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}/<repo>`); a hotfix spanning
+several repos gets one branch per repo.
 The flow ends at a pushed `hot-fix/…` branch, with no pull request into
 `main`/`master`.
 
-## 1. Sync local branches with origin
+## 1. Find the production branch
 
-Identify the production branch — `main` if it exists, else `master`:
+Start from a clean working tree. When `git status --short` lists changes, stash
+them and note the stash so step 5 restores it:
+
+```bash
+git status --short
+git stash push -u -m "before hot-fix <ticket-id>"
+```
+
+Fetch, then take the production branch from whichever of `origin/main` and
+`origin/master` has the newer tip — some repos keep a years-old `main` beside a
+live `master` (wallet-service, billpay-service):
 
 ```bash
 git fetch origin
-git rev-parse --verify --quiet origin/main >/dev/null 2>&1 && PROD_BRANCH=main || PROD_BRANCH=master
+for b in main master; do
+  git rev-parse --verify --quiet "origin/$b" >/dev/null && \
+    printf '%s %s %s\n' "$(git log -1 --format=%ct "origin/$b")" "$b" "$(git log -1 --format='%cs %h %s' "origin/$b")"
+done | sort -rn | head -1
 ```
 
-Reset both branches to exactly match origin:
-
-```bash
-for branch in development "$PROD_BRANCH"; do
-  git checkout "$branch"
-  git reset --hard "origin/$branch"
-done
-```
-
-If either checkout hits uncommitted local changes unrelated to this hotfix,
-stash them first, then restore after pushing the hotfix branch, the same way
-as any other branch switch:
-
-```bash
-git stash push -u -m "<note>"
-```
+Show the user the chosen branch with its last commit date and subject, and
+confirm it before going further. Set `PROD_BRANCH` to the confirmed name.
 
 ## 2. Get the commits to hotfix
 
 Ask the user for every pull request (link or number) going into this hotfix,
-then find each one's **actual** commit in `development`'s history:
+then read each one's squashed commit — the `mergeCommit` is the exact commit
+that landed in `development`:
 
 ```bash
-git log --oneline origin/development -5
+gh pr view <pr-number> --json number,title,state,baseRefName,mergeCommit,mergedAt
 ```
 
-Each PR shows up tagged with `(#<pr-number>)` in that log. Cherry-pick that
-SHA — it's the squashed commit that actually landed in `development`. Note
-the order the commits appear in the log (newest first) — step 4 cherry-picks
-them in the reverse order, oldest first.
-
-Use `gh pr view` for context only (title, merge state): it lists the PR's
-pre-squash commits, which stay on the PR's own branch and never land in
-`development` as standalone commits.
+Confirm each PR is `MERGED` with `baseRefName` `development`. A sub-ticket PR
+merged into a parent integration branch (`feat/<PARENT>`) has not reached
+`development` — hotfix the parent PR's commit instead. Check the commit is on
+`development`:
 
 ```bash
-gh pr view <pr-number> --json title,mergeCommit,commits,baseRefName,state
+git merge-base --is-ancestor <mergeCommit-oid> origin/development && echo on-development
 ```
 
-For an older or unusually-delayed hotfix, widen the search:
+To cross-check by subject, match the PR number in parentheses so `#54` does not
+also match `#540`:
 
 ```bash
-git log --oneline origin/development | grep "#<pr-number>"
+git log --oneline origin/development | grep "(#<pr-number>)"
 ```
+
+Order the commits by `mergedAt`, oldest first — step 4 cherry-picks them in
+that order.
 
 ## 3. Create the hot-fix branch
 
@@ -82,10 +84,11 @@ involved.
 If a commit subject doesn't carry a bracketed ticket ID, ask the user for
 the ticket ID and context slug directly.
 
-Branch from the production branch:
+Branch from the fetched production branch, leaving your local branches as
+they are:
 
 ```bash
-git checkout -b hot-fix/<ticket-id>_<context> "$PROD_BRANCH"
+git switch -c hot-fix/<ticket-id>_<context> --no-track "origin/$PROD_BRANCH"
 ```
 
 ## 4. Cherry-pick and push
@@ -108,10 +111,19 @@ git add <resolved-files>
 git cherry-pick --continue
 ```
 
-Push the branch straight to origin:
+Show the user the branch name, its base (`origin/$PROD_BRANCH` and its tip),
+and the picked commits, and push once they confirm:
 
 ```bash
 git push -u origin hot-fix/<ticket-id>_<context>
+```
+
+When step 1 stashed changes, switch back to the branch they came from and
+restore them:
+
+```bash
+git switch <previous-branch>
+git stash pop
 ```
 
 **The pushed branch is the finished hotfix.** Deployment ships

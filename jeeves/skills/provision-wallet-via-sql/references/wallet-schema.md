@@ -18,44 +18,59 @@ wallet_<n>.wallet_instruments                                     (id = same PK)
 
 ## Wallet-type values
 
-| Wallet type          | `productType`         | `instrumentType`      | wallet `baseCurrency` | bank `baseCurrency` |
-| -------------------- | --------------------- | --------------------- | --------------------- | ------------------- |
-| Stablecoin (USDC)    | `stablecoin`          | `stablecoin`          | `10840`               | `840` (USD)         |
-| Self-funded          | `self-funded`         | `self-funded`         | ISO numeric           | matching ISO        |
-| Jeeves Pay external  | `jeeves-pay-external` | `jeeves-pay-external` | ISO numeric           | matching ISO        |
+| Wallet type | `productType` / `instrumentType` | wallet `baseCurrency` | `product_accounts.metadata` | linked row `baseCurrency` |
+| --- | --- | --- | --- | --- |
+| Stablecoin USDC (JSS) | `crypto-wallet` | `20840` | `{"provider":"jss"}` | `20840` |
+| Stablecoin USDT (JSS) | `crypto-wallet` | `30840` | `{"provider":"jss"}` | `30840` |
+| Self-funded | `self-funded` | ISO numeric | `NULL` | matching ISO |
+| Jeeves Pay external | `jeeves-pay-external` | ISO numeric | `NULL` | matching ISO |
+
+`10840` is USDB, not USDC. The `stablecoin` enum value exists but the code
+never creates it — use `crypto-wallet` for every JSS wallet.
 
 `createdBy` / `updatedBy` = user email or `system@tryjeeves.com`.
 
 ## Where the provider identity lives
 
-| Wallet type | Identity column | Linked bank account row |
-| --- | --- | --- |
-| Stablecoin (JSS) | `wallet_instrument_provider_accounts.providerAccountDetails` | None |
-| Fiat (Bridge, Qitech, Airwallex, …) | `wallet_instrument_provider_linked_bank_accounts.bankAccountDetails` | One `topup` row; add a `withdrawal` row when needed. `providerAccountDetails` = `NULL` |
+| Wallet type | `providerAccountId` | `providerAccountDetails` | Linked bank account rows |
+| --- | --- | --- | --- |
+| Stablecoin (JSS) | the stablecoin customer id | `jss` shape below | One `topup` row per chain the wallet receives on — deposits fail with `No linked bank account found … on chain` without it |
+| Fiat (Bridge, Qitech, Airwallex, STP, …) | copy the shape of a real row for that provider | keyed by the provider (`airwallex`, `stp`, `qitech`, `bridge`) plus `accountStatus` — copy a real sample (only dLocal rows are `NULL`) | One `topup` row; add a `withdrawal` row when needed |
 
-### Stablecoin `providerAccountDetails`
+### JSS `providerAccountDetails`
 
-Keyed under `stablecoin`. The wallet service reads `providerAccountDetails.stablecoin.wallet.id`,
-`.address`, `.customerId`, and `.paymentRail` directly, so populate all four:
+The wallet service reads `providerAccountDetails.jss.*`:
 
 ```json
-{"stablecoin":{"wallet":{"id":"<stablecoin wallet uuid>"},"address":"<on-chain address>","customerId":"<stablecoin customer uuid>","paymentRail":"solana"}}
+{"jss":{"wallet":{"id":"<stablecoin_wallets.id>"},"customerId":"<stablecoin_wallets.customerId>","paymentRail":"<stablecoin_wallets.chain>"},"accountStatus":"ACTIVE"}
 ```
-
-Source the values from the matching wallet in `stablecoin_<n>`:
 
 | Field | Source |
 | --- | --- |
-| `wallet.id` | stablecoin-service wallet id |
-| `customerId` | that wallet's customer id |
-| `address` | on-chain deposit address |
-| `paymentRail` | e.g. `solana` |
+| `jss.wallet.id` | `stablecoin_<n>.stablecoin_wallets.id` |
+| `jss.customerId` | that wallet's `customerId` — also the provider account's `providerAccountId` |
+| `jss.paymentRail` | that wallet's `chain` (e.g. `tron`, `solana`, `tempo`) |
+
+### JSS linked bank account (`topup`, one per chain)
+
+`providerLinkedBankAccountId` is the deposit address's id, and
+`bankAccountDetails` carries the address:
+
+```json
+{"currency":20840,"bankCountry":"","accountNumber":"<address>","stablecoinDepositAddress":{"id":"<deposit address id>","chain":"<chain>","address":"<address>","currency":"USDC","walletId":"<stablecoin_wallets.id>"}}
+```
+
+The deposit address and its id come from the stablecoin provider and are not
+stored in `stablecoin_<n>` — take them from the user, or from an existing
+linked row for the same wallet.
 
 ## Enums
 
 | Table | Column | Values |
 | --- | --- | --- |
 | `product_accounts` | `accountStatus` | `pending` / `closed` / `active` / `deactivate` / `archived` |
+| `product_accounts` | `productType` | `self-funded` / `jeeves-pay-external` / `jeeves-pay-credit` / `crypto-wallet` / `credit-line` / `stablecoin` |
+| `wallet_instruments` | `instrumentType` | `self-funded` / `jeeves-pay-external` / `crypto-wallet` / `stablecoin` |
 | `product_accounts` | `kycStatus` | `approved` / `pending` / `in-review` / `in-jeeves-review` / `in-review-error` / `rejected` / `rfi-required` / `rfi-answered` / `rfi-closed` |
 | `wallet_instruments` | `accountStatus` | `pending` / `active` / `deactivated` / `closed` |
 | `wallet_instruments` | `KYCStatus` | `approved` / `pending` / `in-review` / `suspended` / `rejected` / `rfi-*` |

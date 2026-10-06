@@ -1,6 +1,8 @@
 # accounting (accounting-service)
 
-Dev/preprod database: `accounting_<n>` (e.g. `accounting_20`).
+| dev-NN | preprod | prod |
+| --- | --- | --- |
+| `accounting_<n>` (e.g. `accounting_20`) | `preprod_accounting` | `accounting` |
 
 ## `integration`
 
@@ -28,7 +30,36 @@ Companies with integrations:
 SELECT companyId, externalCompanyName, platformName, status, linkedAt
 FROM integration
 WHERE deletedAt IS NULL
-ORDER BY companyId;
+ORDER BY companyId
 ```
 
-Add `AND status = 'linked'` for active integrations only.
+Add `AND status = "linked"` for active integrations only.
+
+## `transaction`
+
+The transactions imported into accounting (Card Expenses, bill pay, transfers, fees). Each row comes from one report under `src/db/external-databases/sql/transaction-reports/`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36), PK | uuid |
+| `companyId` | int unsigned | backend `companies.id` |
+| `fundingSourceType` | enum | `SELF_FUNDED` (from `product_accounts_ledger` reports), `LOC` (from `loc-*` reports) |
+| `transactionReferenceId` | varchar(255) | import dedup key. LOC card rows: `jeeves.transactions.uuid`. Self-funded card rows: `product_accounts_ledger.transactionReferenceId` (= `cards.card_transactions.id`). Self-funded fee rows: `cards.transaction_fees.id` |
+| `tag` | enum | e.g. `cards`, `card-reversal-loc`, `card-refund-loc` (LOC); `card-purchase`, `card-reversal`, `card-refund`, `adjustment`, `iof-fee`, `bill-pay`, `self-funded-account-*` |
+| `syncStatus` | enum | default `missing_categorization`; also `pending`, `processing`, `success`, `failed`, `categorized`, `attachment_upload_*` |
+| `isExported` | tinyint(1) | `1` once exported to the ERP |
+| `createdAt` / `updatedAt` / `deletedAt` | datetime(3) | soft delete via `deletedAt` |
+
+SELF_FUNDED rows imported from dual-written LOC ledger rows (WAL-6448):
+
+```sql
+SELECT t.tag, t.syncStatus, t.isExported, COUNT(*) AS rows_, COUNT(DISTINCT t.companyId) AS companies
+FROM accounting.transaction t
+JOIN product_account.product_accounts_ledger pal
+  ON pal.transactionReferenceId = t.transactionReferenceId
+ AND pal.companyId = t.companyId
+WHERE pal.source = "transactions"
+  AND t.fundingSourceType = "SELF_FUNDED"
+  AND t.deletedAt IS NULL
+GROUP BY t.tag, t.syncStatus, t.isExported
+```

@@ -42,21 +42,28 @@ When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with 
    git pull --ff-only origin feat/<PARENT>
    git switch -c feat/<SUB>
    ```
-3. Open each sub-ticket PR against the parent branch, titled with the sub-ticket's id:
+3. Open each sub-ticket PR against the parent branch, titled with the sub-ticket's id (see **Create a PR**):
    ```bash
-   gh pr create --repo JeevesInc/<repo> --base feat/<PARENT> --head feat/<SUB>
+   gh pr create --repo JeevesInc/<repo> --base feat/<PARENT> --head feat/<SUB> \
+     --title "feat: [<SUB>] - <description>" --body-file <body.md>
    ```
-4. Keep the parent branch current by rebasing it onto the default branch, then rebase every open sub-branch onto the new parent tip. `<old-parent-tip>` is the parent's commit before the rebase:
+4. Keep the parent branch current by rebasing it onto the default branch, then rebase every open sub-branch onto the new parent tip. Record the parent's tip before the rebase, so each sub-branch replays only its own commits:
    ```bash
    git switch <default-branch>
    git pull --ff-only origin <default-branch>
 
    git switch feat/<PARENT>
+   OLD_PARENT=$(git rev-parse feat/<PARENT>)
    git rebase <default-branch>
+   ```
+   Confirm with the user before each force-push — the parent branch carries every merged sub-PR and is the base of every open one:
+   ```bash
    git push --force-with-lease origin feat/<PARENT>
-
+   ```
+   Then, for each open sub-branch, rebase and (after confirming) force-push:
+   ```bash
    git switch feat/<SUB>
-   git rebase --onto feat/<PARENT> <old-parent-tip>
+   git rebase --onto feat/<PARENT> "$OLD_PARENT"
    git push --force-with-lease origin feat/<SUB>
    ```
 5. Once every sub-issue PR is squashed into the parent branch, open the parent PR against the default branch, titled with the parent's id. List each sub-issue PR in its description, then squash-merge it.
@@ -73,7 +80,7 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) spec wit
 [optional footer(s)]
 ```
 
-**Types:** `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:`, `chore:`
+**Types:** `feat:`, `fix:`, `docs:`, `refactor:`, `perf:`, `test:`, `chore:` — the set the repos' `lint / Validate PR title` check accepts.
 
 **Examples:**
 ```bash
@@ -88,6 +95,23 @@ feat: [ENG-123] - Implement feature
 
 Co-Authored-By: <the session's own Claude model> <noreply@anthropic.com>
 ```
+
+## Create a PR
+
+Jeeves repos squash-merge, so the PR title becomes the commit subject on the base branch. Every repo runs `lint / Validate PR title` (`infra-reusable-workflows` → `pr-title.yml`), which accepts:
+
+| Part | Allowed |
+|---|---|
+| Type | `fix`, `feat`, `chore`, `docs`, `refactor`, `perf`, `test` (optional scope, e.g. `feat(ACC):`) |
+| Subject | starts with the bracketed ticket id `[ABC-123]` (2–6 capitals, a dash, digits), then the description |
+
+1. Push the branch, then open the PR against the default branch (or the parent branch for a sub-ticket), with the title in the commit format and a body file:
+   ```bash
+   gh pr create --repo JeevesInc/<repo> --base <default-branch> --head <branch> \
+     --title "<type>: [<TICKET>] - <description>" --body-file <body.md>
+   ```
+2. Add a `## Related PRs` section when the change spans repos (below).
+3. Offer the pollers (see **PR Post-Create Polling**).
 
 ## Cross-Repo Related PRs
 
@@ -124,29 +148,40 @@ Watches for review/PR comments that need a response.
   ```bash
   gh pr view <n> --repo JeevesInc/<repo> --json state,comments,reviews
   ```
-  and inline code-review comments, which live on a separate endpoint:
+  and inline code-review comments, which live on a separate endpoint paged at 30 — `--paginate` returns all of them:
   ```bash
-  gh api repos/JeevesInc/<repo>/pulls/<n>/comments --jq '.[] | {id, user: .user.login, path, line, body, created_at}'
+  gh api --paginate repos/JeevesInc/<repo>/pulls/<n>/comments --jq '.[] | {id, user: .user.login, path, line, body, created_at}'
   ```
 
 ### Checks poller
 
 Watches CI/check status until it settles.
 
-- Cadence is per-repo. Check `references/ci-check-timing.md` for a row matching the target repo first; when one exists, use its `First check`/`Interval` columns directly.
-- For a repo with no row yet, derive the cadence from that repo's own CI history with a background `Agent` instead of asking the user. Pull the last 10 completed runs of each PR-check workflow:
+- Cadence is per-repo. Check `references/ci-check-timing.md` (the source clone's copy first — see **Write back a timing row**) for a row matching the target repo; when one exists, use its `First check`/`Interval` columns directly.
+- For a repo with no row yet, derive the cadence from that repo's own CI history with a background `Agent` instead of asking the user. Pull the last 10 successful PR runs of each PR-check workflow:
   ```bash
-  gh run list --repo <repo> --workflow <file> --limit 10 --json createdAt,updatedAt,conclusion,event
+  gh run list --repo JeevesInc/<repo> --workflow <file> --status success --event pull_request --limit 10 --json createdAt,updatedAt \
+    --jq '[.[] | ((.updatedAt|fromdateiso8601) - (.createdAt|fromdateiso8601)) | select(. < 7200)] | "n=\(length) min=\(min)s max=\(max)s mean=\(add/length|floor)s"'
   ```
-  Compute each run's duration (`updatedAt - createdAt`), then set `First check` a little under the fastest observed duration and `Interval` from the spread between fastest and slowest. Have the agent add a new row to `references/ci-check-timing.md` (repo, long-pole workflow, check name, min/max/mean, sample size, first check, interval), then start polling once it reports back.
-- After checks settle, if the actual settle time differs noticeably from the remembered cadence, update that repo's row in `references/ci-check-timing.md` with the refined value.
+  Set `First check` a little under the fastest duration and `Interval` from the spread between fastest and slowest, then add the row (repo, long-pole workflow, check name, min/max/mean, sample size, first check, interval) per **Write back a timing row** below, and start polling once the agent reports back.
+- After checks settle, if the actual settle time differs noticeably from the remembered cadence, refine that repo's row in the same turn, per **Write back a timing row**.
 - Use `/loop`'s dynamic mode (`ScheduleWakeup`) for the recurring execution, including when asked to "run in the background" or "move to background" — it re-invokes the session each interval, so every tick is a fresh check.
 - Poll with `statusCheckRollup`, which exits 0 while checks are still running:
   ```bash
-  gh pr view <n> --json statusCheckRollup --jq '.statusCheckRollup[] | {name, status, conclusion}'
+  gh pr view <n> --repo JeevesInc/<repo> --json statusCheckRollup --jq '.statusCheckRollup[] | {name, status, conclusion}'
   ```
-- Stop as soon as every check has `status: COMPLETED`, then report per **Report findings** below.
-- A failing check here often traces back to the SonarCloud quality gate — see the `sonar-proactive-rules` skill for what triggers it, and `/jeeves:sonar-fix` to clear it.
+- Stop once every check has `status: COMPLETED` **and** every check in the row's `Settles on` column is in the list — on repos using the shared unit-test workflow that is `test / Scan for secrets` and `SonarCloud Code Analysis`. The workflow creates `test / Code Analysis` and `test / Scan for secrets` only after the job before them finishes, so an all-COMPLETED list missing them is mid-handoff — keep polling. Then report per **Report findings** below.
+- A failing check here often traces back to the SonarCloud quality gate — see the `jeeves:sonar-proactive-rules` skill for what triggers it, and `/jeeves:sonar-fix` to clear it.
+
+### Write back a timing row
+
+Edit the source clone of the plugin, not the installed skill copy:
+
+```bash
+${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/git-preferences/references/ci-check-timing.md
+```
+
+Leave the edit uncommitted and tell the user it is ready to review and push. When that directory doesn't exist, report the new row and the proposed edit instead. Read the source clone's copy of the table when it exists, else this skill's own `references/ci-check-timing.md`.
 
 ## Report findings
 

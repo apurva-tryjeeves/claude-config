@@ -10,9 +10,11 @@ environment.
 
 ## Parameters
 
-- `ENVIRONMENT` — Active Choices `ChoiceParameter`. Full choice list (from
-  the job's Build with Parameters UI): `develop-01` through `develop-20`,
-  plus `sandbox`.
+- `ENVIRONMENT` — Active Choices `ChoiceParameter`, generated live from the
+  EKS namespaces matching `^(develop-|sandbox).*`: `develop-01` through
+  `develop-20` plus `sandbox`. `develop-14` and `develop-15` are managed by
+  FluxCD image automation and the pipeline aborts any build that targets them,
+  so offer the other slots.
 - `MODULES` — Active Choices `DynamicReferenceParameter`. Packs every
   deployable service into one comma-separated string with no name-to-field
   mapping in the REST API: three values per service, in this fixed
@@ -22,19 +24,25 @@ environment.
   | Field | Enabled service | Disabled service |
   |---|---|---|
   | `enable` | `true` | `false` |
-  | `branch` | the branch the user asked for | the service's default branch (`development`, or `main` for `simulationserver`, `utvservice`, `aiweb`) |
-  | `mode` | `rebuild` for any feature branch; `latest` on the default branch; whatever the user asks for overrides both | `latest` |
+  | `branch` | the branch the user asked for | the form's pre-filled branch (`development`, or `main` for `simulationserver` and `aiweb`) |
+  | `mode` | `latest` when the branch is `development`, `rebuild` for every other branch; whatever the user asks for overrides both | `latest` |
 
   The pipeline builds and deploys only `enable=true` services and leaves every
   other service in the environment as it is, so a disabled triple's branch and
-  mode are never read. Mode `latest` makes the pipeline resolve the service's
-  current `:latest` ECR image before building (`ecr.resolveLatestTag`), and
-  that step fails the build when the image carries more than one tag — which
-  is why a feature branch goes out as `rebuild`.
+  mode are never read. It rebuilds any enabled service whose branch is not
+  `development` (`parseModulesForm`: `rebuild = enable && (mode == 'rebuild' ||
+  branch != 'development')`). Mode `latest` additionally resolves the service's
+  current `:latest` ECR image (`ecr.resolveLatestTag`), which needs exactly one
+  non-`latest` tag on that image and fails the build otherwise — so `latest`
+  only fits `development`, and a `resolveLatestTag` failure is retried with
+  `:rebuild`.
 
-  `scripts/modules.py` is the one place this order lives. It builds and reads
-  the value, keeping every service on its own position and checking the string
-  carries one triple per service:
+  `scripts/modules.py` holds this order. The pipeline's own source of it is
+  `jenkins-library` `vars/jeevesPlatformInfo.groovy`: the `modules` map,
+  filtered to entries with a non-empty `giturl` and no
+  `standaloneHelmRelease`. The script builds and reads the value, keeping
+  every service on its own position and checking the string carries one
+  triple per service:
 
   ```bash
   python3 scripts/modules.py --list               # position, service, local repo
@@ -42,10 +50,13 @@ environment.
   ```
 
   `--list` prints each service alongside its git repo name; the local
-  checkout lives under `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}`. A service showing `-` has no repo recorded yet: ask
-  the user for the repo name and branch, then add the repo to `SERVICES` in
-  `scripts/modules.py` in the same turn, so the next run reads it instead of
-  asking again.
+  checkout lives under `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}`. A
+  service showing `-` has no repo recorded yet: ask the user for the repo
+  name, then record it in your clone of the plugin — edit `SERVICES` in
+  `${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/scripts/modules.py`,
+  leave the change uncommitted, and tell the user it is ready to review and
+  push. When that directory is missing, report the repo name and the edit
+  instead.
 
   Example decoded triple from a captured build: `api` at position 1 with
   `true,MP-5198,latest` means deploy `api`, branch `MP-5198`, mode `latest`.
@@ -66,10 +77,10 @@ environment.
    git -C "${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}/<repo>" branch --show-current
    ```
 
-3. **Determine the environment.** The choice list (`develop-01`–`develop-20`,
-   `sandbox`) has 21 entries, past the 4-option cap on `AskUserQuestion` —
-   print the full list as plain text and ask the user to reply with a slot
-   name rather than using `AskUserQuestion`.
+3. **Determine the environment.** The usable slots (`develop-01`–`develop-20`
+   except `develop-14` and `develop-15`, plus `sandbox`) number 19, past the
+   4-option cap on `AskUserQuestion` — print the list as plain text and ask
+   the user to reply with a slot name rather than using `AskUserQuestion`.
 4. **Build `MODULES` with the script** from exactly the services and branches
    the user asked for — one `--set` per service. Every other service goes in
    disabled:
@@ -94,9 +105,11 @@ environment.
    shared dev environment other people may be using. Mention the expected
    duration from "Per-service deploy timing" below for the service(s) being
    deployed, if a row exists there.
-7. **Trigger.** Builds lock per environment, so check whether anything is
-   already working on *your* slot — a build on another slot runs in parallel
-   and is someone else's deploy, not a blocker:
+7. **Trigger.** Same-slot builds run concurrently (see "Concurrency model"),
+   so check whether anything is already working on *your* slot. When a build
+   is running or queued for that slot, stop and ask the user before
+   triggering. A build on another slot is someone else's deploy, not a
+   blocker:
 
    ```bash
    jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=builds[number,building,actions[parameters[name,value]]]{0,10}" \
@@ -158,12 +171,14 @@ environment.
 
 ## Concurrency model
 
-The pipeline takes a lockable resource for the target `ENVIRONMENT` before
-deploying, so two builds targeting the **same** `develop-NN` slot queue and
-run in sequence, while builds targeting different slots run in parallel —
-this job does not hit the shared-workspace git-ref race described in
-`build-ops.md`. Check `$JENKINS_URL/lockable-resources/` before retriggering
-into a busy environment.
+Two builds targeting the **same** `develop-NN` slot run concurrently. The
+per-environment lock `eks-<ENVIRONMENT>` covers only the scale-up in
+`prepare` and the `check rollout` stage; `build` runs unlocked, and `deploy`
+takes only the global `config-repo` lock while it commits the HelmRelease. So
+two same-slot builds both build and both commit, the later commit wins, and
+they serialize only at rollout. Builds targeting different slots run fully in
+parallel. Check `$JENKINS_URL/lockable-resources/` and the running builds
+before triggering into a busy environment.
 
 ## Reading a build's outcome from the console log
 
@@ -171,14 +186,17 @@ into a busy environment.
 | --- | --- |
 | `Pod [Pending][Unschedulable] ...` | The deploy agent is waiting on capacity; usually clears on its own within the build |
 | `... not found` + `Error restarting X. Not a big deal` | The service has no matching cron/side deployment in this environment — expected/benign, not a build failure signal |
-| `... rollout status ... exceeded its progress deadline` | The newly deployed service failed to become ready in time — a genuine app/code issue in the deployed module, not a Jenkins problem |
+| `rollout status deploy <x>` then `exceeded its progress deadline` / `Timeout has been exceeded`, ending `Finished: ABORTED` | The newly deployed service never became ready — a genuine app/code issue in the deployed module, not a user abort. Report it as a failed rollout |
+| `ERROR: resolveLatestTag: expected exactly one non-latest tag alongside :latest for <repo>, found N` | Mode `latest` hit an ECR image with zero or several real tags. Retrigger that service with `:rebuild` |
+| `ArrayIndexOutOfBoundsException: Index <n> out of bounds` in `parseModulesForm` | The `MODULES` triple count no longer matches `jeevesPlatformInfo`'s module list. Re-check the order against `jenkins-library` and update `SERVICES` in the source clone |
 | `Couldn't find any revision to build` on a repo you did not target, within a minute or two of the trigger | The `MODULES` triples shifted position, so your branch landed on a neighbouring service whose repo has no such branch. The build stops at checkout, so nothing deployed. Rebuild the string with `scripts/modules.py` and retrigger |
 
 Diagnose using the console log text alone — that's the source of truth
 available from this session.
 
-Failures post to the `#jenkins-ci-dev` Slack channel via the pipeline's
-`slackSend` post-action step.
+Every build result — success, failure and aborted — posts to the
+`#jenkins-ci-dev` Slack channel via the pipeline's `slackSend` post-action
+step.
 
 ## Per-service deploy timing
 
@@ -187,13 +205,16 @@ Build durations derived from build history where **exactly one** service was
 cleanly to that one service — a multi-service build's duration can't be
 split back out per service since they build/deploy in parallel.
 
-One row per service, carried forward across sessions. The job's
-`BuildDiscarderProperty` keeps a rolling window (72 builds as of 2026-09-22,
-6 the day before), so a service's earlier samples age out of the API while
-its row here keeps them — merge a fresh sample into the existing row (widen
-min/max, add to the sample size) rather than replacing the row with whatever
-the current window holds. A service with no row yet gets one the first time
-a clean single-service build appears for it.
+One row per service, carried forward across sessions. The job keeps builds
+for one day (`logRotator(daysToKeepStr: '1')`), so the window's size swings
+with traffic and a service's earlier samples age out of the API while its row
+here keeps them — merge a fresh sample into the existing row (widen min/max,
+add to the sample size) rather than replacing it. A service with no row yet
+gets one the first time a clean single-service build appears for it. Record
+rows in your clone of the plugin
+(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/references/deploy-develop-environment.md`),
+leave the change uncommitted and tell the user it is ready to review and
+push; when that directory is missing, report the sample instead.
 
 | Service | Min | Max | Mean | Sample size |
 |---|---|---|---|---|

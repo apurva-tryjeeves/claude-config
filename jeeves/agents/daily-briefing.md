@@ -1,7 +1,7 @@
 ---
 name: daily-briefing
 description: Gather the invoking user's daily standup-style briefing (Linear cycle tickets and activity, Notion mentions, GitHub PRs authored/review-requested across JeevesInc, Slack DMs/mentions) and send it as one Slack DM to themself.
-tools: mcp__linear__list_issues, mcp__linear__list_cycles, mcp__linear__get_notifications, mcp__linear__get_issue, mcp__github__search_issues, mcp__notion__notion-search, mcp__notion__notion-get-users, mcp__claude_ai_Slack__slack_read_user_profile, mcp__claude_ai_Slack__slack_send_message, mcp__claude_ai_Slack__slack_search_public_and_private
+tools: mcp__linear__list_issues, mcp__linear__list_cycles, mcp__linear__get_notifications, mcp__linear__get_issue, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__list_cycles, mcp__claude_ai_Linear__get_notifications, mcp__claude_ai_Linear__get_issue, mcp__github__search_issues, mcp__notion__notion-search, mcp__notion__notion-get-users, mcp__claude_ai_Slack__slack_read_user_profile, mcp__claude_ai_Slack__slack_send_message, mcp__claude_ai_Slack__slack_search_public_and_private
 ---
 
 # Daily Briefing (JeevesInc)
@@ -23,26 +23,33 @@ Resolve the user's identity first, fresh every run:
 
 ## 1. Linear — current cycle + activity
 
-1. `mcp__linear__list_issues` (`assignee: "me"`) — the teams on those issues
-   are the user's teams.
-2. For each of those teams, `mcp__linear__list_cycles` (`teamId`,
+Use whichever Linear server is connected — `mcp__linear__*` or
+`mcp__claude_ai_Linear__*`; both take the same parameters.
+
+1. `list_issues` (`assignee: "me"`, `updatedAt: "-P30D"`,
+   `fields: ["teamId", "team"]`, `limit: 250`) — the teams on those issues are
+   the user's teams.
+2. For each of those teams, `list_cycles` (`teamId: <team UUID>`,
    `type: "current"`) to get the live current cycle, fetched fresh every run.
-3. Keep the issues in that cycle as this user's cycle tickets.
+3. `list_issues` (`assignee: "me"`, `team: <team UUID>`, `cycle: <that cycle's
+   id>`), following `cursor` until `hasNextPage` is false — these are this
+   user's cycle tickets.
 4. Flag a ticket as needing attention when it's `In Review`/`QA` and hasn't
    moved in 2+ days, or `In Progress` and hasn't been touched in 3+ days, or
    is blocked (check `includeRelations: true` via `get_issue` when a ticket
    looks stale) — use `updatedAt` for the staleness check.
 
-Then pull the real inbox with `mcp__linear__get_notifications`
+Then pull the real inbox with `get_notifications`
 (`unreadOnly: true`) and surface anything from the last 24h. Label this
 section "Unread Linear notifications" in the final message.
 
 ## 2. Notion — mentions
 
-`mcp__notion__notion-search` with `query: "<Notion display name>"`, `content_search_mode: "ai_search"`, sorted by recency. This is a
-keyword search over content — report the top pages that clearly reference
-the user (via the search highlight), and label it "mentions found via
-keyword search" in the final message, naming the method plainly.
+`mcp__notion__notion-search` with `query: "<Notion display name>"`. Results
+come back by relevance — date sorting needs a Business plan — so report the top
+pages that clearly reference the user (via the search highlight), and label the
+section "top mentions found via keyword search (not date-filtered)" in the
+final message.
 
 ## 3. GitHub — PRs across JeevesInc
 
@@ -59,12 +66,12 @@ review/CI status if visible in the result.
 
 ## 4. Slack — personal DMs and mentions
 
-1. `mcp__claude_ai_Slack__slack_search_public_and_private` with query
-   `<@<Slack user ID>>` to find recent mentions in channels (covers "tagged in a
-   larger forum").
-2. Same tool with a query scoped to direct messages (`is:dm`) to surface
-   personal DMs from the last 24h. When `is:dm` comes back empty, note in
-   the final message that this run covers channel mentions only.
+1. `mcp__claude_ai_Slack__slack_search_public_and_private` with
+   `keywords: ["<@<Slack user ID>>"]` and `filters: "after:<yesterday's date>"`
+   to find recent mentions in channels (covers "tagged in a larger forum").
+2. Same tool with `filters: "is:dm after:<yesterday's date>"` to surface
+   personal DMs from the last 24h. When that comes back empty, note in the
+   final message that this run covers channel mentions only.
 
 Keep only messages from roughly the last 24h (since the last briefing) —
 older hits are noise for a daily digest.

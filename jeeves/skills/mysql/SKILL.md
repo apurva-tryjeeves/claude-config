@@ -5,31 +5,41 @@ description: Query Jeeves MySQL dev/preprod/prod databases via the jsql wrapper 
 
 # Jeeves MySQL — Dev/Prod Database Access
 
-| Env | Target | Secrets file | Writes |
-| --- | --- | --- | --- |
-| dev-01…dev-20 | `dev-NN/<service>` | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
-| preprod | `preprod/<database>` | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
-| prod | `prod/<database>` | `$JEEVES_SECRETS_DIR/prod.env` | Rejected by the server (read replica, `ERROR 1290`) |
+| Env | Target | Database names | Secrets file | Writes |
+| --- | --- | --- | --- | --- |
+| dev-01…dev-20 | `dev-NN/<service>` | `<service>_NN`; backend `develop_NN` | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
+| preprod | `preprod/preprod_<service>` | `preprod_<service>`; backend `preprod` | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
+| prod | `prod/<service>` | `<service>`; backend `jeeves` | `$JEEVES_SECRETS_DIR/prod.env` | Rejected by the server (read replica, `ERROR 1290`) |
 
 The wrapper sends statements straight to MySQL, so **the server is the only
 thing that stops a write**. Read intent from the table above before running
 anything that modifies data, and confirm with the user before writing to
 `preprod`.
 
+On preprod, name a database that starts with `preprod`. The preprod host also
+holds every dev env's databases (`wallet_20`, …) plus stale unprefixed ones
+(`accounting`), and the preprod user can read them all — so
+`jsql preprod/wallet_20` returns dev-20 data under a preprod header.
+
 ## Credentials
 
 `JEEVES_SECRETS_DIR` defaults to `$HOME/.config/jeeves/mysql` — deliberately
 outside any source tree, so credentials stay clear of git, editor indexers and
 workspace-wide searches. Set it to relocate them. Keep the directory out of any
-git repo, and keep its `.gitignore` (`*`) as insurance should it ever land
-inside one.
+git repo; `jsql-pull-secrets` writes a `.gitignore` (`*`) into it as insurance
+should it ever land inside one.
 
 Each file holds `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASS`,
-`MYSQL_DB`, `MYSQL_SSL`, scoped per environment:
+`MYSQL_DB`, `MYSQL_SSL`, one MySQL user per environment:
 
-- Each env has its **own MySQL user**, scoped to a single database.
+| User | Privileges |
+| --- | --- |
+| `develop_NN` | `ALL` on that env's service databases (`*_NN`) |
+| `preprod` | `ALL` on `preprod` and `preprod_*`; `SELECT` on every database on the host, dev ones included |
+| prod read replica | read-only |
+
 - Every `develop-NN` file carries a distinct user and password of its own.
-- Keep one file per env, even where several share a host.
+- dev-NN and preprod share one host; keep one file per env all the same.
 - A database override changes only the database — the user and password still
   come from the env's file.
 
@@ -81,7 +91,9 @@ The command text is logged verbatim, so its shape is what the user reads:
   quotes** (`"<id>"`) — MySQL reads both quote styles as strings (no
   `ANSI_QUOTES` in `sql_mode`), and single quotes keep the shell out of the
   statement, so backticks and `$` reach MySQL untouched.
-- Leave off the trailing `;` — the wrapper sends one statement per call.
+- Send one statement per call and leave off the trailing `;` — the output
+  then maps to one statement. (The wrapper does run several `;`-separated
+  statements; reserve that for a transaction, as `jeeves:provision-wallet-via-sql` does.)
 - Keep a short probe on one line:
 
   ```bash
@@ -149,6 +161,7 @@ Every default matches a standard checkout, so these stay unset in normal use:
 | `JEEVES_DB_HOST` | the secret file's `MYSQL_HOST`; for the pull, the resolved RDS endpoint | both commands |
 | `JEEVES_DB_PORT` | the secret file's `MYSQL_PORT`; `3306` for the pull | both commands |
 | `JEEVES_DB_INSTANCE_ID` | `development-db-useast2` | `jsql-pull-secrets` |
+| `AWS_PROFILE` | `jeeves_dev` | `jsql-pull-secrets` |
 | `MYSQL_CLIENT` | the pinned `mysql-client@8.4` binary | `jsql` |
 | `JEEVES_DB_COLOR` | `always` | `jsql` |
 
@@ -171,28 +184,29 @@ jsql dev-20/wallet 'SELECT ...'
 ```
 
 **Default:** connect to the database matching the **active service repo**, per
-this table (confirmed on dev-20; substitute the env number for `<n>`):
+this table (dev and preprod confirmed with `SHOW DATABASES`; prod from the
+production DMS config; substitute the env number for `<n>`):
 
-| Service repo | Database |
-| --- | --- |
-| wallet-service | `wallet_<n>` |
-| stablecoin-service | `stablecoin_<n>` |
-| accounting-service | `accounting_<n>` |
-| backend / monolith ("jeeves") | `develop_<n>` |
-| billpay-service | `billpay_<n>` |
-| cards-service | `cards_<n>` |
-| cashback-service | `cashback_<n>` |
-| lumen-engine | `lumen_<n>` |
-| ocr-service | `ocr_<n>` |
-| pricing-engine | `pricing_<n>` |
-| product-account-service | `product_account_<n>` |
-| public-api-service | `publicapi_<n>` |
-| risk-service | `risk_<n>` |
-| transactions-service | `transactions_<n>` |
-| underwriting-service | `underwriting_<n>` |
-| jeeves-ai | `aiservice_<n>` |
-| jumanji | `flows_<n>` |
-| TBD | `rfi_agent_<n>` |
+| Service repo | dev-NN | preprod | prod |
+| --- | --- | --- | --- |
+| wallet-service | `wallet_<n>` | `preprod_wallet` | `wallet` |
+| stablecoin-service | `stablecoin_<n>` | `preprod_stablecoin` | confirm with `SHOW DATABASES` |
+| accounting-service | `accounting_<n>` | `preprod_accounting` | `accounting` |
+| backend / monolith ("jeeves") | `develop_<n>` | `preprod` | `jeeves` |
+| billpay-service | `billpay_<n>` | `preprod_billpay` | `billpay` |
+| cards-service | `cards_<n>` | `preprod_cards` | `cards` |
+| cashback-service | `cashback_<n>` | `preprod_cashback` | `cashback` |
+| lumen-engine | `lumen_<n>` | `preprod_lumen` | `lumen` |
+| ocr-service | `ocr_<n>` | `preprod_ocr` | `ocr` |
+| pricing-engine | `pricing_<n>` | `preprod_pricing` | `pricing` |
+| product-account-service | `product_account_<n>` | `preprod_product_account` | `product_account` |
+| public-api-service | `publicapi_<n>` | `preprod_publicapi` | confirm with `SHOW DATABASES` |
+| risk-service | `risk_<n>` | `preprod_risk` | confirm with `SHOW DATABASES` |
+| transactions-service | `transactions_<n>` | `preprod_transactions` | `transactions` |
+| underwriting-service | `underwriting_<n>` | `preprod_underwriting` | `underwriting` |
+| jeeves-ai | `aiservice_<n>` | `preprod_aiservice` | confirm with `SHOW DATABASES` |
+| jumanji | `flows_<n>` | `preprod_flows` | `flows` |
+| rfi-agent-service | `rfi_agent_<n>` | `preprod_rfi_agent` | `rfi_agent` |
 
 **Determining the active repo in multi-root workspaces:**
 
@@ -227,8 +241,8 @@ Discover databases on any env with:
 jsql <env> 'SHOW DATABASES'
 ```
 
-preprod/prod schema names may differ from the `_<n>` dev convention — confirm
-there.
+On preprod this lists every env's databases on the shared host; pick the
+`preprod`-prefixed one from the table above.
 
 ## Building the query from documented schema
 
@@ -238,11 +252,11 @@ For these requests, go straight to the listed table and its ready-made query:
 
 | Request | Database | Table | Reference |
 | --- | --- | --- | --- |
-| Login OTP / MFA / verification code for a user | `develop_<n>` | `multifactor_action_code` | `references/schema/backend.md` → `multifactor_action_code` |
-| Company by name | `develop_<n>` | `companies` | `references/schema/backend.md` → `companies` |
-| User by email | `develop_<n>` | `users` | `references/schema/backend.md` → `users` |
-| Exchange rate | `develop_<n>` | `exchange_rates` | `references/schema/backend.md` → `exchange_rates` |
-| Feature flags enabled for a company | `develop_<n>` | `company_settings` | `references/schema/backend.md` → `company_settings` |
+| Login OTP / MFA / verification code for a user | `develop_<n>` | `multifactor_action_code` | `references/schema/develop.md` → `multifactor_action_code` |
+| Company by name | `develop_<n>` | `companies` | `references/schema/develop.md` → `companies` |
+| User by email | `develop_<n>` | `users` | `references/schema/develop.md` → `users` |
+| Exchange rate | `develop_<n>` | `exchange_rates` | `references/schema/develop.md` → `exchange_rates` |
+| Feature flags enabled for a company | `develop_<n>` | `company_settings` | `references/schema/develop.md` → `company_settings` |
 | Accounting integrations / connections (QBO, Xero, NetSuite via Codat) — which companies have one, their status | `accounting_<n>` | `integration` | `references/schema/accounting.md` → `integration` |
 
 A row is added when a request that didn't name its table had to be searched for
@@ -250,12 +264,18 @@ and the user approves the row (see step 3 below).
 
 ### Any other table
 
-Each service database has a schema-notes file at `references/schema/<service>.md`
-(service name matches the table above, e.g. `wallet.md`, `stablecoin.md` — one
-file per service, shared across its `_<n>` env variants). Before writing a query
-against a table:
+Each service database has a schema-notes file at `references/schema/<service>.md`,
+named after the dev database prefix — the `<service>` in `jsql dev-NN/<service>`
+(`wallet.md`, `product_account.md`, `develop.md` for the backend). One file per
+service covers its dev, preprod and prod databases.
 
-1. Read `references/schema/<service>.md` first. If it documents the table —
+These notes live in your clone of the plugin — read and write
+`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/mysql/references/schema/<service>.md`
+when that directory exists (it carries notes not yet released), else read this
+skill's own copy and report new notes to the user instead of writing them.
+Before writing a query against a table:
+
+1. Read the schema note first. If it documents the table —
    columns, types, enum values, date/timestamp format, notable FKs — build the
    query straight from that.
 2. If the file doesn't exist yet, or the table isn't documented there, discover
@@ -273,9 +293,10 @@ against a table:
    ```
 3. **Write the schema note in this same turn, before reporting results.** Any
    turn that ran `SHOW TABLES`, `DESCRIBE` or `SELECT DISTINCT` to learn a
-   table ends with that table documented in `references/schema/<service>.md`
-   (create the file if new). Resolve the path from this skill's base
-   directory. Append a section in this shape:
+   table ends with that table documented in the clone's
+   `skills/mysql/references/schema/<service>.md` (create the file if new),
+   left uncommitted — tell the user it is ready to review and push. Append a
+   section in this shape:
 
    ````markdown
    ## `<table>`
@@ -299,16 +320,17 @@ against a table:
    answers, e.g. "Accounting integrations / connections (QBO, Xero, NetSuite)
    — which companies have one, their status"; plus database and table) with options
    **Add to Common lookups** (Recommended) and **Skip**. On Add, write the row
-   in this same turn. The schema note itself is written either way.
+   into the clone's `skills/mysql/SKILL.md` in this same turn. The schema note itself is written either way.
 
 Each table then only has to be discovered once: later queries read the note
 instead of re-running `DESCRIBE`/`SELECT DISTINCT`.
 
 When a task needs data correlated across two service databases (e.g. a
 stablecoin deposit and the wallet top-up it produced), check
-`references/cross-service-links.md` first the same way — read it before
-guessing which columns line up, and append a new section there the first time a
-cross-service query is worked out.
+`references/cross-service-links.md` first the same way (the clone's copy when
+it exists) — read it before guessing which columns line up, and append a new
+section to the clone's copy the first time a cross-service query is worked
+out.
 
 ## Regenerating secret files
 

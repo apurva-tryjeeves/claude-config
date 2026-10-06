@@ -1,8 +1,10 @@
 # Schema notes
 
-One file per service (`wallet.md`, `stablecoin.md`, `develop.md`, ...), matching
-the service names in the main SKILL.md database table. Shared across that
-service's `_<n>` env variants, since dev/preprod/prod share the same schema.
+One file per service, named after its dev database prefix — the `<service>` in
+`jsql dev-NN/<service>` (`wallet.md`, `product_account.md`, `stablecoin.md`,
+`develop.md` for the backend). One file covers that service's dev, preprod and
+prod databases, which share the same schema. Write new notes in your clone of
+the plugin, as the mysql skill describes.
 
 Each file accumulates one section per documented table:
 

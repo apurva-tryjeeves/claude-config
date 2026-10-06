@@ -60,7 +60,8 @@ jenkins-api "job/<job>/<n>/api/json?tree=actions%5Bparameters%5Bname,value%5D%5D
 ```
 
 Set `JENKINS_API_DRYRUN=1` to print the URL a command would request instead of
-sending it.
+sending it; every subcommand, `queued` and `crumb` included, stops after that
+print.
 
 ## Name the build you mean
 
@@ -134,8 +135,10 @@ what the user does next.
 
 Icons, linking and value-rendering vocabulary live in the shared
 `../../references/output-style.md` — follow it rather than inventing a format.
-A Jenkins `result` maps straight onto it: `SUCCESS` ✅, `FAILURE` ❌,
-`UNSTABLE` ⚠️, `ABORTED` ⛔, building ⏳.
+A Jenkins `result` maps onto it: `SUCCESS` ✅, `FAILURE` ❌, `UNSTABLE` ⚠️,
+`ABORTED` ⛔, building ⏳. A deploy that ends `ABORTED` after `rollout status`
+and `Timeout has been exceeded` is a failed rollout, not a user abort — report
+it as ❌ and say so.
 
 **One build** — one line: icon, result, a clickable build link, and a
 human-readable duration.
@@ -156,11 +159,12 @@ It also accepts a single build object, so the same script formats a
 in a fenced block, then the root cause (a genuine code/config problem, or a
 concurrent-build race per `references/build-ops.md`):
 
-> ❌ **FAILURE** — [#44087](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/44087/) · 1m32s
+> ❌ **Rollout failed (ABORTED)** — [#45269](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/45269/) · 18m29s
 >
 > ```text
-> + kubectl rollout status deployment/api
+> + kubectl --namespace develop-04 rollout status deploy api --watch
 > error: deployment "api" exceeded its progress deadline
+> Timeout has been exceeded
 > ```
 >
 > The new `api` pod never became ready — an app issue in the deployed module.
@@ -172,8 +176,10 @@ from the timing table in `references/deploy-develop-environment.md`:
 
 When a deploy finishes and exactly one service was enabled, that build is a
 clean timing sample: merge it into that service's row in the timing table —
-widen min/max, add to the sample size — in the same turn, while the number is
-in hand.
+widen min/max, add to the sample size — in your clone of the plugin
+(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/references/deploy-develop-environment.md`),
+leave the change uncommitted and tell the user it is ready to review and push.
+When that directory is missing, report the sample instead.
 
 Keep the rest lean: name the failing step, and leave out the steps that
 succeeded, the URLs the user already has, `jenkins-api` usage examples, the

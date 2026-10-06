@@ -13,7 +13,7 @@ markdown shape, so a ticket matches what the team expects.
 | `SPIKE Template` | A timeboxed investigation answering an unknown | Context / Problem / Acceptance Criteria / Additional Details |
 | `User Story Template` | PM-driven feature work with a design dependency | Carries Figma, design/release timelines and design+product approvals |
 | `Customer Query (Template)` | A question routed in from a customer | |
-| `Design Issue` | Design work on a named component or page | Put the component/page name in the title |
+| `Design Issue - (add the component or page name here)` (id `abae0db6-5238-4171-b455-2f37f20a2ced`) | Design work on a named component or page | Workspace template; teams also carry their own `Design Issue Template`. Put the component/page name in the title |
 | `Bug_Template_Cards` | A cards-specific bug | Use over `Bug template` only for cards work |
 | `R2 Launch`, `R3 Test-a-Thon` | Launch and test-a-thon events | |
 

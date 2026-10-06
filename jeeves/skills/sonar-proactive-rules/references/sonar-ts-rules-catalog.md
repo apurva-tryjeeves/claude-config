@@ -1,10 +1,21 @@
-# SonarCloud "Sonar way" — full active TypeScript rule catalog (443 rules)
+# SonarCloud "Sonar way comprehensive" — active TypeScript rule catalog (471 rules)
 
-Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via API. Grep this file by rule id (e.g. `S6582`) or keyword when a Sonar issue cites a rule. Quality = RELIABILITY (bug), SECURITY (vuln/hotspot), MAINTAINABILITY (code smell).
+Source: SonarCloud org `jeevesinc`, quality profile `Sonar way comprehensive` (the org's default TypeScript profile, used by every Jeeves service), pulled 2026-10-06 from `api/rules/search?activation=true`. Grep this file by rule id (e.g. `S6582`) or keyword when a Sonar issue cites a rule. Sections follow each rule's software quality: RELIABILITY (bug), SECURITY (vulnerability/hotspot), MAINTAINABILITY (code smell).
 
+Regenerate it when an issue cites a rule id missing here:
+
+```bash
+PROFILE=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualityprofiles/search?organization=jeevesinc&language=ts" \
+  | jq -r '.profiles[] | select(.isDefault) | .key')
+for p in 1 2; do
+  curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/rules/search?organization=jeevesinc&qprofile=$PROFILE&activation=true&ps=500&p=$p&f=name,impacts" \
+    | jq -r '.rules[] | "- `\(.key)` — \(.name)"'
+done
+```
 
 ## RELIABILITY
 
+- `typescript:S905` — Non-empty statements should change control flow or have at least one side-effect
 - `typescript:S1077` — Image, area, button with image and object elements should have an alternative text
 - `typescript:S1082` — Mouse events should have corresponding keyboard events
 - `typescript:S1090` — iFrames must have a title
@@ -54,7 +65,6 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S5856` — Regular expressions should be syntactically valid
 - `typescript:S5863` — Assertions should not be given twice the same argument
 - `typescript:S5868` — Unicode Grapheme Clusters should be avoided inside regex character classes
-- `typescript:S5973` — Tests should be stable
 - `typescript:S6080` — Disabling Mocha timeouts should be explicit
 - `typescript:S6323` — Alternation in regular expressions should not contain empty alternatives
 - `typescript:S6324` — Regular expressions should not contain control characters
@@ -64,7 +74,6 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S6435` — React "render" functions should return a value
 - `typescript:S6438` — Comments inside JSX expressions should be enclosed in curly braces
 - `typescript:S6439` — React components should not render non-boolean condition values
-- `typescript:S6440` — React Hooks should be properly called
 - `typescript:S6442` — React's useState hook should not be used directly in the render function or body of a component
 - `typescript:S6443` — React state setter function should not be called with its matching state variable
 - `typescript:S6523` — Optional chaining should not be used if returning "undefined" throws an error
@@ -72,34 +81,63 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S6638` — Binary expressions should not always return the same value
 - `typescript:S6671` — Literals should not be used for promise rejection
 - `typescript:S6679` — "Number.isNaN()" should be used to check for "NaN" value
-- `typescript:S6746` — In React "this.state" should not be mutated directly
 - `typescript:S6747` — JSX elements should not use unknown properties and attributes
-- `typescript:S6756` — "setState" should use a callback when referencing the previous state
+- `typescript:S6750` — The return value of "ReactDOM.render" should not be used
+- `typescript:S6757` — "this" should not be used in functional components
+- `typescript:S6761` — "children" and "dangerouslySetInnerHTML" should not be used together
 - `typescript:S6763` — "shouldComponentUpdate" should not be defined when extending "React.PureComponent"
+- `typescript:S6772` — Spacing between inline elements should be explicit
 - `typescript:S6788` — React's "findDOMNode" should not be used
 - `typescript:S6790` — String references should not be used
 - `typescript:S6791` — React legacy lifecycle methods should not be used
 - `typescript:S6807` — DOM elements with ARIA roles should have the required properties
 - `typescript:S6811` — DOM elements with ARIA role should only have supported properties
+- `typescript:S6821` — DOM elements with ARIA roles should have a valid non-abstract role
 - `typescript:S6822` — No redundant ARIA role
 - `typescript:S6823` — DOM elements with the `aria-activedescendant` property should be accessible via the tab key
 - `typescript:S6824` — No ARIA role or property for unsupported DOM elements
 - `typescript:S6825` — Focusable elements should not have "aria-hidden" attribute
+- `typescript:S6827` — Anchors should contain accessible content
+- `typescript:S6840` — DOM elements should use the "autocomplete" attribute correctly
+- `typescript:S6841` — "tabIndex" values should be 0 or -1
+- `typescript:S6842` — Non-interactive DOM elements should not have interactive ARIA roles
+- `typescript:S6843` — Interactive DOM elements should not have non-interactive ARIA roles
+- `typescript:S6845` — Non-interactive DOM elements should not have the `tabindex` attribute
+- `typescript:S6846` — DOM elements should not use the "accesskey" property
 - `typescript:S6847` — Non-interactive elements shouldn't have event handlers
+- `typescript:S6848` — Non-interactive DOM elements should not have an interactive handler
+- `typescript:S6850` — Heading elements should have accessible content
 - `typescript:S6851` — Images should have a non-redundant alternate description
+- `typescript:S6852` — Elements with an interactive role should support focus
 - `typescript:S6853` — Label elements should have a text label and an associated control
+- `typescript:S6859` — Imports should not use absolute paths
 - `typescript:S6958` — Literals should not be used as functions
 - `typescript:S6959` — "Array.reduce()" calls should include an initial value
-- `typescript:S7060` — Module should not import itself
+- `typescript:S7723` — Built-in constructors should be called consistently with or without "new"
 - `typescript:S7732` — "instanceof" should not be used with built-in objects
+- `typescript:S7733` — HTTP GET and HEAD requests should not include a request body
 - `typescript:S7736` — Negated expressions should not be used in equality checks
-- `typescript:S7739` — Objects should not have a "then" property
 - `typescript:S7758` — Unicode-aware string methods should be used for proper character handling
-- `typescript:S7767` — Bitwise operators should not be used to truncate numbers
-- `typescript:S8780` — Async test assertions should be awaited or returned
-- `typescript:S8784` — Assertions should be placed inside test cases or hooks
-- `typescript:S8785` — Test suite callbacks should be synchronous functions
-- `typescript:S905` — Non-empty statements should change control flow or have at least one side-effect
+- `typescript:S7773` — Number static methods and properties should be preferred over global equivalents
+- `typescript:S7781` — Strings should use "replaceAll()" instead of "replace()" with global regex
+- `typescript:S8951` — Vue component props should not be mutated directly
+- `typescript:S8959` — UI test debug commands should not be committed to version control
+- `typescript:S8982` — HTML elements with v-for should have a :key attribute
+- `typescript:S8984` — Vue v-for directives should be valid
+- `typescript:S8988` — Side effects should not be performed inside Vue computed properties
+- `typescript:S8990` — Promises should not be passed to "fireEvent"
+- `typescript:S9011` — "<button>" elements should have a valid "type" attribute, explicitly set when associated with a "<form>"
+- `typescript:S9019` — Vue refs should not be used as operands
+- `typescript:S9025` — Asynchronous actions should not be used in Vue computed properties
+- `typescript:S9107` — Vue component prop types should be constructors
+- `typescript:S9114` — Lodash and Underscore.js debounced or throttled functions should not be recreated on every React render
+- `typescript:S9115` — Promises returned by Testing Library async events should be handled
+- `typescript:S9128` — Vue component field names should not be duplicated
+- `typescript:S9153` — Testing Library disappearance waits should use non-throwing queries
+- `typescript:S9163` — Reactive state should not be unconditionally mutated inside Vue's "updated" lifecycle hook
+- `typescript:S9379` — DOM elements should not use the "autofocus" attribute
+- `typescript:S9380` — The "scope" attribute should only be used on "th" elements
+- `typescript:S9383` — Promises should not be left unhandled
 
 ## SECURITY
 
@@ -153,6 +191,7 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S1313` — IP addresses should not be hardcoded
 - `typescript:S1523` — Dynamic code execution should not use user-controlled data
 - `typescript:S2068` — Credentials should not be hard-coded
+- `typescript:S2077` — SQL queries should not be dynamically formatted
 - `typescript:S2092` — Cookies should have the "secure" flag
 - `typescript:S2245` — Pseudorandom number generators (PRNGs) should not be used in security contexts
 - `typescript:S2598` — File uploads should be restricted
@@ -206,6 +245,7 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S6418` — Secrets should not be hard-coded
 - `typescript:S6437` — Credentials should not be hard-coded
 - `typescript:S7639` — Wallet phrases should not be hard-coded
+- `typescript:S7790` — Templates should not be constructed dynamically
 - `typescript:S8441` — Static Assets should not serve session cookies
 - `typescript:S8479` — DOMPurify configuration should not be bypassable
 
@@ -219,9 +259,12 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `tsarchitecture:S8484` — Architecture directive to move a component should be applied
 - `tsarchitecture:S8487` — Relationships should align with the interface design of the intended architecture
 - `typescript:S101` — Class names should comply with a naming convention
-- `typescript:S1068` — Unused private class members should be removed
 - `typescript:S107` — Functions should not have too many parameters
 - `typescript:S108` — Nested blocks of code should not be left empty
+- `typescript:S128` — Switch cases should end with an unconditional "break" statement
+- `typescript:S878` — Comma operator should not be used
+- `typescript:S888` — Equality operators should not be used in "for" loop termination conditions
+- `typescript:S1068` — Unused private class members should be removed
 - `typescript:S1119` — Labels should not be used
 - `typescript:S1121` — Assignments should not be made from within sub-expressions
 - `typescript:S1125` — Boolean literals should not be used in comparisons
@@ -232,7 +275,6 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S1199` — Nested code blocks should not be used
 - `typescript:S1219` — "switch" statements should not contain non-case labels
 - `typescript:S1264` — A "while" loop should be used instead of a "for" loop
-- `typescript:S128` — Switch cases should end with an unconditional "break" statement
 - `typescript:S1301` — "if" statements should be preferred over "switch" when simpler
 - `typescript:S1314` — Octal values should not be used
 - `typescript:S1439` — Only "while", "do", "for" and "switch" statements should be labelled
@@ -250,7 +292,6 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S1940` — Boolean checks should not be inverted
 - `typescript:S1994` — "for" loop increment clauses should modify the loops' counters
 - `typescript:S2004` — Functions should not be nested too deeply
-- `typescript:S2077` — SQL queries should not be dynamically formatted
 - `typescript:S2094` — Classes should not be empty
 - `typescript:S2187` — Test files should contain at least one test case
 - `typescript:S2234` — Parameters should be passed in the correct order
@@ -265,7 +306,7 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S2699` — Tests should include assertions
 - `typescript:S2737` — "catch" clauses should do more than rethrow
 - `typescript:S2870` — "delete" should not be used on arrays
-- `typescript:S2925` — Fixed waits and debug commands should not be used in tests
+- `typescript:S2925` — Fixed waits should not be used in tests
 - `typescript:S2933` — Fields that are only assigned in the constructor should be "readonly"
 - `typescript:S2970` — Assertions should be complete
 - `typescript:S2990` — The global "this" object should not be used
@@ -303,8 +344,8 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S5860` — Names of regular expressions named groups should be used
 - `typescript:S5869` — Character classes in regular expressions should not contain the same character twice
 - `typescript:S5906` — The most specific assertion should be used
-- `typescript:S5914` — Assertions should not fail or succeed unconditionally
 - `typescript:S5958` — Tests should check which exception is thrown
+- `typescript:S5973` — Tests should be stable
 - `typescript:S5976` — Similar tests should be grouped in a single Parameterized test
 - `typescript:S6019` — Reluctant quantifiers in regular expressions should be followed by an expression that can't match the empty string
 - `typescript:S6035` — Single-character alternations in regular expressions should be replaced with character classes
@@ -352,34 +393,22 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S6661` — Object spread syntax should be used instead of "Object.assign"
 - `typescript:S6666` — Spread syntax should be used instead of "apply()"
 - `typescript:S6676` — Calls to ".call()" and ".apply()" methods should not be redundant
+- `typescript:S6746` — In React "this.state" should not be mutated directly
 - `typescript:S6749` — Redundant JSX fragments should be removed
-- `typescript:S6750` — The return value of "ReactDOM.render" should not be used
 - `typescript:S6754` — The return value of "useState" should be destructured and named symmetrically
-- `typescript:S6757` — "this" should not be used in functional components
+- `typescript:S6756` — "setState" should use a callback when referencing the previous state
 - `typescript:S6759` — React props should be read-only
-- `typescript:S6761` — "children" and "dangerouslySetInnerHTML" should not be used together
 - `typescript:S6767` — Unused React typed props should be removed
 - `typescript:S6770` — User-defined JSX components should use Pascal case
-- `typescript:S6772` — Spacing between inline elements should be explicit
 - `typescript:S6775` — All "defaultProps" should have non-required PropTypes
 - `typescript:S6789` — React's "isMounted" should not be used
 - `typescript:S6819` — Prefer tag over ARIA role
-- `typescript:S6821` — DOM elements with ARIA roles should have a valid non-abstract role
-- `typescript:S6827` — Anchors should contain accessible content
 - `typescript:S6836` — "case" and "default" clauses should not contain lexical declarations
-- `typescript:S6840` — DOM elements should use the "autocomplete" attribute correctly
-- `typescript:S6841` — "tabIndex" values should be 0 or -1
-- `typescript:S6842` — Non-interactive DOM elements should not have interactive ARIA roles
-- `typescript:S6843` — Interactive DOM elements should not have non-interactive ARIA roles
-- `typescript:S6845` — Non-interactive DOM elements should not have the `tabIndex` property
-- `typescript:S6846` — DOM elements should not use the "accesskey" property
-- `typescript:S6848` — Non-interactive DOM elements should not have an interactive handler
-- `typescript:S6850` — Heading elements should have accessible content
-- `typescript:S6852` — Elements with an interactive role should support focus
-- `typescript:S6859` — Imports should not use absolute paths
 - `typescript:S6861` — Mutable variables should not be exported
 - `typescript:S6957` — Deprecated React APIs should not be used
 - `typescript:S7059` — Constructors should not contain asynchronous operations
+- `typescript:S7060` — Module should not import itself
+- `typescript:S7503` — Async functions should use async features
 - `typescript:S7641` — Angular lifecycle methods should be used in the correct context
 - `typescript:S7647` — Empty Angular lifecycle methods should be removed
 - `typescript:S7649` — Input bindings should not be aliased
@@ -392,15 +421,14 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S7720` — Ternary expressions in array spreads should use consistent types
 - `typescript:S7721` — Functions should be moved to the highest possible scope
 - `typescript:S7722` — Built-in error objects should have meaningful messages
-- `typescript:S7723` — Built-in constructors should be called consistently with or without "new"
 - `typescript:S7724` — ESLint disable comments should specify which rules to disable
 - `typescript:S7725` — Getters and setters should not recursively access the same property
 - `typescript:S7726` — Default exports should be named
 - `typescript:S7727` — Function references should not be passed directly to iterator methods
 - `typescript:S7729` — Array method callbacks should not use the "thisArg" parameter
-- `typescript:S7733` — HTTP GET and HEAD requests should not include a request body
 - `typescript:S7734` — Default imports and exports should use the dedicated syntax
 - `typescript:S7737` — Objects should not be used as default parameters
+- `typescript:S7739` — Objects should not have a "then" property
 - `typescript:S7740` — Variables should not be assigned the value of "this"
 - `typescript:S7741` — "typeof" should not be used to check for "undefined"
 - `typescript:S7742` — Polyfills should not be used when native support is available in target environments
@@ -424,33 +452,43 @@ Source: SonarCloud org `jeevesinc`, profile `Sonar way` (default), pulled via AP
 - `typescript:S7763` — Re-exports should use "export...from" syntax
 - `typescript:S7765` — Existence checks should use ".includes()" instead of ".indexOf()" or ".lastIndexOf()"
 - `typescript:S7766` — Ternary expressions should be replaced with "Math.min()" or "Math.max()" for simple comparisons
+- `typescript:S7767` — Bitwise operators should not be used to truncate numbers
 - `typescript:S7769` — Modern Math APIs should be used instead of legacy mathematical expressions
 - `typescript:S7770` — Wrapper functions around built-in type conversion functions should be avoided
 - `typescript:S7771` — Negative indices should be used instead of length calculations
 - `typescript:S7772` — Node.js built-in modules should be imported using the "node:" protocol
-- `typescript:S7773` — Number static methods and properties should be preferred over global equivalents
 - `typescript:S7774` — Methods should be accessed from prototypes, not instances
 - `typescript:S7776` — Arrays used only for existence checks should be Sets
 - `typescript:S7777` — Set size should be accessed directly instead of converting to array first
 - `typescript:S7778` — Multiple consecutive calls to methods that accept multiple arguments should be combined
 - `typescript:S7780` — String literals with escaped backslashes should use `String.raw` template literals
-- `typescript:S7781` — Strings should use "replaceAll()" instead of "replace()" with global regex
 - `typescript:S7783` — "trimLeft()" and "trimRight()" should be replaced with "trimStart()" and "trimEnd()"
 - `typescript:S7784` — "structuredClone()" should be used instead of other deep cloning methods
 - `typescript:S7785` — Top-level await should be preferred over promise chains and async wrappers
 - `typescript:S7786` — Generic "Error" should be "TypeError" when thrown after type checking
-- `typescript:S7790` — Templates should not be constructed dynamically
 - `typescript:S8754` — Test titles should be unique within the same suite
-- `typescript:S878` — Comma operator should not be used
+- `typescript:S8780` — Async test assertions should be awaited or returned
 - `typescript:S8781` — Test and suite titles should not be empty or whitespace-only
 - `typescript:S8782` — Lifecycle hooks should not be interleaved with test cases or nested suites
 - `typescript:S8783` — Forced browser interactions should not bypass actionability checks
-- `typescript:S888` — Equality operators should not be used in "for" loop termination conditions
+- `typescript:S8784` — Assertions should be placed inside test cases or hooks
+- `typescript:S8785` — Tests should not be registered asynchronously in suite callbacks
 - `typescript:S8907` — Native APIs should be preferred over Lodash and Underscore.js methods
 - `typescript:S8927` — Default imports from modular utility libraries should not be used
 - `typescript:S8932` — Lodash and Underscore.js `memoize` calls on functions with multiple parameters should use an explicit cache key function
 - `typescript:S8950` — Vue props with a default value should not be required
-- `typescript:S8951` — Vue component props should not be mutated directly
 - `typescript:S8957` — Vue component props should declare a type
 - `typescript:S8961` — Vue component events should be explicitly declared
-- `typescript:S8962` — Vue ref and shallowRef calls should be typed
+- `typescript:S8967` — Inline snapshots should not contain interpolations
+- `typescript:S8968` — Tests should be skipped explicitly
+- `typescript:S8981` — Regular expressions used in Testing Library queries should not have the global flag
+- `typescript:S8998` — Parameterized tests should not have empty datasets
+- `typescript:S9027` — Testing Library queries should match presence assertions
+- `typescript:S9072` — Synchronous exception assertions should receive synchronous callbacks
+- `typescript:S9078` — Parameterized tests should not contain duplicate test cases
+- `typescript:S9145` — Vue components should not use the deprecated "vue-class-component" or "vue-property-decorator" libraries
+- `typescript:S9150` — Vue components should not use mixins
+- `typescript:S9162` — Cypress assertions should be retryable
+- `typescript:S9169` — vi.mock should be declared at module scope
+- `typescript:S9333` — Synchronous Testing Library queries should not be awaited
+- `typescript:S9382` — Promises should not be awaited sequentially in a loop

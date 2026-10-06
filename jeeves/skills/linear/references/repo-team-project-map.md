@@ -5,8 +5,9 @@ resolving team/project for a repo — it skips a live `list_teams`/
 `list_projects` round-trip for a repo already seen, and skips re-asking the
 user something they already answered once.
 
-One row per repo. Add a new row the first time a repo's team/project is
-resolved (by user confirmation, not a guess); add a new project to an
+One row per repo, edited in your clone of the plugin (see the linear skill). Add
+a new row the first time a repo's team/project is resolved (by user
+confirmation, not a guess); add a new project to an
 existing repo's row when the repo starts appearing under a different active
 project. Don't remove an old project when a new one appears — a repo can
 have work tracked under more than one project over time; instead note which

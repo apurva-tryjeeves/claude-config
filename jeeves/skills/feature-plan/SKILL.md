@@ -15,11 +15,11 @@ This skill produces the plan those read from.
 
 ## Read these first
 
-- **DB access** → Skill `mysql` — the `jsql <env>/<service> '<sql>'` wrapper
+- **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
 - **Reusable queries** → `../../references/queries.md` — read it before
-  composing a query, and append a new one there in the same turn the user
-  shares one.
+  composing a query; when the user shares a new one, add it as that file
+  describes (to your clone of the plugin).
 - **GitHub** → `mcp__github__*`, or `gh` via Bash.
 
 ## Steps
@@ -28,8 +28,8 @@ This skill produces the plan those read from.
    spec and Linear ticket links when neither is given, then read them.
 2. **Scope the services.** Propose the microservices involved from the spec,
    then **ask the user to confirm** which are in scope before mapping anything.
-3. **Map the current state.** Fan out the **`service-investigator`** agent —
-   `subagent_type: "service-investigator"`, **one per confirmed service, all in
+3. **Map the current state.** Fan out the **`jeeves:service-investigator`** agent —
+   `subagent_type: "jeeves:service-investigator"`, **one per confirmed service, all in
    a single message** so they run in parallel. Give each the repo, the feature
    and any identifiers in play. Synthesize their maps yourself.
 4. **Data shape.** Connect to a **dev-xx** database (ask which env) and inspect

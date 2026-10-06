@@ -8,17 +8,20 @@ description: Trace one JeevesInc transaction end to end — its rows in the wall
 Trace one transaction across Jeeves services and produce a single chronological
 timeline.
 
-| Environment | DB access | Logs |
+| Environment | Wallet / transactions / product-account databases | Logs |
 | --- | --- | --- |
-| prod | `jsql prod/<database> '<sql>'` | `mcp__opensearch-prod__*` |
-| preprod | `jsql preprod/<database> '<sql>'` | `mcp__opensearch-dev__*` |
-| dev-01…dev-20 | `jsql dev-NN/<service> '<sql>'` | `mcp__opensearch-dev__*` |
+| prod | `jsql prod/wallet`, `prod/transactions`, `prod/product_account` | `mcp__opensearch-prod__*` |
+| preprod | `jsql preprod/preprod_wallet`, `preprod/preprod_transactions`, `preprod/preprod_product_account` | `mcp__opensearch-dev__*` |
+| dev-01…dev-20 | `jsql dev-NN/wallet`, `dev-NN/transactions`, `dev-NN/product_account` | `mcp__opensearch-dev__*` |
 
 - **Read-only throughout** — keep every query a `SELECT`.
-- **DB rules** → Skill `mysql`, for the wrapper and per-service database selection.
-- **Log rules** → Skill `opensearch`, for indices, fields and query patterns.
-- **Column names** → read `mysql`'s `references/schema/<service>.md` before
-  composing a query, and append what you discover there in the same turn.
+- **DB rules** → Skill `jeeves:mysql`, for the wrapper and per-service database selection.
+- **Log rules** → Skill `jeeves:opensearch`, for indices, fields and query patterns.
+- **Column names** → read `jeeves:mysql`'s `references/schema/<service>.md`
+  (`wallet.md`, `product_account.md`) before composing a query, and record
+  what you discover the way that skill describes (in your clone of the plugin).
+- **Reusable queries** → `../../references/queries.md` — read it before
+  composing a query.
 - **Expired credentials** — prod log queries returning empty or unauthorized
   usually mean a stale SSO session:
   ```bash
@@ -27,13 +30,22 @@ timeline.
 
 ## Establish the inputs
 - **Transaction id** — usually a UUID, taken from the request. Ask for it when none is given.
-- **Environment** — `dev-NN`, `preprod` or `prod`. When the request names one, use it for every query; otherwise ask via `AskUserQuestion`, offering the workspace repos' envs first.
-- **Target** — on dev, name the service (`dev-20/wallet`); the wrapper appends the env number. On preprod and prod, name the full database.
+- **Environment** — `dev-NN`, `preprod` or `prod`. When the request names one, use it for every query. Otherwise ask via `AskUserQuestion` with four options: `prod`, `preprod`, the dev-NN named earlier in the conversation (or `dev-20`), and "Other dev env". On "Other dev env", ask in plain text for the number.
+- **Target** — use the database names from the table above for every query.
 
 ## Gather (query each in parallel where possible)
-1. **wallet_<n>** — the wallet transaction and its sub-transactions, provider references, and status. Search by the id, then by any provider reference ids that turn up.
-2. **transactions_<n>** — the universal transaction row(s) and status history tied to this id.
-3. **product_account_<n>** — related ledger entries and balance movements.
+The id usually matches on `id` or on the transaction reference id, which all three databases carry:
+
+| Database | Table | Match the id on | Also read |
+| --- | --- | --- | --- |
+| wallet | `wallet_transactions` | `id`, `transactionReferenceId`, `parentTransactionReferenceId` | `walletInstrumentId`, `transactionTypeTag`, `transactionStatus`, amounts |
+| wallet | `wallet_sub_transactions` | `walletTransactionId` = `wallet_transactions.id` | `sourceType`, `destinationType`, `transactionStatus`, `providerTransactionReferenceId`, `failureInfo` |
+| transactions | `ut_transactions` (snake_case columns) | `uuid`, `transaction_reference_id`, `parent_transaction_reference_id` | `transaction_status`, `internal_transaction_status`, `failure_reason` |
+| product_account | `product_accounts_ledger` | `transactionReferenceId`, `parentTransactionReferenceId` | `productAccountId`, `transactionStatus`, `internalTransactionStatus`, `failureReason` |
+
+1. **wallet** — the wallet transaction and its sub-transactions, provider references, and status. Search by the id, then by any provider reference ids that turn up.
+2. **transactions** — the universal transaction row(s) in `ut_transactions` tied to this id.
+3. **product_account** — related ledger entries in `product_accounts_ledger`.
 4. **Logs** — `match_phrase` the id in the `log` field over a sensible `@timestamp` window (widen it when empty), scoped by `app_name.keyword` to the wallet, transaction and product-account services. Use the MCP server for the env from the table above. Surface errors and webhook receipts.
 
 ## Report

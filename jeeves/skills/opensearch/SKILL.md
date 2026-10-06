@@ -30,7 +30,7 @@ All Jeeves services ship app logs into **daily indices `logs-YYYY.MM.DD`**
 ### Key fields
 
 - `@timestamp` — for a date-range filter.
-- `app_name` / `app_name.keyword` — the emitting process, named `<service>-<role>`. Examples: `accounting-api`, `accounting-worker`, `accounting-jobexecutor` (wallet/stablecoin/etc. use their own `*-api` / `*-worker` names). Filter on `.keyword` to scope to one service.
+- `app_name` / `app_name.keyword` — the emitting pod's `app` label, taken from each service's deployment names in `jenkins-library` `vars/jeevesPlatformInfo.groovy`. Examples: `accounting-api`, `accounting-worker`, `accounting-jobexecutor`, `wallet-api`, `wallet-worker`, `stablecoin-service`, `stablecoin-service-worker`, `stablecoin-service-cron`. Filter on `.keyword` to scope to one service.
 - `log` — text field holding the full JSON log line **and** raw SQL.
 - `pid` — set by the application logger, absent from OpenTelemetry SDK lines.
 - `traceId` / `trace_id` and `jeeves_trace_id` — two distinct per-request correlation ids, present on request/response-cycle logs (absent on background jobs, startup logs, etc). Both persist identically across every service a single request touches — group by either to pull the whole cross-service chain for one request in a single query, no need to query service-by-service.
@@ -69,7 +69,7 @@ Example, via `mcp__opensearch-prod__SearchIndexTool`:
           { "match_phrase": { "log": "<transaction-uuid>" } },
           { "range": { "@timestamp": { "gte": "2026-06-30T00:00:00Z", "lte": "2026-06-30T23:59:59Z", "format": "strict_date_optional_time||epoch_millis" } } }
         ],
-        "filter": [{ "term": { "app_name.keyword": "wallet-service-api" } }]
+        "filter": [{ "term": { "app_name.keyword": "wallet-api" } }]
       }
     }
   }
@@ -80,7 +80,7 @@ Example, via `mcp__opensearch-prod__SearchIndexTool`:
 
 **Large result sets** get written to a file with very long lines, which the Read tool would otherwise truncate. Parse it instead with a Python heredoc slicing the JSON.
 
-For a service's DB tables, use the `jsql` wrapper with that service's database (see the `mysql` skill).
+For a service's DB tables, use the `jsql` wrapper with that service's database (see the `jeeves:mysql` skill).
 
 ### Report search findings
 
@@ -88,7 +88,7 @@ Icons, linking and value-rendering vocabulary live in the shared
 `../../references/output-style.md` — follow it rather than inventing a format.
 
 - **Lead with a verdict line** — icon, what was found, the hit count, and the
-  window searched. Example: `❌ 43 hits — wallet-service-worker, 6 Aug 00:00–23:59`.
+  window searched. Example: `❌ 43 hits — wallet-worker, 6 Aug 00:00–23:59`.
 - **Quote only the lines that carry the meaning** in a fenced block, with the
   surrounding log left out. Prefix each with its human timestamp.
 - **Group many similar hits** into a counts table keyed by what distinguishes
@@ -107,6 +107,10 @@ window that hit the result-size cap so the counts are a floor.
 Monitors and notification channels are cluster config, held in OpenSearch rather
 than in a repo. The MCP tools read logs only, so reach the Alerting API with
 `awscurl --service es`, which signs each request with SigV4.
+
+Before any create, update, delete or `_execute`, state the cluster, the monitor
+(name and id) and the action, and get the user's go-ahead — these change shared
+alerting and can post to Slack.
 
 Read `references/alerting-api.md` before creating, updating, listing or deleting
 a monitor, wiring a Slack channel, or deep-linking an alert into Discover. It

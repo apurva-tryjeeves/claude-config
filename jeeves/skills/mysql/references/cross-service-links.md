@@ -29,3 +29,19 @@ cross-service query is worked out. Format:
 - Query pattern: <the cross-schema JOIN, or note if this env's services are on
   separate hosts and it needs two `jsql` calls instead>
 ```
+
+## Dual-written LOC ledger row ↔ accounting transaction
+
+- `product_account.product_accounts_ledger.transactionReferenceId` ↔ `accounting.transaction.transactionReferenceId`, filtered to `pal.source = "transactions"`
+- Card spends: `pal.transactionReferenceId` = `cards.card_transactions.id` = `jeeves.transactions.syncKey`. The LOC accounting row to keep has `transactionReferenceId = jeeves.transactions.uuid`, and the SELF_FUNDED row is the duplicate
+- Card refunds whose `jeeves.transactions.transactionStatus = "refunded"` have no LOC accounting row, since `loc-card-transactions.sql` imports `completed` only
+- Adjustments: `pal.transactionReferenceId` = `jeeves.transactions.uuid`, so LOC and SELF_FUNDED share one reference id. Accounting holds a single row
+- Card fees: `accounting.transaction.transactionReferenceId` = `cards.transaction_fees.id`, and `transaction_fees.transactionId` = `pal.transactionReferenceId`
+- Query pattern: one cross-schema `JOIN` on prod. `jeeves.transactions.syncKey` has no index (13M rows), so a bare `syncKey` join loses the connection (`ERROR 2013`). Join on `jt.companyId = <companyId> AND jt.syncKey = <id>` to use the `companyId` indexes, and run it in the background
+
+## Wallet ↔ product account ↔ bill-pay invoice
+
+- `wallet.wallet_instruments.id` ↔ `product_account.product_accounts.id` ↔ `billpay.invoices.paymentSourceId`
+- Match on: the shared id (one PK across all three)
+- Direction / lag: wallet ledger rows settle first; `product_accounts.accountBalance` reflects the settled `wallet_transactions` sum
+- Query pattern: same-host cross-schema `JOIN` on prod, or one `jsql` call per database

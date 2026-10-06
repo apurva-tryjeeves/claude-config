@@ -31,21 +31,25 @@ Fix the SonarCloud quality gate for a pull request end to end.
    | Gate conditions | `api/qualitygates/project_status?projectKey=<key>&pullRequest=<pr-number>` | Each condition's own `errorThreshold` — set per-project (e.g. `new_coverage` can require 50% on one project, 100% on another); treat this response as the source of truth for the actual number |
    | Open issues | `api/issues/search?componentKeys=<key>&pullRequest=<pr-number>&statuses=OPEN,CONFIRMED&ps=100` | Rule, component, line, message for each `CODE_SMELL`/`BUG`/`VULNERABILITY` |
    | Security hotspots | `api/hotspots/search?projectKey=<key>&pullRequest=<pr-number>&ps=100` | Findings behind a red `new_security_hotspots_reviewed` condition — a distinct SonarCloud concept, not returned by `issues/search` |
+   | Duplicated blocks | `api/measures/component?component=<key>&pullRequest=<pr-number>&metricKeys=new_duplicated_lines_density,new_duplicated_blocks` | The duplication figure behind a red `new_duplicated_lines_density` condition |
 
-3. **Fix each issue by rule.** Consult the `sonar-proactive-rules` skill (and its `references/sonar-ts-rules-catalog.md`) for what each rule id requires. Apply the minimal, behavior-preserving change (e.g. S7776 → `Set`+`.has()`, S6582 → optional chaining, S6606 → `??=`/`??`, S3776 → extract a helper — note `?.` and `??` each cost a cognitive-complexity point, so extraction, not just rewriting a condition, is what actually lowers S3776).
+3. **Fix each issue by rule.** Consult the `jeeves:sonar-proactive-rules` skill (and its `references/sonar-ts-rules-catalog.md`) for what each rule id requires. Apply the minimal, behavior-preserving change (e.g. S7776 → `Set`+`.has()`, S6582 → optional chaining, S6606 → `??=`/`??`, S3776 → extract a helper — note `?.` and `??` each cost a cognitive-complexity point, so extraction, not just rewriting a condition, is what actually lowers S3776).
 
 4. **Fix coverage-on-new-code failures.** When the `new_coverage` condition is red (below the `errorThreshold` read in step 2): run the repo's tests with coverage and find the uncovered new lines. If the file is a bootstrap/entry point already in jest.config `coveragePathIgnorePatterns` (e.g. `start-*.ts`, `main.ts`, `server.ts`, barrels), add it to `sonar.coverage.exclusions` in `sonar-project.properties` (keep the two lists in sync). Otherwise, add tests until coverage on the new/changed lines clears that project's actual threshold.
 
-5. **Verify locally** before committing:
+   **Fix duplication failures.** When `new_duplicated_lines_density` is red, extract the repeated new code into a shared helper. For generated code or test fixtures, add their paths to `sonar.cpd.exclusions` in `sonar-project.properties` instead.
+
+5. **Verify locally** before committing, with the repo's own tooling:
    ```bash
-   npx tsc --noEmit
+   [ -f tsconfig.json ] && npx tsc --noEmit
    npx eslint <changed files>
+   npm run   # lists the repo's scripts; pick its test/coverage script
    ```
-   Run `eslint --fix` for pure formatting, then run the repo's test command with coverage — confirm all tests pass and coverage on changed files clears the threshold from step 2.
+   Run `eslint --fix` for pure formatting, then run the repo's test script with coverage (jest in most services, mocha in `backend`) — confirm all tests pass and coverage on changed files clears the threshold from step 2.
 
-6. **Commit exactly the files you edited**, staged explicitly by path (leave `*.postman_collection.json` unstaged if it appears among changes). Follow the `git-preferences` skill for commit message style and the co-author trailer.
+6. **Commit exactly the files you edited**, staged explicitly by path (leave `*.postman_collection.json` unstaged if it appears among changes). Follow the `jeeves:git-preferences` skill for commit message style and the co-author trailer.
 
-7. **Push** the branch, then follow the `git-preferences` skill's Checks poller section (per-repo cadence from its `references/ci-check-timing.md`, `gh pr view <pr-number> --json statusCheckRollup` polling, `ScheduleWakeup` dynamic loop) until the SonarCloud check reaches a terminal state, and report pass/fail. A one-line rewrite that "should" fix S3776 sometimes doesn't (the `?.`/`??` cost cancels it out) — re-read the gate (step 2) and iterate against the live result rather than trusting local reasoning about whether a fix worked.
+7. **Push** once the user confirms — show the branch and the commit(s) first. Then follow the `jeeves:git-preferences` skill's PR Post-Create Polling section: ask which poller(s) to start, and for the Checks poller use its per-repo cadence and stop rule until the `SonarCloud Code Analysis` check reaches a terminal state, then report pass/fail. A one-line rewrite that "should" fix S3776 sometimes doesn't (the `?.`/`??` cost cancels it out) — re-read the gate (step 2) and iterate against the live result rather than trusting local reasoning about whether a fix worked.
 
 ## Notes
 - SonarCloud projects here are private: the GitHub check annotations carry locations but NOT rule messages — the API (with the token) is the only reliable source of the actual issue text.

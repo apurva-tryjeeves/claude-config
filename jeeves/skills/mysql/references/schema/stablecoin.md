@@ -1,6 +1,8 @@
 # stablecoin-service schema notes
 
-Applies to `stablecoin_<n>` (dev), `stablecoin` (preprod/prod).
+| dev-NN | preprod | prod |
+| --- | --- | --- |
+| `stablecoin_<n>` | `preprod_stablecoin` | confirm with `jsql prod 'SHOW DATABASES'` |
 
 ## stablecoin_webhook_events
 
@@ -10,7 +12,7 @@ Outbound event log — the events actually sent to webhook subscribers.
 | --- | --- | --- |
 | id | char(36) PK | |
 | eventId | varchar(40), unique | |
-| eventType | enum | `customer.updated`, `transfer.created`, `transfer.completed`, `transfer.failed`, `deposit.received` |
+| eventType | enum | `customer.updated`, `transfer.created`, `transfer.completed`, `transfer.failed`, `deposit.received`, `deposit.travel_rule.state_changed` |
 | eventCategory | enum | `customer`, `transfer`, `deposit` |
 | eventObjectId | varchar(255) | id of the related object (customer/transfer/deposit) |
 | eventObjectStatus | varchar(255), nullable | |

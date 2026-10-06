@@ -1,6 +1,8 @@
 # backend (monolith / "jeeves")
 
-Dev/preprod database: `develop_<n>` (e.g. `develop_01`). **Prod database name differs from the `_<n>` convention: it's just `jeeves`.**
+| dev-NN | preprod | prod |
+| --- | --- | --- |
+| `develop_<n>` (e.g. `develop_01`) | `preprod` | `jeeves` |
 
 ## `exchange_rates`
 
@@ -30,8 +32,8 @@ WITH ranked AS (
 )
 SELECT sourceAlphaCode, destinationCurrencyAlphaCode, rates, createdAt
 FROM ranked
-WHERE rn = 1 AND sourceAlphaCode = 'USD'
-ORDER BY destinationCurrencyAlphaCode;
+WHERE rn = 1 AND sourceAlphaCode = "USD"
+ORDER BY destinationCurrencyAlphaCode
 ```
 
 Note: rows are historical snapshots from whenever a cron last wrote them — some pairs (e.g. USD->ARS) can be years stale, since the value only updates when that cron actually runs for that pair. Not a live/current-rate source, treat as "last known" only.
@@ -76,9 +78,9 @@ Find a user's current login OTP by email:
 SELECT m.id, m.userId, u.email, m.code, m.actionType, m.status, m.notificationType, m.validUntil, m.createdAt
 FROM multifactor_action_code m
 JOIN users u ON u.id = m.userId
-WHERE u.email = '<email>' AND m.actionType = 'USER_LOGIN'
+WHERE u.email = "<email>" AND m.actionType = "USER_LOGIN"
 ORDER BY m.createdAt DESC
-LIMIT 5;
+LIMIT 5
 ```
 
 By `userId`:
@@ -86,9 +88,9 @@ By `userId`:
 ```sql
 SELECT id, userId, code, actionType, status, notificationType, validUntil, createdAt
 FROM multifactor_action_code
-WHERE userId = <userId> AND actionType = 'USER_LOGIN'
+WHERE userId = <userId> AND actionType = "USER_LOGIN"
 ORDER BY createdAt DESC
-LIMIT 5;
+LIMIT 5
 ```
 
 Only trust a row where `status = 'active'` and `validUntil` is still in the
@@ -112,7 +114,7 @@ Find a company by name:
 ```sql
 SELECT id, uuid, name, status, isTest, createdAt
 FROM companies
-WHERE name LIKE '%term%';
+WHERE name LIKE "%term%"
 ```
 
 ## `users`
@@ -156,8 +158,8 @@ SELECT companyId, settingKey, settingValue, updatedAt
 FROM company_settings
 WHERE companyId = <companyId>
   AND deletedAt IS NULL
-  AND settingValue = 'on'
-ORDER BY settingKey;
+  AND settingValue = "on"
+ORDER BY settingKey
 ```
 
 ## Prod connection note

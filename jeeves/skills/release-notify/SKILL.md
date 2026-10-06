@@ -8,7 +8,7 @@ description: Draft and post Slack status updates (branch cut-off, deployment in 
 | Slack target | Resolve with | Used for |
 |---|---|---|
 | Release captain's DM | `slack_read_user_profile` with no `user_id` — returns the current user's ID | Previewing a finalized draft's look and feel via DM before it goes public |
-| `#release-channel` | `$JEEVES_RELEASE_CHANNEL_ID` when set, else `C03E2MRJ8JG` | Default posting target for the real release updates |
+| `#deployments` | `$JEEVES_RELEASE_CHANNEL_ID` when set, else `C03E2MRJ8JG` (`#deployments`); read the channel's name from its ID with `slack_read_channel` before naming it to the user | Default posting target for the real release updates |
 
 Draft Slack updates for the three release-process milestones a Jeeves release
 captain announces: branch cut-off complete, deployment in progress, and
@@ -21,15 +21,16 @@ go-ahead each time, the same as any other send-on-someone's-behalf action.
 Ask for (or use, if already given in the conversation) the Notion release
 page URL for this release — these pages live under Engineering > Releases >
 `<Year> Releases` > `<Quarter>` > `<Month> Releases`, named like
-"29-July-2026 - Release" for a normal weekly release or
-"07-Aug-2026 - Hot-fix Release (accounting)" for a hotfix. Fetch it with
+"29-Jul-2026 - Release" for a normal weekly release or
+"07-Oct-2026 - Hotfix Release (accounting)" for a hotfix (`DD-Mon-YYYY`). Fetch it with
 `notion-fetch`.
 
 Pull three things from the page:
 
 - The release date, from the page title.
-- Whether this is a hotfix — the page title says "Hot-fix Release" instead
-  of plain "Release". This changes the header (see below).
+- Whether this is a hotfix — the page title matches `hot[- ]?fix`, case
+  insensitive ("Hotfix Release", "Hot-fix Release", "Hot fix Release"),
+  instead of plain "Release". This changes the header (see below).
 - The "Changed Repository" column of the Tickets table — this becomes the
   service list in every message.
 
@@ -86,7 +87,9 @@ when the release clearly has other stages too.
 
 🔗 *Release page:* <bare Notion URL, no angle brackets or pipe syntax>
 
-Every message opens with `@here` on its own line, then the header, using the
+Every message opens with a channel-wide mention on its own line — `@here` in a
+draft meant for pasting, `<!here>` in text sent through `slack_send_message`
+(the API only pings on `<!here>`) — then the header, using the
 header text for this release's type (weekly vs hotfix, from the page title
 check above):
 
@@ -138,9 +141,9 @@ above), so the release captain can catch problems before anything is sent.
 
 Once the release captain says a draft is final, ask with `AskUserQuestion`:
 "Want me to send this to your DM for preview first, or straight to
-#release-channel?" — swap in the actual target channel name (default
-`#release-channel`, see the table at the top) so the question names it out
-loud; other release captains use different channels, and even this user may
+#deployments?" — swap in the target channel's real name, read from its ID
+(default `#deployments`, see the table at the top), so the question names the
+channel the message will land in; other release captains use different channels, and even this user may
 want a different one for a particular release.
 
 For a DM preview, send that exact text with `slack_send_message` to

@@ -127,7 +127,8 @@ the Slack connector at claude.ai → Settings → Connectors.
 | `~/.config/jeeves/jenkins/dev.env` | `jenkins` | Create by hand — see below |
 | `SONAR_TOKEN` | `sonar-fix` | sonarcloud.io → My Account → Security → generate a token, then `export SONAR_TOKEN=…` in `~/.zshrc` |
 | `JEEVES_REPOS_DIR` (optional) | `jenkins` | Where your repo checkouts live; defaults to `~/github/JeevesInc` |
-| `JEEVES_RELEASE_CHANNEL_ID` (optional) | `release-notify` | Overrides the default `#release-channel` id |
+| `JEEVES_RELEASE_CHANNEL_ID` (optional) | `release-notify` | Overrides the default `#deployments` channel id |
+| `JEEVES_PLUGIN_SRC` (optional) | skills that record what they learn | Your clone of this repo; defaults to `~/github/apurva-tryjeeves/claude-config` — see Contributing |
 
 **`prod.env`** — copy the prod read-replica credentials from Keeper into the
 same format the pull writes:
@@ -191,19 +192,18 @@ Several skills record facts they discover back into their own files:
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
 | `notion-templates` | `skills/notion-templates/references/release-page.md` |
 
-Claude Code clones the marketplace to `~/.claude/plugins/marketplaces/jeeves-local`
-and runs the plugin from a versioned copy under
-`~/.claude/plugins/cache/jeeves-local/jeeves/<version>/`, so recorded facts stay
-there until the next version lands. To keep and share them, open a PR from your
-own clone of the repo:
+Claude Code runs the plugin from a versioned copy under
+`~/.claude/plugins/cache/jeeves-local/jeeves/<version>/`, which each update
+replaces, so skills write what they learn into your clone of this repo instead:
 
 ```bash
-git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/claude-config
-cd ~/github/claude-config && git checkout -b <branch>
-diff -ru jeeves ~/.claude/plugins/cache/jeeves-local/jeeves/<version> --exclude .claude-plugin
+git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/apurva-tryjeeves/claude-config
 ```
 
-Copy the changed files the diff lists into `jeeves/`, bump `version` in
+Set `JEEVES_PLUGIN_SRC` when the clone lives elsewhere. Skills read the clone's
+copy of these files when it exists and leave their edits uncommitted there, and
+tell you when one is ready. Review it, bump `version` in
 `jeeves/.claude-plugin/plugin.json`, then commit, push and open a PR. Once it
 merges, `/plugin marketplace update jeeves-local` brings the new version to
-everyone.
+everyone. Without a clone, skills report the new fact and the edit they would
+make.

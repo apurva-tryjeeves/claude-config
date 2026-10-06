@@ -20,13 +20,13 @@ looser "I just deployed it, does it work?" pass.
 
 ## Read these first
 
-- **Logs** → Skill `opensearch` — indices, `@timestamp` / `app_name.keyword` /
+- **Logs** → Skill `jeeves:opensearch` — indices, `@timestamp` / `app_name.keyword` /
   `log` fields, the two trace ids, the `match_phrase` pattern.
-- **DB access** → Skill `mysql` — the `jsql <env>/<service> '<sql>'` wrapper
+- **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
 - **Reusable queries** → `../../references/queries.md` — read it before
-  composing a query, and append a new one there in the same turn the user
-  shares one.
+  composing a query; when the user shares a new one, add it as that file
+  describes (to your clone of the plugin).
 
 ## Steps
 
@@ -48,7 +48,7 @@ looser "I just deployed it, does it work?" pass.
    ```bash
    NODE_ENV=test npx jest <path>
    ```
-6. **Commit** following the `git-preferences` skill for message format and the
+6. **Commit** following the `jeeves:git-preferences` skill for message format and the
    co-author trailer. Push when the user asks, then follow that skill's Checks
    poller section for CI.
 

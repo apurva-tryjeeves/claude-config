@@ -8,15 +8,16 @@ description: Provision a wallet for an org directly via SQL in a Jeeves dev env 
 Seed a ready-to-use wallet for an org in a **dev** env: the wallet-instrument chain,
 optionally with a new product account, chained by a shared PK.
 
-| Env | Database names | Writes |
+| Env | Database names | Scope |
 | --- | --- | --- |
-| dev-01…dev-20 | `product_account_<n>`, `wallet_<n>`, `stablecoin_<n>` | Succeed |
-| preprod, prod | — | Read-only |
+| dev-01…dev-20 | `product_account_<n>`, `wallet_<n>`, `stablecoin_<n>` | Provision here |
+| preprod | `preprod_product_account`, `preprod_wallet` | Writes succeed, but out of scope — decline and point the user to the product flow |
+| prod | — | Read-only replica; out of scope |
 
 ## Read these first
 
-- **Schema** → `references/wallet-schema.md` — the table chain and shared PK, wallet-type values, where each provider stores its identity, the stablecoin `providerAccountDetails` shape, and column enums.
-- **DB access** → Skill `mysql` — the `jsql <env>/<service>` wrapper and the single-quoted multi-line form used here for anything longer than a short probe.
+- **Schema** → `references/wallet-schema.md` — the table chain and shared PK, wallet-type values, where each provider stores its identity, the JSS `providerAccountDetails` and linked-row shapes, and column enums.
+- **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service>` wrapper and the single-quoted multi-line form used here for anything longer than a short probe.
 
 ## Flow
 
@@ -42,8 +43,24 @@ Walk these in order, gathering answers before composing any query.
    Use the chosen row's `id` as `providerId`.
 
 4. **Fill the provider account identity** — this depends on the wallet type:
-   - **Stablecoin (JSS)** → build `providerAccountDetails` from the matching wallet in `stablecoin_<n>`, following the shape in the schema reference, and confirm the values with the user. Skip the linked-bank-account insert.
-   - **Fiat providers (Bridge, Qitech, Airwallex, …)** → confirm the bank details for the linked-bank-account row. Pull a real sample for that provider and ask if it's correct or needs editing:
+   - **Stablecoin (JSS)** → read the customer's wallet(s) in `stablecoin_<n>` and build `providerAccountDetails` (the `jss` shape) and one `topup` linked row per chain, following the schema reference. Ask the user for each chain's deposit address and its id, or copy them from an existing linked row for that wallet. Confirm the values with the user.
+     ```bash
+     jsql dev-NN/stablecoin '
+     SELECT id, customerId, asset, chain, status
+     FROM stablecoin_wallets
+     WHERE customerId = "<stablecoin customer id>" AND deletedAt IS NULL
+     '
+     ```
+   - **Fiat providers (Bridge, Qitech, Airwallex, STP, …)** → copy a real provider-account sample for that provider (its `providerAccountId` shape and `providerAccountDetails`), and the bank details for the linked-bank-account row. Pull both and ask if they're correct or need editing:
+     ```bash
+     jsql dev-NN/wallet '
+     SELECT pa.providerAccountId, pa.providerAccountDetails
+     FROM wallet_instrument_provider_accounts pa
+     WHERE pa.providerId = "<PROVIDER_ID>"
+     ORDER BY pa.createdAt DESC
+     LIMIT 1
+     '
+     ```
      ```bash
      jsql dev-NN/wallet '
      SELECT lba.bankAccountDetails
@@ -62,46 +79,69 @@ Walk these in order, gathering answers before composing any query.
      - companyId: `<companyId>`
      - productAccountId / walletInstrumentId (shared PK): `<SHARED>`
      - providerId: `<PROVIDER_ID>`
-     - providerAccountId (new): `<PROV_ACCT>`
-     - linkedBankAccountId (new, fiat only): `<LINKED_BANK>`
+     - wallet provider account row id (new): `<PROV_ACCT>`
+     - providerAccountId (provider's own id): `<PROVIDER_ACCT_ID>`
+     - linkedBankAccountId (new, one per linked row): `<LINKED_BANK>`
+     - providerLinkedBankAccountId (provider's id; JSS: deposit address id): `<PROV_LINKED>`
 
    Then print the full INSERT set (below) with all values filled in. Run them only after the user confirms; otherwise apply their requested changes and show the summary + queries again.
 
 ## Queries to compose
 
-Generate one shared UUID (or reuse the existing productAccountId) plus three fresh ones
-(provider account, linked bank, external bank ref). Include the first INSERT only for a
-**new** product account. Run each database's INSERTs through a quoted heredoc
-(`jsql dev-NN/product_account <<'SQL'`, `jsql dev-NN/wallet <<'SQL'`) so the
-single-quoted values and the JSON's double quotes pass through as written.
+Generate one shared UUID (or reuse the existing productAccountId), plus a fresh
+UUID for the provider account row and for each linked row. Before composing,
+check the shared id is free in `wallet_instruments`:
 
-```sql
--- product_account_<n>  (NEW product account only)
-INSERT INTO product_accounts
-  (id, companyId, accountName, productType, baseCurrency, accountBalance, availableBalance,
+```bash
+jsql dev-NN/wallet 'SELECT id, instrumentType FROM wallet_instruments WHERE id = "<SHARED>"'
+```
+
+An existing row means this product account already has a wallet — stop and
+show it to the user.
+
+Run every insert as one transaction through one connection, with
+schema-qualified tables and strict mode, so a bad enum value fails instead of
+being stored as `''` and a failure partway leaves nothing behind. The quoted
+heredoc passes the single-quoted values and the JSON's double quotes through as
+written. Write a bare `NULL` (no quotes) wherever a value is null.
+
+```bash
+jsql dev-NN/wallet <<'SQL'
+SET SESSION sql_mode = 'STRICT_ALL_TABLES';
+START TRANSACTION;
+
+-- NEW product account only
+INSERT INTO product_account_NN.product_accounts
+  (id, companyId, accountName, productType, baseCurrency, metadata, accountBalance, availableBalance,
    accountStatus, kycStatus, createdAt, updatedAt, createdBy, updatedBy, spendLimit,
    transactionBalance, collateralAmount, activatedAt)
-VALUES ('<SHARED>', <companyId>, '<Account Name>', '<productType>', <baseCurrency>,
+VALUES ('<SHARED>', <companyId>, '<Account Name>', '<productType>', <baseCurrency>, <'{"provider":"jss"}' or NULL>,
    0, 0, 'active', 'approved', NOW(3), NOW(3), '<createdBy>', '<createdBy>', 0, 0, 0, NOW(3));
 
--- wallet_<n>  (instrument reuses the shared PK)
-INSERT INTO wallet_instruments
+-- instrument reuses the shared PK
+INSERT INTO wallet_NN.wallet_instruments
   (id, companyId, instrumentType, accountStatus, KYCStatus, baseCurrency, createdAt, updatedAt, createdBy, updatedBy)
 VALUES ('<SHARED>', <companyId>, '<instrumentType>', 'active', 'approved', <baseCurrency>, NOW(3), NOW(3), '<createdBy>', '<createdBy>');
 
--- providerAccountDetails: stablecoin JSON for JSS, NULL for fiat
-INSERT INTO wallet_instrument_provider_accounts
+-- JSS: providerAccountId = customerId, details = jss shape. Fiat: the copied sample.
+INSERT INTO wallet_NN.wallet_instrument_provider_accounts
   (id, walletInstrumentId, providerId, providerAccountId, providerAccountDetails, createdAt, updatedAt, createdBy, updatedBy)
-VALUES ('<PROV_ACCT>', '<SHARED>', '<PROVIDER_ID>', '<PROVIDER_ACCT_ID or NULL>', '<providerAccountDetails>', NOW(3), NOW(3), '<createdBy>', '<createdBy>');
+VALUES ('<PROV_ACCT>', '<SHARED>', '<PROVIDER_ID>', <'<PROVIDER_ACCT_ID>' or NULL>, <'<providerAccountDetails JSON>' or NULL>,
+   NOW(3), NOW(3), '<createdBy>', '<createdBy>');
 
--- Fiat providers only (Bridge, Qitech, Airwallex, …)
-INSERT INTO wallet_instrument_provider_linked_bank_accounts
+-- one per linked row: JSS = one topup per chain; fiat = one topup (plus withdrawal when needed)
+INSERT INTO wallet_NN.wallet_instrument_provider_linked_bank_accounts
   (id, walletInstrumentProviderAccountId, providerLinkedBankAccountId, type, baseCurrency,
    bankAccountDetails, subType, status, createdAt, updatedAt, createdBy, updatedBy)
-VALUES ('<LINKED_BANK>', '<PROV_ACCT>', '<PROV_LINKED>', 'topup', <bankCurrency>,
+VALUES ('<LINKED_BANK>', '<PROV_ACCT>', '<PROV_LINKED>', 'topup', <linked baseCurrency>,
    '<bankAccountDetails JSON — confirmed in flow step 4>',
    'bankaccount', 'active', NOW(3), NOW(3), '<createdBy>', '<createdBy>');
+
+COMMIT;
+SQL
 ```
+
+Replace `NN` with the env number in every table name.
 
 ## Verify & report
 
@@ -123,7 +163,7 @@ WHERE id = "<SHARED>"
 
 ```bash
 jsql dev-NN/wallet '
-SELECT id, walletInstrumentId, providerId, providerAccountDetails
+SELECT id, walletInstrumentId, providerId, providerAccountId, providerAccountDetails
 FROM wallet_instrument_provider_accounts
 WHERE walletInstrumentId = "<SHARED>"
 '
@@ -131,7 +171,7 @@ WHERE walletInstrumentId = "<SHARED>"
 
 ```bash
 jsql dev-NN/wallet '
-SELECT id, walletInstrumentProviderAccountId, type, status
+SELECT id, walletInstrumentProviderAccountId, providerLinkedBankAccountId, type, baseCurrency, status
 FROM wallet_instrument_provider_linked_bank_accounts
 WHERE walletInstrumentProviderAccountId = "<PROV_ACCT>"
 '
@@ -140,7 +180,7 @@ WHERE walletInstrumentProviderAccountId = "<PROV_ACCT>"
 Report the rows in a table with columns `Service | Table | Record` — one row per record — confirming the product account and wallet instrument share the PK.
 - Status values (`accountStatus`, `kycStatus`, `KYCStatus`, `status`) carry an
   icon beside the value: ✅ `active`/`approved`, ⏳ `pending`/`in-review`/`rfi-*`,
-  ⛔ `closed`/`deactivated`/`deleted`/`rejected`, ⚠️ `suspended`/`in-review-error`.
+  ⛔ `closed`/`deactivate`/`deactivated`/`archived`/`deleted`/`rejected`, ⚠️ `suspended`/`in-review-error`.
 - Write every id in full — uuids and PKs stay untruncated.
 
 Answer with the table, then stop. Follow `../../references/output-style.md` (plugin root)

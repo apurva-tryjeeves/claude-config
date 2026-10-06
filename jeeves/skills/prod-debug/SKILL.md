@@ -12,30 +12,30 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
 | --- | --- |
 | Prod logs | `mcp__opensearch-prod__*` |
 | Prod MySQL | `jsql prod/<database> '<sql>'` |
-| Service code | the `service-investigator` agent, one per service |
+| Service code | the `jeeves:service-investigator` agent, one per service |
 
 ## Start here
 
 - **A single transaction id is the whole question** ("what happened to
-  `<uuid>`?") → use the `trace-tx` skill instead. It already walks wallet,
+  `<uuid>`?") → use the `jeeves:trace-tx` skill instead. It already walks wallet,
   transactions and product-account in order and returns one timeline.
 - **Anything broader** — an error signature, a stuck cohort, a bad deploy —
   continue below.
 
 ## Read these first
 
-- **Logs** → Skill `opensearch` — indices, `@timestamp` / `app_name.keyword` /
+- **Logs** → Skill `jeeves:opensearch` — indices, `@timestamp` / `app_name.keyword` /
   `log` fields, the two trace ids, the `match_phrase` pattern.
-- **DB access** → Skill `mysql` — the `jsql <env>/<service> '<sql>'` wrapper
-  and per-service database selection.
+- **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
+  and per-service database selection (prod names: `<service>`, backend `jeeves`).
 - **Reusable queries** → `../../references/queries.md` — SQL and OpenSearch
-  strings the user has shared. Read it before composing a query, and append a
-  new one there in the same turn the user shares it.
+  strings the user has shared. Read it before composing a query; when the user
+  shares a new one, add it as that file describes (to your clone of the plugin).
 
 ## Steps
 
 1. **Ticket.** Ask for the Linear issue if not given; read it with
-   `mcp__linear__get_issue` for symptoms, affected entity and time window.
+   `get_issue` (`mcp__linear__` or `mcp__claude_ai_Linear__`, whichever is connected) for symptoms, affected entity and time window.
 2. **Identifiers.** Extract `traceId` / `jeeves_trace_id`, transaction and
    company ids, provider references.
 3. **Prod logs.** With a trace id, `term`-filter `jeeves_trace_id.keyword` or
@@ -48,8 +48,8 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
    jsql prod/wallet '<SELECT ...>'
    ```
 5. **Map the code.** From the ticket and the `app_name`s in the logs, identify
-   the services involved and fan out the **`service-investigator`** agent —
-   `subagent_type: "service-investigator"`, **one per service, all in a single
+   the services involved and fan out the **`jeeves:service-investigator`** agent —
+   `subagent_type: "jeeves:service-investigator"`, **one per service, all in a single
    message** so they run in parallel. Give each the repo, the issue and the
    ids. Synthesize their briefs yourself.
 6. **Root-cause timeline.** Request → each service hop → where it diverged,

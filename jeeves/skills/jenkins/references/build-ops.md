@@ -51,16 +51,16 @@ the target slot, fetching a CSRF crumb, `buildWithParameters`, then resolving
 the queue id to your build number with `jenkins-api queued`. The same
 mechanics apply to any job: swap in that job's name and parameters.
 
-To **replay** a specific past build's parameters (e.g. retrying a failed
-deploy with the exact same inputs), capture them straight from that build and
-resubmit byte-for-byte:
+To **retry** a past build (e.g. a failed deploy), read its parameters, confirm
+them with the user, and submit them fresh:
 
-- A packed/positional parameter (the Active Choices plugin's
-  `DynamicReferenceParameter`) exposes no name-to-field mapping via the REST
-  API, so the captured string is the only faithful copy of it.
-- For `deploy-DEVELOP-environment`'s `MODULES`, read a captured string with
-  `python3 scripts/modules.py --decode`. To change what it deploys, build a new
-  string with `--set` for each service that should deploy.
+- For a plain job, resubmit the captured parameters as they are.
+- For `deploy-DEVELOP-environment`, decode the captured `MODULES` with
+  `python3 scripts/modules.py --decode`, confirm the enabled services and
+  branches with the user, then build a new string with one `--set` per service.
+  That applies the current mode rule and service order — the old string can
+  carry a mode that already failed (`latest` on a feature branch) or an
+  outdated layout.
 
 ```bash
 jenkins-api "job/<job>/<build-number>/api/json" | python3 -c "

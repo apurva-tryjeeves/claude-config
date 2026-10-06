@@ -71,11 +71,14 @@ request and the call returns `request body is required`.
 | Read | `GET _plugins/_alerting/monitors/<monitor_id>` |
 | List | `GET _plugins/_alerting/monitors/_search` |
 | Delete | `DELETE _plugins/_alerting/monitors/<monitor_id>` |
-| Run now | `POST _plugins/_alerting/monitors/<monitor_id>/_execute` |
+| Run now (dry run) | `POST _plugins/_alerting/monitors/<monitor_id>/_execute?dryrun=true` |
 | Channels | `GET _plugins/_notifications/configs` |
 
-`_execute` defaults to `dryrun=true` — it runs the query and evaluates the
-trigger while creating no alert and sending no notification.
+Pass `?dryrun=true` to `_execute` — it then runs the query and evaluates the
+trigger while creating no alert and sending no notification. A bare `_execute`
+defaults to `dryrun=false`: it creates alerts and fires the monitor's actions,
+including Slack messages. Confirm with the user before any POST, PUT, DELETE or
+`_execute`, naming the cluster, the monitor and the action.
 
 Create and update return `_id` and `_version`. Read the monitor back to confirm
 what was stored: `track_total_hits: true` returns as `2147483647`, and
@@ -109,7 +112,10 @@ A channel's config id is the last path segment of its channel-details URL:
 | `slack-cat-ops` | `JUIK640BAvEjoJNCY-mL` |
 
 Put the config id in the action's `destination_id`. When you wire a channel this
-table does not list, add its row in the same turn you confirm the id.
+table does not list, record its row in your clone of the plugin
+(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/opensearch/references/alerting-api.md`),
+leave the change uncommitted and tell the user it is ready to review and push;
+when that directory is missing, report the id instead.
 
 ## Deep-link an alert into Discover
 
