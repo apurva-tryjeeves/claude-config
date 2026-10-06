@@ -13,9 +13,11 @@ Personal git and PR preferences. This is a living list — add new guidance here
   ```bash
   gh repo view JeevesInc/<repo> --json defaultBranchRef -q .defaultBranchRef.name
   ```
-- Pull that branch before starting work:
+- Start every new branch from an up-to-date local copy of its base: switch to the base, fast-forward it from origin, then branch from it. `--ff-only` stops the pull when the local base has drifted from origin, so it never gains a merge commit:
   ```bash
-  git pull origin <default-branch>
+  git switch <default-branch>
+  git pull --ff-only origin <default-branch>
+  git switch -c <type>/<TICKET>
   ```
 
 ### Parent ticket whose sub-issues ship together
@@ -27,16 +29,18 @@ When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with 
 | `feat/<PARENT>` (e.g. `feat/ACC-1555`) | the default branch | the default branch, once every sub-issue is in | Squash |
 | `feat/<SUB>` (e.g. `feat/ACC-1557`) | `feat/<PARENT>` | `feat/<PARENT>` | Squash |
 
-1. Create and push the parent branch once:
+1. Create and push the parent branch once, from the updated local default branch:
    ```bash
-   git fetch origin
-   git switch -c feat/<PARENT> origin/<default-branch>
+   git switch <default-branch>
+   git pull --ff-only origin <default-branch>
+   git switch -c feat/<PARENT>
    git push -u origin feat/<PARENT>
    ```
-2. Start each sub-ticket from the latest parent branch:
+2. Start each sub-ticket from the updated local parent branch:
    ```bash
-   git fetch origin
-   git switch -c feat/<SUB> origin/feat/<PARENT>
+   git switch feat/<PARENT>
+   git pull --ff-only origin feat/<PARENT>
+   git switch -c feat/<SUB>
    ```
 3. Open each sub-ticket PR against the parent branch, titled with the sub-ticket's id:
    ```bash
@@ -44,13 +48,15 @@ When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with 
    ```
 4. Keep the parent branch current by rebasing it onto the default branch, then rebase every open sub-branch onto the new parent tip. `<old-parent-tip>` is the parent's commit before the rebase:
    ```bash
+   git switch <default-branch>
+   git pull --ff-only origin <default-branch>
+
    git switch feat/<PARENT>
-   git fetch origin
-   git rebase origin/<default-branch>
+   git rebase <default-branch>
    git push --force-with-lease origin feat/<PARENT>
 
    git switch feat/<SUB>
-   git rebase --onto origin/feat/<PARENT> <old-parent-tip>
+   git rebase --onto feat/<PARENT> <old-parent-tip>
    git push --force-with-lease origin feat/<SUB>
    ```
 5. Once every sub-issue PR is squashed into the parent branch, open the parent PR against the default branch, titled with the parent's id. List each sub-issue PR in its description, then squash-merge it.
