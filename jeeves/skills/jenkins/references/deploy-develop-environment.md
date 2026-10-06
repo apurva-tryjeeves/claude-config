@@ -16,8 +16,21 @@ environment.
 - `MODULES` — Active Choices `DynamicReferenceParameter`. Packs every
   deployable service into one comma-separated string with no name-to-field
   mapping in the REST API: three values per service, in this fixed
-  positional order — `enable(true/false), branch, mode(latest/rebuild)`.
-  Default `mode` to `latest` unless the user specifies `rebuild`.
+  positional order — `enable(true/false), branch, mode(latest/rebuild)` —
+  followed by a trailing comma, exactly as the job's form submits it.
+
+  | Field | Enabled service | Disabled service |
+  |---|---|---|
+  | `enable` | `true` | `false` |
+  | `branch` | the branch the user asked for | the service's default branch (`development`, or `main` for `simulationserver`, `utvservice`, `aiweb`) |
+  | `mode` | `rebuild` for any feature branch; `latest` on the default branch; whatever the user asks for overrides both | `latest` |
+
+  The pipeline builds and deploys only `enable=true` services and leaves every
+  other service in the environment as it is, so a disabled triple's branch and
+  mode are never read. Mode `latest` makes the pipeline resolve the service's
+  current `:latest` ECR image before building (`ecr.resolveLatestTag`), and
+  that step fails the build when the image carries more than one tag — which
+  is why a feature branch goes out as `rebuild`.
 
   `scripts/modules.py` is the one place this order lives. It builds and reads
   the value, keeping every service on its own position and checking the string
@@ -57,53 +70,27 @@ environment.
    `sandbox`) has 21 entries, past the 4-option cap on `AskUserQuestion` —
    print the full list as plain text and ask the user to reply with a slot
    name rather than using `AskUserQuestion`.
-4. **Capture a baseline `MODULES` string** from a recent build that already
-   targeted the same `ENVIRONMENT`, so every untouched service's existing
-   `enable/branch/mode` triple is preserved exactly. Fetch recent builds'
-   parameters in **one** batched request (not one curl per build number):
+4. **Build `MODULES` with the script** from exactly the services and branches
+   the user asked for — one `--set` per service. Every other service goes in
+   disabled:
 
    ```bash
-   jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=builds[number,actions[parameters[name,value]]]{0,25}" \
-   | python3 -c "
-   import json, sys
-   d = json.load(sys.stdin)
-   for b in d['builds']:
-       params = {p['name']: p['value'] for a in b.get('actions', []) for p in a.get('parameters', [])}
-       print(b['number'], params.get('ENVIRONMENT'))
-   "
+   MODULES=$(python3 scripts/modules.py --set accounting=feat/ACC-1568 --set web=feat/ACC-1603)
    ```
 
-   `jenkins-api` percent-encodes `[`, `]`, `{`, `}` for you, so write a
-   `tree=` filter with plain brackets as above. Calling curl directly means
-   encoding them yourself as `%5B`/`%5D`/`%7B`/`%7D` — an unencoded filter
-   comes back as an empty body, which reads as "no data" rather than as a
-   malformed request.
-
-   Find the first line matching the target `ENVIRONMENT`, then re-run the
-   same one-shot query (or reuse the parsed JSON) to pull that build's
-   `MODULES` value.
-
-   When no retained build targets that environment (the job keeps only a
-   short history), deploy the target service alone with `--only` in the next
-   step and say so when confirming.
-5. **Build `MODULES` with the script**, which keeps every other service's
-   triple byte-for-byte and reports which position each enabled service
-   landed on:
+   Append `:latest` or `:rebuild` to a value (`web=<branch>:latest`) when the
+   user names a mode. The script prints the enabled services and their
+   positions to stderr — read that line back and confirm it names exactly the
+   services and branches requested before moving on.
+5. **Check the payload.** Decode the string you are about to send and compare
+   it with the request — the enabled list must match it one for one:
 
    ```bash
-   # with a baseline captured in step 4
-   MODULES=$(python3 scripts/modules.py --set web=<branch> --baseline "$BASELINE")
-
-   # or, for an environment running nothing else
-   MODULES=$(python3 scripts/modules.py --only web --branch <branch>)
+   python3 scripts/modules.py --decode "$MODULES"
    ```
 
-   Add `:rebuild` to a `--set` value (`web=<branch>:rebuild`) or pass
-   `--mode rebuild` when the user asks for a rebuild. The script prints the
-   enabled services and their positions to stderr — read that line back and
-   confirm it names the service you intended before moving on.
-6. **Confirm before triggering.** State the exact `ENVIRONMENT`, which
-   service(s)/branch/mode changed, and get explicit go-ahead — this is a
+6. **Confirm before triggering.** State the exact `ENVIRONMENT` and each
+   enabled service's branch and mode, and get explicit go-ahead — this is a
    shared dev environment other people may be using. Mention the expected
    duration from "Per-service deploy timing" below for the service(s) being
    deployed, if a row exists there.
@@ -226,7 +213,7 @@ a clean single-service build appears for it.
 | web | 11m14s | 15m46s | 13m26s | 7 |
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
-one batched request (same tree-query pattern as step 4 above), filter to
+one batched request, filter to
 `result == "SUCCESS"` builds whose `MODULES` string has exactly one
 `enable=true` triple, and use that build's total `duration` as one sample for
 that service:

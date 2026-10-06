@@ -2,18 +2,19 @@
 """Build and decode the packed MODULES parameter for `deploy-DEVELOP-environment`.
 
 MODULES is one comma-separated string holding three fields per service —
-`enable,branch,mode` — in a fixed positional order with no names. Build it here
-so the field count and every service's position are checked, and read an
-existing value back with --decode.
+`enable,branch,mode` — in a fixed positional order with no names, plus a
+trailing comma. Build it here so the field count and every service's position
+are checked, and read an existing value back with --decode.
 
-    # one service, everything else off
-    python3 scripts/modules.py --only web --branch fix/ACC-1527
+Only the services passed with --set are enabled. Every other service gets the
+disabled triple `false,<default branch>,latest`, and the pipeline
+leaves disabled services untouched in the environment.
 
-    # keep a baseline captured from a prior build on the same environment
-    python3 scripts/modules.py --set web=fix/ACC-1527 --baseline "$(cat baseline.txt)"
+    # deploy these services, nothing else
+    python3 scripts/modules.py --set accounting=feat/ACC-1568 --set web=feat/ACC-1603
 
     # read a string back, or list the service order
-    python3 scripts/modules.py --decode "$(cat baseline.txt)"
+    python3 scripts/modules.py --decode "$MODULES"
     python3 scripts/modules.py --list
 
 The built string goes to stdout and a summary to stderr, so
@@ -72,6 +73,19 @@ SERVICES = [
 NAMES = [s for s, _ in SERVICES]
 MODES = ("latest", "rebuild")
 
+# Default branch the form pre-fills: `main` for these, `development` for the rest.
+# The pipeline builds and deploys only enabled services, so a disabled triple's
+# branch and mode are never read.
+MAIN_BRANCH = {"simulationserver", "utvservice", "aiweb"}
+
+
+def default_branch(name):
+    return "main" if name in MAIN_BRANCH else "development"
+
+
+def disabled_triple(name):
+    return ["false", default_branch(name), "latest"]
+
 
 def parse(modules):
     """Split a MODULES string into one [enable, branch, mode] triple per service."""
@@ -87,10 +101,10 @@ def parse(modules):
 
 
 def render(triples):
-    """Join triples back into the packed string, checking the count once more."""
+    """Join triples back into the packed string, with the form's trailing comma."""
     if len(triples) != len(SERVICES):
         sys.exit(f"built {len(triples)} triples, need {len(SERVICES)}")
-    return ",".join(",".join(t) for t in triples)
+    return ",".join(",".join(t) for t in triples) + ","
 
 
 def summarize(triples):
@@ -110,20 +124,17 @@ def service_index(name):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--only", metavar="SERVICE", help="enable just this service; every other service off")
     p.add_argument("--set", metavar="SERVICE=BRANCH[:MODE]", action="append", default=[],
-                   help="enable a service at a branch, keeping the rest of the baseline; repeatable")
-    p.add_argument("--branch", help="branch for --only")
-    p.add_argument("--mode", choices=MODES, default="latest", help="build mode (default: latest)")
-    p.add_argument("--baseline", metavar="MODULES", help="start from this MODULES string; '-' reads stdin")
+                   help="enable a service at a branch; repeatable. MODE defaults to latest on the "
+                        "service's default branch and rebuild on any other branch")
     p.add_argument("--decode", metavar="MODULES", help="print what a MODULES string resolves to; '-' reads stdin")
     p.add_argument("--list", action="store_true", help="print the positional service order")
     args = p.parse_args()
 
     if args.list:
-        print(f"{'#':>3}  {'Service':<22} Repo")
+        print(f"{'#':>3}  {'Service':<22} {'Default':<12} Repo")
         for i, (name, repo) in enumerate(SERVICES, 1):
-            print(f"{i:>3}  {name:<22} {repo or '-'}")
+            print(f"{i:>3}  {name:<22} {default_branch(name):<12} {repo or '-'}")
         return
 
     if args.decode is not None:
@@ -133,31 +144,20 @@ def main():
         print(summarize(triples))
         return
 
-    if args.only:
-        if not args.branch:
-            sys.exit("--only needs --branch")
-        triples = [["false", "", "latest"] for _ in SERVICES]
-        triples[service_index(args.only)] = ["true", args.branch, args.mode]
-    elif args.set:
-        if not args.baseline:
-            sys.exit(
-                "--set needs --baseline: capture MODULES from a recent build on the same "
-                "ENVIRONMENT so every other service keeps its current triple. Use --only "
-                "when the environment is running nothing else."
-            )
-        value = sys.stdin.read() if args.baseline == "-" else args.baseline
-        triples = parse(value)
-        for item in args.set:
-            name, _, spec = item.partition("=")
-            branch, _, mode = spec.partition(":")
-            if not branch:
-                sys.exit(f"--set {item!r} needs a branch, as SERVICE=BRANCH[:MODE]")
-            mode = mode or args.mode
-            if mode not in MODES:
-                sys.exit(f"mode {mode!r} is not one of {', '.join(MODES)}")
-            triples[service_index(name)] = ["true", branch, mode]
-    else:
-        p.error("choose --only, --set, --decode, or --list")
+    if not args.set:
+        p.error("choose --set, --decode, or --list")
+
+    triples = [disabled_triple(name) for name in NAMES]
+    for item in args.set:
+        name, _, spec = item.partition("=")
+        branch, _, mode = spec.partition(":")
+        if not branch:
+            sys.exit(f"--set {item!r} needs a branch, as SERVICE=BRANCH[:MODE]")
+        idx = service_index(name)
+        mode = mode or ("latest" if branch == default_branch(name) else "rebuild")
+        if mode not in MODES:
+            sys.exit(f"mode {mode!r} is not one of {', '.join(MODES)}")
+        triples[idx] = ["true", branch, mode]
 
     modules = render(triples)
     print(f"{len(triples)} services, enabled:\n{summarize(triples)}", file=sys.stderr)

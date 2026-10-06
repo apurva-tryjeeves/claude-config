@@ -117,7 +117,7 @@ before working with a job:
 
 | Script | Use it for |
 | --- | --- |
-| `scripts/modules.py` | Building and decoding `deploy-DEVELOP-environment`'s packed `MODULES` parameter — `--only`, `--set`, `--decode`, `--list`. It holds the service order, so every service keeps its own position |
+| `scripts/modules.py` | Building and decoding `deploy-DEVELOP-environment`'s packed `MODULES` parameter — `--set`, `--decode`, `--list`. It holds the service order, so every service keeps its own position, and enables only the services passed to `--set` |
 | `scripts/build-table.py` | Rendering several builds as a markdown table with icons, durations and links |
 
 Both take a `scripts/`-relative path, so run them from this skill's own

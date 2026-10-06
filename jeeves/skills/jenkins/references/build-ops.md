@@ -59,8 +59,8 @@ resubmit byte-for-byte:
   `DynamicReferenceParameter`) exposes no name-to-field mapping via the REST
   API, so the captured string is the only faithful copy of it.
 - For `deploy-DEVELOP-environment`'s `MODULES`, read a captured string with
-  `python3 scripts/modules.py --decode` and edit it with `--set`, which keeps
-  every other service on its own position.
+  `python3 scripts/modules.py --decode`. To change what it deploys, build a new
+  string with `--set` for each service that should deploy.
 
 ```bash
 jenkins-api "job/<job>/<build-number>/api/json" | python3 -c "
