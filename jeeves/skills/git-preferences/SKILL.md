@@ -110,15 +110,27 @@ Jeeves repos squash-merge, so the PR title becomes the commit subject on the bas
    gh pr create --repo JeevesInc/<repo> --base <default-branch> --head <branch> \
      --title "<type>: [<TICKET>] - <description>" --body-file <body.md>
    ```
-2. Add a `## Related PRs` section when the change spans repos (below).
+2. Add a `## 🔗 Related PRs` section when the change spans repos (below).
 3. Offer the pollers (see **PR Post-Create Polling**).
+
+### PR body format
+
+Write every PR description, PR comment and review summary in this style:
+
+- Start each section with a `## <emoji> Header`, one emoji per header. Use the repo's PR template sections:
+  `## ❗ Problem`, `## 🛠️ Solution`, `## 🔗 References`, `## 🧪 How to test`, `## 🚀 Deployed to`.
+- Use `- [ ]` task lists for test steps and follow-ups.
+- Bold each bullet's lead term.
+- Put names, paths and commands in `code`.
+- Use a table for anything with repeating columns.
+- Wrap long logs in `<details>`.
 
 ## Cross-Repo Related PRs
 
-When a change spans PRs in different repos, link each PR to the others in its description. Add a `## Related PRs` section listing every sibling PR as a full link with a one-line note on what it covers:
+When a change spans PRs in different repos, link each PR to the others in its description. Add a `## 🔗 Related PRs` section listing every sibling PR as a full link with a one-line note on what it covers:
 
 ```markdown
-## Related PRs
+## 🔗 Related PRs
 - https://github.com/JeevesInc/jeeves-web/pull/3739 — reads the renamed provider columns
 ```
 
