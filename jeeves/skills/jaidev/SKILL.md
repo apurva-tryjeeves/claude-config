@@ -1,6 +1,6 @@
 ---
 name: jaidev
-description: Coordinate Jaidev (Jeeves AI Developer, `@jaidev` on Linear) through Linear code tickets in batches — pick ready tickets, write and post the `@jaidev start` briefing, answer its questions, review its plan and PR against the ticket, track progress. Use when the user wants to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or asks why Jaidev didn't pick a ticket up.
+description: Coordinate Jaidev (Jeeves AI Developer, `@jaidev` on Linear) through Linear code tickets in batches — pick ready tickets, write and post the `@jaidev start` briefing, answer its questions, review its plan and PR, resolve blocked runs, track progress. Use when the user wants to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or asks why Jaidev didn't start or got blocked.
 ---
 
 # Jaidev
@@ -10,10 +10,13 @@ Jaidev writes the code; you brief it, review its plans and PRs against the
 ticket, and keep every approval and merge with the user.
 
 Read `references/jaidev-reference.md` before the first step — it holds
-Jaidev's exact commands, lifecycle and comment formats. An exact trigger is
-what makes Jaidev start, so follow its wording to the letter. When Jaidev
-behaves differently from that file (a new command, a changed trigger, a new
-limit), update the file now, in the same turn.
+Jaidev's exact commands, lifecycle, comment formats, limits, and observed
+timings and costs. An exact trigger is what makes Jaidev start, so follow its
+wording to the letter.
+
+Check the reference file first whenever Jaidev acts. When Jaidev shows
+something new — a command, a trigger, a comment format, a limit, a timing —
+update the file now, in this same turn.
 
 Linear tools come from whichever server is connected — `mcp__linear__*` or
 `mcp__claude_ai_Linear__*`; both take the same parameters. Use the `linear`
@@ -35,7 +38,7 @@ Confirm only what's missing:
 
 ## The loop
 
-Repeat until every ticket in scope is done, blocked, or manual. Show the
+Repeat until every ticket in scope is merged, blocked, or manual. Show the
 progress table after every step.
 
 ### 1. Pick the next batch
@@ -50,16 +53,35 @@ progress table after every step.
 3. Mark tickets whose work lives outside code (repository settings, docs,
    DevOps, access requests) **manual** and list them for the user.
 4. Look for an existing "**Jaidev — <ID>**" status comment. When one exists,
-   resume from its current stage.
-5. Pick up to the batch size of ready tickets with disjoint files, favouring
+   resume from its current stage. When none exists, treat the ticket as not
+   started by Jaidev, whatever its Linear state — a project can have every
+   ticket bulk-moved to In Progress.
+5. List every `@jaidev` comment that has no status comment after it — a
+   leftover that never triggered — so the user can delete it.
+6. Pick up to the batch size of ready tickets with disjoint files, favouring
    tickets that unblock others.
-6. Show the user the batch, why it was chosen, and what each blocked ticket
+7. Show the user the batch, why it was chosen, and what each blocked ticket
    waits on.
 
 ### 2. Write the briefing
 
-Read the ticket, its related and blocking tickets, the repository, and every
-precedent PR the ticket names. Draft one comment in exactly this format:
+Research first. Jaidev plans from the ticket and its comments, so every
+verified fact in the briefing becomes a correct assumption in its plan:
+
+- Read the ticket, its related and blocking tickets, the repository, and
+  every precedent PR the ticket names. Spell out every reference: when the
+  ticket says "same as stablecoin-service PR 9", read that PR and write what
+  it did.
+- Check every factual claim in the ticket against the code — current config,
+  versions, file layout, what CI runs. Brief Jaidev on what is true, and
+  tell the user each correction.
+- Read how one or two sibling services do the same thing, and follow the
+  setting the team already uses.
+- When the ticket touches build, lint or CI, read `.github/workflows/*`, the
+  inputs it passes to any reusable workflow, and the npm scripts those
+  inputs run, including `pre*` hooks (e.g. `prebuild` running lint).
+
+Then draft one comment in exactly this format:
 
 ````markdown
 @jaidev start
@@ -72,82 +94,149 @@ Please pick up this ticket in `<org/repo>` (base branch `<branch>`).
 
 ## 📋 Context
 
-<facts Jaidev needs: current state of the code with file paths; precedent PRs to follow and what they did; known CI or environment limitations; related tickets in flight and the files they touch>
+- <current state of the code, with file paths>
+- <precedent PRs to follow and what they did>
+- <known CI or environment limitations>
+- <related tickets in flight and the files they touch>
 
 ## 🛠️ Changes
 
-<every change, specifically: file paths, exact names, versions and values>
+- <every change, specifically: file paths, exact names, versions and values>
 
 ## 🚧 Constraints
 
-<what stays unchanged; scope boundaries with other tickets; secrets stay out of code; coverage thresholds stay as they are; known CI failures are reported as they stand>
+- <what stays unchanged; scope boundaries with other tickets>
+- Secrets stay out of code; coverage thresholds stay as they are.
+- Report known CI failures as they stand.
+- Your changes stay outside `.github/workflows/*`; a human makes the items under Manual follow-up.
+
+## 🧑‍🔧 Manual follow-up
+
+- <changes a human makes on your branch, e.g. `.github/workflows/*` edits; they sit outside your definition of done>
 
 ## ✅ Acceptance criteria
 
-- [ ] <checkable items: commands that must pass, behaviour to verify, evidence to paste in the PR description>
+- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description>
 
 Ask here if anything is unclear before you start.
 ````
 
-Jaidev plans from the ticket and its comments, so every detail written out
-is one assumption fewer in its plan:
+Write the briefing to these rules:
 
-- Spell out every reference. When the ticket says "same as stablecoin-service
-  PR 9", read that PR and write what it did.
-- Carry every ticket item into Changes or Acceptance criteria, word for word
-  where possible.
+- Carry every ticket item into Changes, Acceptance criteria or Manual
+  follow-up, word for word where possible.
+- Put every change to `.github/workflows/*` under Manual follow-up. Jaidev's
+  GitHub token has no `workflow` scope, so those changes reach the branch
+  through the user (see Rules).
+- Keep lists one level deep, with each item's detail on its own line.
 - Describe credentials by name and location (e.g. the Secrets Manager key);
   keep their values out of the comment.
-- Show the user each draft. After they approve, post it as a **new top-level
-  comment**.
+- Show the user each draft and wait for explicit approval of that draft:
+  "post it", "yes" or "approved". A general go-ahead ("coordinate with
+  Jaidev per the skill") starts the drafting; posting waits for approval of
+  the draft itself. Then post it as a **new top-level comment**.
+- Omit the Manual follow-up section when it has no items.
 
 ### 3. Watch the run
 
-- Check the ticket's comments and Jaidev's status comment.
-- When Jaidev hasn't acknowledged a few minutes after the comment posted,
-  check the trigger against the reference file and tell the user.
+- Check the ticket's comments and Jaidev's status comment every few minutes;
+  reference §6 shows how long each phase usually takes.
+- In your first report on a ticket, tell the user that Jaidev's status, plan
+  and progress comments are the items you review, so a new Jaidev comment
+  means a review from you is on its way.
+- When no status comment appears within a few minutes of posting, check the
+  trigger against the reference file and tell the user.
 - When Jaidev asks questions: if the ticket, code or related tickets answer
   it, draft the reply, show the user, and post it in the question's thread
   once they approve. If it needs a decision, ask the user.
+- During implementation, read the rolling notes in the live progress
+  comment. When a note signals a blocker — a rejected push, missing access,
+  a failing check outside the ticket — tell the user at once with the
+  options; Jaidev spends its remaining attempts before posting Blocked.
+- When Jaidev posts "🚫 Blocked — Needs Human Help": read "What Failed" and
+  "What I Tried", inspect the pushed branch, and give the user the options.
+  Once they choose, make any approved manual change, then post
+  `@jaidev resume` as a reply in the Blocked thread, saying what changed.
 
 ### 4. Review the plan
 
-Compare Jaidev's "Implementation plan" with the ticket and the briefing, item
-by item:
+Compare Jaidev's latest "Implementation plan" with the ticket and the
+briefing, item by item:
 
 - repository and base branch match;
-- every Change and Acceptance criterion is covered;
+- every Change and Acceptance criterion is covered, value by value — rule
+  names, options, versions and file names exactly as briefed. An item is
+  covered when the plan names its value; a preset that "includes most of
+  it" counts as missing;
 - scope matches the ticket, and the files belong to this ticket alone;
-- each Key Assumption holds — verify it in the code;
+- each Key Assumption holds — verify it in the code. A revised plan may omit
+  the section; verify the assumptions it now relies on;
 - risks and mitigations are acceptable.
 
 Report a verdict (approve / request changes), a table of ticket items →
 covered / missing / wrong, and any wrong assumptions. When changes are
 needed, draft the feedback reply. Post `@jaidev plan:approved` or the
-feedback in the plan thread once the user confirms.
+feedback as a reply in the thread of the **latest** plan once the user
+confirms. A revised plan arrives as a new top-level comment ("Implementation
+plan (v2)"), and Jaidev resolves the previous plan's thread.
 
 ### 5. Review the PR
 
-When Jaidev opens the PR, check:
+When Jaidev opens the PR:
 
-- the diff against the briefing's Changes, Constraints and Acceptance
-  criteria;
-- the title follows the ticket format (e.g. `[ACC-123] …`);
-- CI results, noting which failures are known and expected;
-- tests and coverage;
-- the diff is clean of secrets and internal hostnames.
+1. Read `.github/CODEOWNERS` and the merge box, and tell the user now which
+   approvals the merge needs besides theirs.
+2. Wait until every check has completed, SonarCloud included. Jaidev pushes
+   fixes for bot findings on its own, so review the head that remains after
+   that fix.
+3. Review the PR and record the head SHA you reviewed:
+   - the diff against the briefing's Changes, Constraints and Acceptance
+     criteria, using the PR's own file list (the result comment counts only
+     the last session's files);
+   - the title follows the ticket format (e.g. `feat: [WAL-123] - …`);
+   - CI results, noting which failures are known and expected;
+   - tests and coverage;
+   - generated files regenerate with no diff, and the lockfile adds or
+     removes only what the change needs;
+   - the effect beyond the PR: the deploy build (e.g. the Dockerfile's
+     `npm run build`) and other open PRs against the same base;
+   - the diff is clean of secrets and internal hostnames.
+4. Trace each finding through the code path and its call sites. Report
+   verified findings as issues and the rest as questions.
+5. Give the user a verdict, the issues, and draft specific, actionable
+   GitHub review comments, all in one review. Post them once the user
+   confirms — Jaidev picks up PR review comments as a revision.
+6. When nothing needs changing, confirm the head still matches the SHA you
+   reviewed, propose an Approve review, and submit it once the user
+   confirms. The approval goes out under the user's account.
+7. Read the merge box and tell the user any requirement still missing, such
+   as another required reviewer.
+8. Draft follow-ups that belong outside the PR as new tickets for the user,
+   each blocked by this ticket.
 
-Give the user a verdict, the issues, and draft specific, actionable GitHub
-review comments. Post them once the user confirms — Jaidev picks up PR
-review comments as a revision. Jaidev gets 3 attempts; when the third still
-falls short, stop and hand the ticket to the user.
+Read the head SHA, review state and checks:
+
+```bash
+gh pr view <number> --json headRefOid,reviewDecision,mergeStateStatus,statusCheckRollup
+```
+
+Submit the approval:
+
+```bash
+gh pr review <number> --approve
+```
+
+Jaidev gets 3 attempts per PR, and each review round uses one — a SonarCloud
+finding counts as a round. When the third still falls short, stop and hand
+the ticket to the user.
 
 ### 6. Close out
 
 - Once the user merges the PR, confirm the ticket reached a completed state,
   or tell them it hasn't.
-- Do manual follow-ups listed in the ticket (e.g. creating branches) when the
-  user asks.
+- Do manual follow-ups listed in the ticket or the briefing when the user
+  asks.
+- Add the run's timings and costs to reference §6.
 - Update the progress table and return to step 1.
 
 ## Progress table
@@ -157,17 +246,24 @@ Show it, current, at the end of every step:
 | Ticket | Title | Repo / base | Stage | Next action | Owner |
 |---|---|---|---|---|---|
 
-Stages: waiting, briefing, running, questions, plan review, PR review,
-merged, blocked, manual. Owner: user, you, or Jaidev.
+Stages: waiting, briefing, running, questions, plan review, blocked,
+PR review, awaiting merge, merged, manual. Owner: user, you, or Jaidev.
+
+List follow-up tickets created during the run as their own rows, with their
+blocked-by ticket, so the table shows what each merge unblocks.
 
 ## Rules
 
-- Get the user's explicit confirmation before approving a plan, posting a
-  comment, or posting a GitHub review — each starts paid work or changes
+- Get the user's explicit approval — "post it", "yes" or "approved" for that
+  specific item — before posting a comment, approving a plan, posting a
+  GitHub review, or pushing a commit. Each starts paid work or changes
   shared code.
+- Push to Jaidev's branch only the Manual follow-up changes the user
+  approved, commit by commit; every other fix reaches Jaidev as a review
+  comment.
 - Leave merging to the user.
-- Leave repository settings, branch protection, access and infrastructure to
-  the user.
+- Leave repository settings, branch protection, access and infrastructure
+  to the user.
 - When a ticket is ambiguous or conflicts with the code or another ticket,
   ask the user.
 
