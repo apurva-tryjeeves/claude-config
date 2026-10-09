@@ -156,6 +156,21 @@ allocated develop environments (see At a glance).
   HelmRelease).
 - Knowledge-base files cover existing repositories. For a new repository
   Jaidev explores the code directly, so give the briefing extra context.
+- On WAL-6301 it reported that the briefing's identifiers "arrived …
+  blanked" — inside a `+++` collapsible code block and in bullets outside it
+  — then planned with invented names. A reply with the same code as plain
+  fenced blocks arrived intact (verified by quote-back). The Linear API
+  returned both comments intact, so the loss is in Jaidev's ingestion of
+  that one comment; the collapsible is the leading suspect. Put code Jaidev
+  must copy in plain fenced blocks, and ask it to quote key lines back.
+- Implementation works from the plan's text. On WAL-6301 the implementer
+  noted "the original money.ts code was stripped from the ticket, I need to
+  reconstruct it from the plan descriptions", although the planner had
+  quoted the plain-block thread reply correctly. Code that must land
+  verbatim belongs in the plan itself: ask Jaidev to include it in full.
+- With `collectCoverage: true` and a global threshold in `jest.config.js`, a
+  single-file `npx jest <file>` run fails the threshold even when its tests
+  pass; brief single-file runs with `--coverage=false`.
 - Its GitHub token pushes code only; `.github/workflows/*` changes reach the
   branch through a human. A briefing that puts a workflow change in its
   definition of done ends Blocked.
@@ -172,7 +187,7 @@ allocated develop environments (see At a glance).
 
 ## 6. Timings and costs
 
-Provisional — two runs so far. Add a column per run to the timing table and a
+Provisional — three runs so far. Add a column per run to the timing table and a
 row per run to the cost table.
 
 Queue wait is logged apart from the phase timings. The status timeline has no
@@ -182,22 +197,25 @@ containing the ticket ID). "Enqueued ticket-received message" marks the start
 of the wait and "Processing ticket-received message" its end. Without log
 access, check the status comment about 5 s and 20 s after posting.
 
-| Event | WAL-6298 | WAL-6300 |
-|---|---|---|
-| `@jaidev start` → status comment | 3 s | 3 s |
-| Queued → analysis started | not queued | 0.005 s (status left "Queued" at +0.2 s) |
-| → analysis complete | 23 s | 17 s |
-| → plan v1 | 3 min 30 s | 4 min 6 s (analysis complete 13:31:13 → plan 13:35:19) |
-| Plan feedback → in-thread ack | 11 s | 9 s |
-| → plan v2 | 1 min 25 s | 55 s |
-| `plan:approved` → progress comment | 5 s | 12 s (approval logged at +2 s; plan thread resolved at +3 s) |
-| → PR opened, or Blocked | 19 min (Blocked: workflow scope) | 4 min 30 s (PR, no block) |
-| `@jaidev resume` → PR opened | 2 min 38 s | — |
-| SonarCloud findings → fix pushed | ~6 min | — (Sonar clean) |
-| Human PR review → revision started | — | 14 s |
-| Revision started → fix pushed | — | 2 min (+ PR reply 8 s later) |
+| Event | WAL-6298 | WAL-6300 | WAL-6301 |
+|---|---|---|---|
+| `@jaidev start` → status comment | 3 s | 3 s | 2 s (already "Analyzing...", no Queued stage shown) |
+| Queued → analysis started | not queued | 0.005 s (status left "Queued" at +0.2 s) | 0.005 s (from logs) |
+| → analysis complete | 23 s | 17 s | 15.5 s |
+| → plan v1 | 3 min 30 s | 4 min 6 s (analysis complete 13:31:13 → plan 13:35:19) | 1 min 27 s |
+| Plan feedback → in-thread ack | 11 s | 9 s | 37 s (~9 KB reply with code) |
+| → plan v2 | 1 min 25 s | 55 s | 1 min 36 s |
+| Feedback → plan v3 | — | — | ack 9.7 s, plan v3 1 min 7 s |
+| Feedback → plan v4 | — | — | ack 12.6 s, plan v4 1 min 13 s |
+| `plan:approved` → progress comment | 5 s | 12 s (approval logged at +2 s; plan thread resolved at +3 s) | 5.2 s |
+| → PR opened, or Blocked | 19 min (Blocked: workflow scope) | 4 min 30 s (PR, no block) | 4 min 7 s (PR, no block) |
+| `@jaidev resume` → PR opened | 2 min 38 s | — |  |
+| SonarCloud findings → fix pushed | ~6 min | — (Sonar clean) |  |
+| Human PR review → revision started | — | 14 s |  |
+| Revision started → fix pushed | — | 2 min (+ PR reply 8 s later) | review → fix pushed 2 min 56 s (+ PR reply 7 s later) |
 
 | Ticket | Kind | Analysis | Planning | Impl | PR rev | Total | Notes |
 |---|---|---|---|---|---|---|---|
 | WAL-6298 | Config only | $0.30 | $1.69 | $6.56 | $0.63 | $9.18 | 1 plan revision; 1 block ($6.25 of impl); 1 SonarCloud revision |
 | WAL-6300 | Code + tests, 25 files | $0.27 | $2.37 | $0.50 | $0.20 | $3.35 | 1 plan revision ($0.33); 0 blocks; 1 human review revision; queue wait 5 ms |
+| WAL-6301 | New code + tests, 9 files | $0.48 | $1.83 | $0.54 | $0.34 | $3.19 | 3 plan revisions (lost briefing, our code defect, our forward-compat change); 0 blocks; 1 human review revision; queue wait 5 ms |

@@ -80,6 +80,13 @@ verified fact in the briefing becomes a correct assumption in its plan:
 - When the ticket touches build, lint or CI, read `.github/workflows/*`, the
   inputs it passes to any reusable workflow, and the npm scripts those
   inputs run, including `pre*` hooks (e.g. `prebuild` running lint).
+- Run every acceptance-criterion command in the repository before
+  briefing, and adjust any that can't pass in Jaidev's sandbox (e.g. single
+  test files need `--coverage=false` when `jest.config.js` enforces a global
+  threshold). Run any code the briefing gives the same way: compile it,
+  lint it under the rules it will meet (including open PRs that tighten
+  them), and test it with coverage on, under the strictest compiler flags
+  the team's guidelines require.
 
 Then draft one comment in exactly this format:
 
@@ -118,7 +125,7 @@ Please pick up this ticket in `<org/repo>` (base branch `<branch>`).
 
 - [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI `test / Unit Test` passes">
 
-Copy every acceptance criterion into your plan's Done when, word for word. Name any you can't meet in the plan, before you start. Ask here if anything is unclear.
+Copy every acceptance criterion into your plan's Done when, word for word. Name any you can't meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
 ````
 
 Write the briefing to these rules:
@@ -129,6 +136,16 @@ Write the briefing to these rules:
   GitHub token has no `workflow` scope, so those changes reach the branch
   through the user (see Rules).
 - Keep lists one level deep, with each item's detail on its own line.
+- Ask Jaidev to quote back, at the top of its plan, one key code signature
+  (when the briefing gives code) and one acceptance criterion. Check both
+  against the briefing before reviewing the rest of the plan.
+- Put code in plain fenced blocks in the comment body, with no `+++`
+  collapsible. A briefing with a collapsible reached Jaidev with its
+  identifiers blanked; the collapsible is the suspected cause, not a
+  confirmed one (reference §5).
+- When the briefing gives code to copy, ask Jaidev to write it out in full
+  in the plan's Implementation Sequence. Implementation works from the
+  plan's text, not from the thread.
 - Describe credentials by name and location (e.g. the Secrets Manager key);
   keep their values out of the comment.
 - Show the user each draft and wait for explicit approval of that draft:
@@ -169,6 +186,8 @@ Compare Jaidev's latest "Implementation plan" with the ticket and the
 briefing, item by item:
 
 - repository and base branch match;
+- the quote-back matches the briefing, and any code the briefing gave
+  appears in the Implementation Sequence exactly as briefed;
 - every Change and Acceptance criterion is covered, value by value — rule
   names, options, versions and file names exactly as briefed. An item is
   covered when the plan names its value; a preset that "includes most of
