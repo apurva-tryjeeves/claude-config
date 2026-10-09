@@ -87,7 +87,7 @@ under exactly this name:
 | Server | Used by |
 |---|---|
 | `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` agent |
-| `linear` | `linear`, `feature-plan`, `daily-briefing` agent |
+| `linear` | `linear`, `feature-plan`, `jaidev`, `daily-briefing` agent |
 | `notion` | `notion-templates`, `release-notify`, `hotfix-captain` and `daily-briefing` agents |
 | `github` | `feature-plan`, `daily-briefing` agent |
 
