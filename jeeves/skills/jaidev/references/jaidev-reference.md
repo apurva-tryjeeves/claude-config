@@ -100,16 +100,20 @@ phase, repositories, PR links and a timeline.
 
 ## 4. What its comments look like
 
-**Status comment** values seen: "Awaiting Plan Approval", "Implementing...
+**Status comment** values seen: "Analyzing... (Queued — waiting for
+available worker)" (first value when every worker is busy), "Awaiting Plan Approval", "Implementing...
 (<repo> · verifying)", "Blocked 🚫 (Needs Human Help)", "PRs Created
-(Awaiting Merge)", "Complete ✅". The cost line is split by phase ("Analysis
-· Planning · Impl · PR Rev") and refreshes after implementation ends.
+(Awaiting Merge)", "Addressing PR Feedback..." (repo phase `revising`), "Complete ✅". The cost line is split by phase ("Analysis
+· Planning · Impl · PR Rev") and refreshes after implementation ends. Earlier
+phase figures can rise later (WAL-6300: analysis $0.15 → $0.27 by the time
+implementation started), so read final costs from the last status.
 
 **Implementation plan** sections:
 
 - Header: Complexity, Estimate (points), Repos, Confidence, Delegating User
 - Summary
-- Key Assumptions, each with the evidence it checked
+- Key Assumptions, each with the evidence it checked (omitted from v1 on
+  WAL-6300, a briefing that listed every file and line)
 - Affected Services table: service, base branch, changes
 - Implementation Sequence per repository, with "Done when" criteria
 - Feature Flags
@@ -122,10 +126,12 @@ When reviewing, focus on Key Assumptions (they carry the most risk), whether
 Affected Services lists the right repository and base branch, and whether the
 "Done when" items match the ticket's acceptance criteria.
 
-**Revised plan**: titled "Implementation plan (v2)", with a "Changes in this
-revision" list. It may omit Key Assumptions and shorten Context Sources.
+**Revised plan**: titled "Implementation plan (v2)". It lists the changes
+either as a "Changes in this revision" list or as numbered items inside the
+Summary (WAL-6300). It may omit Key Assumptions and shorten Context Sources.
 
-**Live progress comment** (during implementation): "**<repo>** •
+**Live progress comment** (during implementation): it opens as
+"**<repo>** • `jai-dev/<id>` ↗ / ⏳ Cloning `<base>`…", then shows "**<repo>** •
 `jai-dev/<id>` ↗", a phase bar "Setup → Implementing → **Verify** → PR",
 three rolling notes, and "🔄 N files • N edits • N min • attempt x/5". The
 rolling notes surface blockers before the Blocked comment does.
@@ -153,6 +159,10 @@ allocated develop environments (see At a glance).
 - Its GitHub token pushes code only; `.github/workflows/*` changes reach the
   branch through a human. A briefing that puts a workflow change in its
   definition of done ends Blocked.
+- It runs one bounded single-file test process at a time and leaves the full
+  suite and coverage thresholds to CI. It reports a briefed "run the full
+  `npm test` and paste its summary" item as not done, even in an approved
+  plan. Brief the full-suite result as "CI `test / Unit Test` passes" instead.
 - A blocked run retries up to 5 times before reporting, and each attempt
   costs money whether or not anything changed.
 - Each phase costs money (shown in the status comment). Clear briefings avoid
@@ -162,21 +172,32 @@ allocated develop environments (see At a glance).
 
 ## 6. Timings and costs
 
-Provisional — one run so far. Add a column per run to the timing table and a
+Provisional — two runs so far. Add a column per run to the timing table and a
 row per run to the cost table.
 
-| Event | WAL-6298 |
-|---|---|
-| `@jaidev start` → status comment | 3 s |
-| → analysis complete | 23 s |
-| → plan v1 | 3 min 30 s |
-| Plan feedback → in-thread ack | 11 s |
-| → plan v2 | 1 min 25 s |
-| `plan:approved` → progress comment | 5 s |
-| → PR opened, or Blocked | 19 min (Blocked: workflow scope) |
-| `@jaidev resume` → PR opened | 2 min 38 s |
-| SonarCloud findings → fix pushed | ~6 min |
+Queue wait is logged apart from the phase timings. The status timeline has no
+entry for leaving "Queued"; read it from Jaidev's logs on the dev OpenSearch
+cluster (index `logs-YYYY.MM.DD`, `namespace_name: jai-dev-preprod`, `log`
+containing the ticket ID). "Enqueued ticket-received message" marks the start
+of the wait and "Processing ticket-received message" its end. Without log
+access, check the status comment about 5 s and 20 s after posting.
+
+| Event | WAL-6298 | WAL-6300 |
+|---|---|---|
+| `@jaidev start` → status comment | 3 s | 3 s |
+| Queued → analysis started | not queued | 0.005 s (status left "Queued" at +0.2 s) |
+| → analysis complete | 23 s | 17 s |
+| → plan v1 | 3 min 30 s | 4 min 6 s (analysis complete 13:31:13 → plan 13:35:19) |
+| Plan feedback → in-thread ack | 11 s | 9 s |
+| → plan v2 | 1 min 25 s | 55 s |
+| `plan:approved` → progress comment | 5 s | 12 s (approval logged at +2 s; plan thread resolved at +3 s) |
+| → PR opened, or Blocked | 19 min (Blocked: workflow scope) | 4 min 30 s (PR, no block) |
+| `@jaidev resume` → PR opened | 2 min 38 s | — |
+| SonarCloud findings → fix pushed | ~6 min | — (Sonar clean) |
+| Human PR review → revision started | — | 14 s |
+| Revision started → fix pushed | — | 2 min (+ PR reply 8 s later) |
 
 | Ticket | Kind | Analysis | Planning | Impl | PR rev | Total | Notes |
 |---|---|---|---|---|---|---|---|
 | WAL-6298 | Config only | $0.30 | $1.69 | $6.56 | $0.63 | $9.18 | 1 plan revision; 1 block ($6.25 of impl); 1 SonarCloud revision |
+| WAL-6300 | Code + tests, 25 files | $0.27 | $2.37 | $0.50 | $0.20 | $3.35 | 1 plan revision ($0.33); 0 blocks; 1 human review revision; queue wait 5 ms |

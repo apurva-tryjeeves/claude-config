@@ -108,7 +108,7 @@ Please pick up this ticket in `<org/repo>` (base branch `<branch>`).
 - <what stays unchanged; scope boundaries with other tickets>
 - Secrets stay out of code; coverage thresholds stay as they are.
 - Report known CI failures as they stand.
-- Your changes stay outside `.github/workflows/*`; a human makes the items under Manual follow-up.
+- Your changes stay outside `.github/workflows/*`.
 
 ## 🧑‍🔧 Manual follow-up
 
@@ -116,9 +116,9 @@ Please pick up this ticket in `<org/repo>` (base branch `<branch>`).
 
 ## ✅ Acceptance criteria
 
-- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description>
+- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI `test / Unit Test` passes">
 
-Ask here if anything is unclear before you start.
+Copy every acceptance criterion into your plan's Done when, word for word. Name any you can't meet in the plan, before you start. Ask here if anything is unclear.
 ````
 
 Write the briefing to these rules:
@@ -135,7 +135,12 @@ Write the briefing to these rules:
   "post it", "yes" or "approved". A general go-ahead ("coordinate with
   Jaidev per the skill") starts the drafting; posting waits for approval of
   the draft itself. Then post it as a **new top-level comment**.
-- Omit the Manual follow-up section when it has no items.
+- Omit the Manual follow-up section when it has no items. When it has
+  items, add "A human makes the items under Manual follow-up." to the
+  workflows Constraint.
+- Write acceptance criteria Jaidev can meet in its sandbox: commands that
+  exist in the base branch's `package.json` and single test files. Name the
+  full suite and coverage gate by their CI check (reference §5).
 
 ### 3. Watch the run
 
@@ -185,7 +190,11 @@ plan (v2)"), and Jaidev resolves the previous plan's thread.
 When Jaidev opens the PR:
 
 1. Read `.github/CODEOWNERS` and the merge box, and tell the user now which
-   approvals the merge needs besides theirs.
+   approvals the merge needs besides theirs: the code-owner teams for the
+   PR's files, whether the user belongs to them
+   (`gh api orgs/<org>/teams/<team>/memberships/<login>`), and two members
+   who can approve. When the membership lookup is denied, name the
+   code-owner teams and ask the user whether they belong to them.
 2. Wait until every check has completed, SonarCloud included. Jaidev pushes
    fixes for bot findings on its own, so review the head that remains after
    that fix.
@@ -241,13 +250,16 @@ the ticket to the user.
 
 ## Progress table
 
-Show it, current, at the end of every step:
+Show it, current, at the start of every report:
 
 | Ticket | Title | Repo / base | Stage | Next action | Owner |
 |---|---|---|---|---|---|
 
 Stages: waiting, briefing, running, questions, plan review, blocked,
 PR review, awaiting merge, merged, manual. Owner: user, you, or Jaidev.
+
+Collapse tickets in stage `waiting` with owner `you` into one line under the
+table: "Waiting (N): WAL-1, WAL-2". Give every other ticket its own row.
 
 List follow-up tickets created during the run as their own rows, with their
 blocked-by ticket, so the table shows what each merge unblocks.
@@ -269,7 +281,7 @@ blocked-by ticket, so the table shows what each merge unblocks.
 
 ## Reporting
 
-Keep each message to three parts: what happened, what you propose, what you
-need from the user — then the progress table. Leave out restated ticket
+Start each message with the progress table, then three parts: what
+happened, what you propose, what you need from the user. Leave out restated ticket
 content and closing offers. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs.
