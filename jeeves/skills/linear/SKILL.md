@@ -61,22 +61,32 @@ outside the two above.
 ### Start work on a ticket
 
 When the user starts work on a ticket (picks it up, branches for it, or asks
-to implement it), get it ready before writing any code:
+to implement it), update it in the same turn, before branching or writing
+code — even when the task brief doesn't mention Linear:
 
-1. Fetch the ticket with `mcp__linear__get_issue` and check that it has an
-   **estimate**, a **cycle**, and a **project**.
-2. For each one that's missing, fetch live options and narrow them down as
-   described in "Team, project, estimate, cycle" below.
-3. Use one `AskUserQuestion` call for everything you need:
-   - One question for each missing field, with the suggested options.
-   - "Move this ticket to `In Progress`?" if its state type is `backlog`,
-     `triage` or `unstarted`.
-4. Save the answers in one `mcp__linear__save_issue` call: the missing
-   fields, plus `state: "In Progress"` if the user said yes. Then continue
-   with the work.
+1. Fetch the ticket with `mcp__linear__get_issue`.
+2. Set `state: "In Progress"`, put it in the team's current cycle (resolve it
+   live with `list_cycles`), and assign it to the user.
+3. For a missing **estimate** or **project**, fetch live options, narrow them
+   as described in "Team, project, estimate, cycle" below, and ask with one
+   `AskUserQuestion` call.
+4. Save everything in one `mcp__linear__save_issue` call, then continue with
+   the work.
 
-If the ticket already has all three fields and is `started` or later, go
-straight to the work.
+### Finish work on a ticket
+
+Once the work is pushed or finished:
+
+1. Draft the state (`Done` when every ticket item is complete, `In Progress`
+   while one is open), any missing estimate or cycle, the commit or PR link,
+   and an outcome comment: done and open items, verification results, and
+   blockers with their ticket ids.
+2. Confirm the draft with one `AskUserQuestion`, then save it. Move to
+   `In Review` or `Done` as its own confirmed step.
+3. List candidate related tickets as suggestions, and add a `relatedTo` link
+   only for the ones the user approves.
+4. Treat any change to the ticket between your saves as the user's deliberate
+   edit, and keep it — re-read the ticket when a field looks lost.
 
 ## Look up a ticket
 

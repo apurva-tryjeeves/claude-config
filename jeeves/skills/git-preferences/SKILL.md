@@ -68,6 +68,14 @@ When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with 
    ```
 5. Once every sub-issue PR is squashed into the parent branch, open the parent PR against the default branch, titled with the parent's id. List each sub-issue PR in its description, then squash-merge it.
 
+**Stacked-branch gotchas:**
+- Parallel sub-branches that each inject the same dependency into one service merge cleanly but break `tsc`. After each merge, rebase the remaining sub-branches and run `tsc` before merging the next.
+- Retarget dependent PRs before deleting their base branch; deleting the base closes them:
+  ```bash
+  gh pr edit <n> --base <new-base>
+  ```
+- To reopen a closed PR whose branch was force-pushed: push the branch back to its SHA at close, reopen the PR, then push the new SHA.
+
 ## Conventional Commits
 
 Follow the [Conventional Commits](https://www.conventionalcommits.org/) spec with a Linear ticket reference:
@@ -95,6 +103,8 @@ feat: [ENG-123] - Implement feature
 
 Co-Authored-By: <the session's own Claude model> <noreply@anthropic.com>
 ```
+
+**Reasoning:** put the "why" of a small, self-contained change in the commit message or PR body, and keep the code free of explanatory comments. Reserve an inline comment for a workaround for a specific external bug or a non-obvious invariant.
 
 ## Create a PR
 
@@ -124,6 +134,9 @@ Write every PR description, PR comment and review summary in this style:
 - Put names, paths and commands in `code`.
 - Use a table for anything with repeating columns.
 - Wrap long logs in `<details>`.
+- Describe the change itself. Keep rebase and cherry-pick mechanics, stacking banners and commit SHAs in the branch graph.
+- Point to other work only through `## 🔗 Related PRs`.
+- Cherry-pick with plain `git cherry-pick` (no `-x`) for commits that land in a PR.
 
 ## Cross-Repo Related PRs
 
