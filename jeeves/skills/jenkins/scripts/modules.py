@@ -69,6 +69,7 @@ SERVICES = [
     ("merchantdatacleaner", ""),
     ("rfiservice", ""),
     ("stablecoinservice", "stablecoin-service"),
+    ("gemini", "gemini"),
 ]
 NAMES = [s for s, _ in SERVICES]
 MODES = ("latest", "rebuild")
@@ -76,7 +77,7 @@ MODES = ("latest", "rebuild")
 # Branch the form pre-fills in a disabled triple: `main` for these, `development`
 # for the rest. The pipeline builds and deploys only enabled services, so a
 # disabled triple's branch and mode are never read.
-MAIN_BRANCH = {"simulationserver", "aiweb"}
+MAIN_BRANCH = {"simulationserver", "aiweb", "gemini"}
 
 
 def default_branch(name):
