@@ -195,21 +195,24 @@ allocated develop environments (see At a glance).
 - Each phase costs money (shown in the status comment). Clear briefings avoid
   question rounds, plan revisions and blocks.
 - Its sandbox has no Docker. A unit-test project whose `globalSetup` starts a
-  database container cannot run there; brief tests that mock the DB layer
+  database container needs Docker; brief tests that mock the DB layer
   and leave the full run to CI.
 - On a parent feature, Jaidev merges a moved base into its branch by
   default (ACC-1637 and ACC-1638, 2026-10-22). Ask for a rebase in a PR
   comment instead. A squash merge flattens the history either way.
-- Open question: whether Jaidev's token can force-push a rebased branch.
-  Record the answer here after the first rebase request.
+- A PR comment asking Jaidev to rebase onto the parent works: on ACC-1591
+  (2026-10-22) Jaidev replied in about 2 minutes, rebased with no conflicts,
+  force-pushed (7 commits on top of the parent tip, 0 merge commits, an
+  identical diff) and ran ts-lint and build. The request counted as
+  "Revision #3", so it used the last of the 3 PR revision attempts.
 - Open question: whether a reply during implementation stops the retries.
   Record the answer here once a run shows it.
 - Plan v1 needed one correction round on ACC-1588, ACC-1637 and ACC-1638:
   base branch set to the default branch, names invented, Done-when criteria
   reworded and acceptance criteria blank. The first plan after a prose-only
   start comment plus a names reply is the one to check hardest.
-- The doc-format hook rejects GitHub approval bodies and Linear comments
-  without `## <emoji>` section headers; comments starting with `@jaidev`
+- The doc-format hook requires `## <emoji>` section headers in GitHub
+  approval bodies and Linear comments; comments starting with `@jaidev`
   are exempt.
 
 ## 6. Timings and costs

@@ -66,8 +66,10 @@ For a parent feature:
   This branch is behind <parent-branch>. Rebase it onto <parent-branch> and push.
   ```
 
-  Whether Jaidev's token can force-push a rebase is untested (reference §5);
-  when the push is rejected, the user force-pushes the rebased branch.
+  Jaidev rebases and force-pushes its own branch (ACC-1591, 2026-10-22). It
+  counts the request as a revision round, so a ticket with two earlier rounds
+  has no attempt left afterwards. Ask for the rebase when the PR has a round to
+  spare, or when no further fix is expected.
 - Every sub-ticket PR title carries its own ticket id, so Linear moves that
   ticket when the PR merges.
 
@@ -122,6 +124,11 @@ verified fact in the briefing becomes a correct assumption in its plan:
   lint it under the rules it will meet (including open PRs that tighten
   them), and test it with coverage on, under the strictest compiler flags
   the team's guidelines require.
+- Settle every identifier the briefing introduces with the
+  `jeeves:typescript-naming` skill, following its "During planning" steps.
+  Read the repo rules and the surrounding code first, then write the Names
+  table (kind, name, file, purpose) and the renames list. The names reply
+  carries the table, and Jaidev uses the names as written.
 
 Then draft one comment in exactly this format:
 
@@ -180,7 +187,7 @@ Write the briefing to these rules:
   replies and plan feedback arrive intact (reference §5).
 - Send the exact names and code as a reply: answer Jaidev's first question
   (it reports what arrived blank) with a Names table and the code, each in a
-  plain fenced block with no `+++` collapsible. When it plans without
+  plain fenced block. When it plans without
   asking, send the same content as plan feedback.
 - Ask Jaidev to write any code to copy out in full in the plan's
   Implementation Sequence. Implementation works from the plan's text, not
@@ -333,14 +340,32 @@ keeps the user's approvals, and the agents do the ticket work.
 | Agents | One background agent per ticket, started with the shared brief |
 | Waiting | Agents wait for the coordinator's wake-up, because their sandbox blocks `sleep`. The coordinator polls on a cron (every 3 minutes) and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad with the context, the briefing format, the plan-review checks, the stop conditions and the report format; each agent reads it and its own ticket |
-| Phase 1: prepare | The agent reads the ticket and the code, settles the names, writes its briefing to a file, reports back and posts nothing |
+| Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
 | Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
 | State file | A JSON file in the scratchpad, one entry per ticket: agent id, branch, last Jaidev comment id, last PR head, last reported CI head, merged flag |
-| Events | Each poll compares Jaidev's newest comment and the PR head with the state file. A new question, plan, Blocked comment, PR, finished revision, completed CI run or merge is an event; status and progress comments change nothing. One `SendMessage` per event, then the state file updates |
+| Events | One `SendMessage` per event, then the state file updates (see "Poll events") |
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
+| Next ticket | Start a Phase 1 agent for the next unblocked ticket while a PR waits in review or CI (see "Preparing the next ticket") |
 | Cleanup | After the last merge, delete the poll job and mark the tickets merged in the state file |
+
+### Poll events
+
+Each poll compares Jaidev's newest comment and the PR head with the state file.
+
+- Events: a new question, a plan, a Blocked comment, a PR, a finished revision, a completed CI run or a merge.
+- Status and progress comments change nothing.
+- Send one `SendMessage` per event, then update the state file.
+
+### Preparing the next ticket
+
+When the tickets form a chain, the next unblocked ticket gets its briefing ready while the current PR waits.
+
+- Start one Phase 1 agent for the next ticket as soon as the current PR is in review or CI.
+- Point the agent at the unmerged code on the PR's branch, and at the PR's briefing and names reply.
+- Keep at most 2 agents running.
+- Send "go" after the blocking PR merges.
 
 Name the session after the batch (`/rename`) when it starts a poll.
 
