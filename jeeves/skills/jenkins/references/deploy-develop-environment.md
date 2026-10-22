@@ -103,8 +103,8 @@ environment.
 6. **Confirm before triggering.** State the exact `ENVIRONMENT` and each
    enabled service's branch and mode, and get explicit go-ahead — this is a
    shared dev environment other people may be using. Mention the expected
-   duration from "Per-service deploy timing" below for the service(s) being
-   deployed, if a row exists there.
+   duration from `~/.claude/memory/jenkins-deploy-timings.md` for the service(s)
+   being deployed, if a row exists there.
 7. **Trigger.** Same-slot builds run concurrently (see "Concurrency model"),
    so check whether anything is already working on *your* slot. When a build
    is running or queued for that slot, stop and ask the user before
@@ -206,32 +206,12 @@ cleanly to that one service — a multi-service build's duration can't be
 split back out per service since they build/deploy in parallel.
 
 One row per service, carried forward across sessions. The job keeps builds
-for one day (`logRotator(daysToKeepStr: '1')`), so the window's size swings
-with traffic and a service's earlier samples age out of the API while its row
-here keeps them — merge a fresh sample into the existing row (widen min/max,
-add to the sample size) rather than replacing it. A service with no row yet
-gets one the first time a clean single-service build appears for it. Record
-rows in your clone of the plugin
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/references/deploy-develop-environment.md`),
-leave the change uncommitted and tell the user it is ready to review and
-push; when that directory is missing, report the sample instead.
-
-| Service | Min | Max | Mean | Sample size |
-|---|---|---|---|---|
-| api | 4m27s | 12m06s | 8m56s | 15 |
-| accounting | 4m02s | 4m38s | 4m17s | 3 |
-| billpay | 2m10s | 6m49s | 4m29s | 5 |
-| cards | 6m49s | 10m48s | 8m57s | 4 |
-| cms | 6m33s | 12m43s | 9m38s | 2 |
-| credit | 3m25s | 3m25s | 3m25s | 1 |
-| creditstatements | 13m04s | 13m04s | 13m04s | 1 |
-| expensemanagement | 2m27s | 5m39s | 4m13s | 6 |
-| flows | 10m06s | 10m10s | 10m08s | 2 |
-| productaccount | 2m04s | 9m50s | 5m22s | 4 |
-| stablecoinservice | 3m32s | 5m10s | 4m04s | 4 |
-| utvservice | 1m45s | 4m26s | 3m11s | 7 |
-| wallet | 4m35s | 9m05s | 6m43s | 6 |
-| web | 11m14s | 15m46s | 13m26s | 7 |
+for one day (`logRotator(daysToKeepStr: '1')`), so a service's earlier samples
+age out of the API while its row keeps them — merge a fresh sample into the
+existing row (widen min/max, add to the sample size) rather than replacing it.
+A service with no row yet gets one the first time a clean single-service build
+appears for it. Record rows in `~/.claude/memory/jenkins-deploy-timings.md`
+in the same turn.
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
 one batched request, filter to

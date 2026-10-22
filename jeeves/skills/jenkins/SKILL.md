@@ -112,7 +112,7 @@ before working with a job:
 
 | Job | Reference |
 | --- | --- |
-| `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (includes per-service deploy timing) |
+| `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (deploy flow; timings live in `~/.claude/memory/jenkins-deploy-timings.md`) |
 
 ## Scripts
 
@@ -170,16 +170,14 @@ concurrent-build race per `references/build-ops.md`):
 > The new `api` pod never became ready — an app issue in the deployed module.
 
 **A running build** — elapsed so far, alongside the service's expected duration
-from the timing table in `references/deploy-develop-environment.md`:
+from `~/.claude/memory/jenkins-deploy-timings.md`:
 
 > ⏳ **building** — [#44089](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/44089/) · 3m20s elapsed, `api` usually takes ~8m56s
 
 When a deploy finishes and exactly one service was enabled, that build is a
-clean timing sample: merge it into that service's row in the timing table —
-widen min/max, add to the sample size — in your clone of the plugin
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/references/deploy-develop-environment.md`),
-leave the change uncommitted and tell the user it is ready to review and push.
-When that directory is missing, report the sample instead.
+clean timing sample: merge it into that service's row in
+`~/.claude/memory/jenkins-deploy-timings.md` — widen min/max, add to the sample
+size — in the same turn.
 
 Keep the rest lean: name the failing step, and leave out the steps that
 succeeded, the URLs the user already has, `jenkins-api` usage examples, the

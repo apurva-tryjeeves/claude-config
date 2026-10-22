@@ -5,8 +5,8 @@ from real tickets. Check here first; when Jaidev shows something new, update
 this file in the same turn.
 
 Sections 1–5 hold stable behaviour and are safe to reuse across runs.
-Section 6 holds timings and costs, which vary by ticket — add a column and a
-row after every run.
+Section 6 points to the local file that holds timings and costs, which vary
+by ticket.
 
 ## At a glance
 
@@ -161,8 +161,20 @@ allocated develop environments (see At a glance).
   — then planned with invented names. A reply with the same code as plain
   fenced blocks arrived intact (verified by quote-back). The Linear API
   returned both comments intact, so the loss is in Jaidev's ingestion of
-  that one comment; the collapsible is the leading suspect. Put code Jaidev
-  must copy in plain fenced blocks, and ask it to quote key lines back.
+  that one comment. ACC-1588 (2026-10-22) had no collapsible: every
+  identifier was an inline code span (backticks) in bullets, and Jaidev
+  reported the base branch, PR title and "most of the file, type and helper
+  names" blank, while the prose arrived. So inline code spans are the cause,
+  not the collapsible. Put every identifier, branch, path and title Jaidev
+  must use inside plain fenced blocks (```text or ```ts), keep inline
+  backticks out of the briefing, and ask it to quote key lines back.
+  ACC-1638 (2026-10-22) then showed fenced blocks blank too: its plan said
+  the code blocks under Names, Changes and the acceptance command "arrived
+  empty" and it chose its own names, with the briefing posted as the start
+  comment and using plain fenced blocks only. Replies in a thread arrived
+  intact on ACC-1588. So the start comment is the unreliable channel for
+  code: keep the start comment to prose and short lists, and send identifiers
+  and code as the answer in Jaidev's question thread or as plan feedback.
 - Implementation works from the plan's text. On WAL-6301 the implementer
   noted "the original money.ts code was stripped from the ticket, I need to
   reconstruct it from the plan descriptions", although the planner had
@@ -182,40 +194,25 @@ allocated develop environments (see At a glance).
   costs money whether or not anything changed.
 - Each phase costs money (shown in the status comment). Clear briefings avoid
   question rounds, plan revisions and blocks.
+- Its sandbox has no Docker. A unit-test project whose `globalSetup` starts a
+  database container cannot run there; brief tests that mock the DB layer
+  and leave the full run to CI.
+- On a parent feature, Jaidev merges a moved base into its branch by
+  default (ACC-1637 and ACC-1638, 2026-10-22). Ask for a rebase in a PR
+  comment instead. A squash merge flattens the history either way.
+- Open question: whether Jaidev's token can force-push a rebased branch.
+  Record the answer here after the first rebase request.
 - Open question: whether a reply during implementation stops the retries.
   Record the answer here once a run shows it.
+- Plan v1 needed one correction round on ACC-1588, ACC-1637 and ACC-1638:
+  base branch set to the default branch, names invented, Done-when criteria
+  reworded and acceptance criteria blank. The first plan after a prose-only
+  start comment plus a names reply is the one to check hardest.
+- The doc-format hook rejects GitHub approval bodies and Linear comments
+  without `## <emoji>` section headers; comments starting with `@jaidev`
+  are exempt.
 
 ## 6. Timings and costs
 
-Provisional — three runs so far. Add a column per run to the timing table and a
-row per run to the cost table.
-
-Queue wait is logged apart from the phase timings. The status timeline has no
-entry for leaving "Queued"; read it from Jaidev's logs on the dev OpenSearch
-cluster (index `logs-YYYY.MM.DD`, `namespace_name: jai-dev-preprod`, `log`
-containing the ticket ID). "Enqueued ticket-received message" marks the start
-of the wait and "Processing ticket-received message" its end. Without log
-access, check the status comment about 5 s and 20 s after posting.
-
-| Event | WAL-6298 | WAL-6300 | WAL-6301 |
-|---|---|---|---|
-| `@jaidev start` → status comment | 3 s | 3 s | 2 s (already "Analyzing...", no Queued stage shown) |
-| Queued → analysis started | not queued | 0.005 s (status left "Queued" at +0.2 s) | 0.005 s (from logs) |
-| → analysis complete | 23 s | 17 s | 15.5 s |
-| → plan v1 | 3 min 30 s | 4 min 6 s (analysis complete 13:31:13 → plan 13:35:19) | 1 min 27 s |
-| Plan feedback → in-thread ack | 11 s | 9 s | 37 s (~9 KB reply with code) |
-| → plan v2 | 1 min 25 s | 55 s | 1 min 36 s |
-| Feedback → plan v3 | — | — | ack 9.7 s, plan v3 1 min 7 s |
-| Feedback → plan v4 | — | — | ack 12.6 s, plan v4 1 min 13 s |
-| `plan:approved` → progress comment | 5 s | 12 s (approval logged at +2 s; plan thread resolved at +3 s) | 5.2 s |
-| → PR opened, or Blocked | 19 min (Blocked: workflow scope) | 4 min 30 s (PR, no block) | 4 min 7 s (PR, no block) |
-| `@jaidev resume` → PR opened | 2 min 38 s | — |  |
-| SonarCloud findings → fix pushed | ~6 min | — (Sonar clean) |  |
-| Human PR review → revision started | — | 14 s |  |
-| Revision started → fix pushed | — | 2 min (+ PR reply 8 s later) | review → fix pushed 2 min 56 s (+ PR reply 7 s later) |
-
-| Ticket | Kind | Analysis | Planning | Impl | PR rev | Total | Notes |
-|---|---|---|---|---|---|---|---|
-| WAL-6298 | Config only | $0.30 | $1.69 | $6.56 | $0.63 | $9.18 | 1 plan revision; 1 block ($6.25 of impl); 1 SonarCloud revision |
-| WAL-6300 | Code + tests, 25 files | $0.27 | $2.37 | $0.50 | $0.20 | $3.35 | 1 plan revision ($0.33); 0 blocks; 1 human review revision; queue wait 5 ms |
-| WAL-6301 | New code + tests, 9 files | $0.48 | $1.83 | $0.54 | $0.34 | $3.19 | 3 plan revisions (lost briefing, our code defect, our forward-compat change); 0 blocks; 1 human review revision; queue wait 5 ms |
+Kept outside the plugin, in `~/.claude/memory/jaidev-run-timings.md`. Read it
+to estimate a run and add the new run's column and row there when it closes out.

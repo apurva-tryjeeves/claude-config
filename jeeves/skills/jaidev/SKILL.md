@@ -1,6 +1,6 @@
 ---
 name: jaidev
-description: Coordinate Jaidev (Jeeves AI Developer, `@jaidev` on Linear) through Linear code tickets in batches — pick ready tickets, write and post the `@jaidev start` briefing, answer its questions, review its plan and PR, resolve blocked runs, track progress. Use when the user wants to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or asks why Jaidev didn't start or got blocked.
+description: Coordinate Jaidev (Jeeves AI Developer, `@jaidev` on Linear) through Linear code tickets in batches or parent features — pick ready tickets, write and post the `@jaidev start` briefing, answer its questions, review its plan and PR, resolve blocked runs, run tickets through background agents, track progress. Use when the user wants to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or asks why Jaidev didn't start or got blocked.
 ---
 
 # Jaidev
@@ -10,9 +10,8 @@ Jaidev writes the code; you brief it, review its plans and PRs against the
 ticket, and keep every approval and merge with the user.
 
 Read `references/jaidev-reference.md` before the first step — it holds
-Jaidev's exact commands, lifecycle, comment formats, limits, and observed
-timings and costs. An exact trigger is what makes Jaidev start, so follow its
-wording to the letter.
+Jaidev's exact commands, lifecycle, comment formats and limits. An exact trigger is what makes Jaidev start, so
+follow its wording to the letter.
 
 Check the reference file first whenever Jaidev acts. When Jaidev shows
 something new — a command, a trigger, a comment format, a limit, a timing —
@@ -35,6 +34,42 @@ Confirm only what's missing:
 - Batch size: tickets run in parallel (default 2). Each ticket in a batch
   touches its own set of files.
 - Default repository and base branch, for tickets that leave them unstated.
+
+## Ticket patterns
+
+Pick the pattern from the ticket's shape; both run the loop below.
+
+| | Single-task ticket | Parent feature with sub-tickets |
+|---|---|---|
+| Jaidev's start branch | the repository's default branch | the parent branch `feat/<PARENT-ID>` |
+| PR base | the default branch | the parent branch |
+| Jaidev's branch | `jai-dev/<ticket-id>` | `jai-dev/<sub-ticket-id>`, cut from the parent branch |
+| Merge | the user merges the PR | the user merges each sub-ticket PR into the parent; the parent's own PR to the default branch comes last |
+| Order | blocked-by relations | blocked-by relations, then file overlap |
+
+For a parent feature:
+
+- Cut the parent branch from the default branch and push it before the
+  first briefing, so Jaidev has a base with a commit.
+- State the start branch and the PR base in the briefing's opening
+  paragraph and again under Constraints.
+- Merge tickets that edit the same files one at a time (for example a
+  worker start file, or one block of the config files). Merge the first,
+  then ask the next ticket's PR to catch up with the parent.
+- When a sub-ticket PR falls behind the parent, ask Jaidev to rebase onto
+  the parent. Jaidev's default is to merge the base into its branch, and the
+  rebase keeps the PR history linear. Post the request as a PR comment:
+
+  ```text
+  ## 🔁 Rebase onto the parent branch
+
+  This branch is behind <parent-branch>. Rebase it onto <parent-branch> and push.
+  ```
+
+  Whether Jaidev's token can force-push a rebase is untested (reference §5);
+  when the push is rejected, the user force-pushes the rebased branch.
+- Every sub-ticket PR title carries its own ticket id, so Linear moves that
+  ticket when the PR merges.
 
 ## The loop
 
@@ -93,7 +128,7 @@ Then draft one comment in exactly this format:
 ````markdown
 @jaidev start
 
-Please pick up this ticket in `<org/repo>` (base branch `<branch>`).
+Please pick up this ticket in <org/repo>. Start your branch from <start-branch> and open the PR against <base-branch>.
 
 ## 🎯 Goal
 
@@ -101,31 +136,31 @@ Please pick up this ticket in `<org/repo>` (base branch `<branch>`).
 
 ## 📋 Context
 
-- <current state of the code, with file paths>
+- <current state of the code, in words>
 - <precedent PRs to follow and what they did>
 - <known CI or environment limitations>
 - <related tickets in flight and the files they touch>
 
 ## 🛠️ Changes
 
-- <every change, specifically: file paths, exact names, versions and values>
+- <every change in prose: what changes and why; the exact names, paths and values follow in the thread reply>
 
 ## 🚧 Constraints
 
 - <what stays unchanged; scope boundaries with other tickets>
 - Secrets stay out of code; coverage thresholds stay as they are.
 - Report known CI failures as they stand.
-- Your changes stay outside `.github/workflows/*`.
+- Your changes stay outside .github/workflows.
 
 ## 🧑‍🔧 Manual follow-up
 
-- <changes a human makes on your branch, e.g. `.github/workflows/*` edits; they sit outside your definition of done>
+- <changes a human makes on your branch, e.g. .github/workflows edits; they sit outside your definition of done>
 
 ## ✅ Acceptance criteria
 
-- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI `test / Unit Test` passes">
+- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI test / Unit Test passes">
 
-Copy every acceptance criterion into your plan's Done when, word for word. Name any you can't meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
+A reply in this thread follows with the exact names and code. Copy every acceptance criterion into your plan's Done when, word for word. Name any you can't meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
 ````
 
 Write the briefing to these rules:
@@ -139,13 +174,21 @@ Write the briefing to these rules:
 - Ask Jaidev to quote back, at the top of its plan, one key code signature
   (when the briefing gives code) and one acceptance criterion. Check both
   against the briefing before reviewing the rest of the plan.
-- Put code in plain fenced blocks in the comment body, with no `+++`
-  collapsible. A briefing with a collapsible reached Jaidev with its
-  identifiers blanked; the collapsible is the suspected cause, not a
-  confirmed one (reference §5).
-- When the briefing gives code to copy, ask Jaidev to write it out in full
-  in the plan's Implementation Sequence. Implementation works from the
-  plan's text, not from the thread.
+- Write the start comment as prose and short lists, with identifiers,
+  branch names, paths and code left out of it. Inline backticks and plain
+  fenced blocks both reach Jaidev blank in the start comment, while thread
+  replies and plan feedback arrive intact (reference §5).
+- Send the exact names and code as a reply: answer Jaidev's first question
+  (it reports what arrived blank) with a Names table and the code, each in a
+  plain fenced block with no `+++` collapsible. When it plans without
+  asking, send the same content as plan feedback.
+- Ask Jaidev to write any code to copy out in full in the plan's
+  Implementation Sequence. Implementation works from the plan's text, not
+  from the thread.
+- Open every other body you post (an approval review, a Linear comment not
+  addressed to Jaidev) with `## <emoji>` section headers, as the doc-format
+  hook requires. Comments addressed to `@jaidev` follow the briefing
+  format.
 - Describe credentials by name and location (e.g. the Secrets Manager key);
   keep their values out of the comment.
 - Show the user each draft and wait for explicit approval of that draft:
@@ -162,7 +205,7 @@ Write the briefing to these rules:
 ### 3. Watch the run
 
 - Check the ticket's comments and Jaidev's status comment every few minutes;
-  reference §6 shows how long each phase usually takes.
+  `~/.claude/memory/jaidev-run-timings.md` shows how long each phase usually takes.
 - In your first report on a ticket, tell the user that Jaidev's status, plan
   and progress comments are the items you review, so a new Jaidev comment
   means a review from you is on its way.
@@ -182,6 +225,14 @@ Write the briefing to these rules:
 
 ### 4. Review the plan
 
+Plan v1 usually needs one correction round. Expect these gaps and check each
+first:
+
+- the base branch is the default branch instead of the briefed one;
+- names are invented where the briefing's names arrived blank;
+- Done-when criteria are reworded or missing;
+- acceptance criteria arrive blank.
+
 Compare Jaidev's latest "Implementation plan" with the ticket and the
 briefing, item by item:
 
@@ -196,6 +247,10 @@ briefing, item by item:
 - each Key Assumption holds — verify it in the code. A revised plan may omit
   the section; verify the assumptions it now relies on;
 - risks and mitigations are acceptable.
+
+Send the correction as one feedback reply that lists the base branch, the
+Names table, every Done-when criterion word for word and the PR title, in
+plain fenced blocks. Approve v2 when it matches.
 
 Report a verdict (approve / request changes), a table of ticket items →
 covered / missing / wrong, and any wrong assumptions. When changes are
@@ -264,8 +319,29 @@ the ticket to the user.
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
-- Add the run's timings and costs to reference §6.
+- Add the run's timings and costs to `~/.claude/memory/jaidev-run-timings.md`.
 - Update the progress table and return to step 1.
+
+## Background agents
+
+Run each ticket through its own background agent when several tickets are in
+flight, so each ticket keeps its own context. The coordinator (this session)
+keeps the user's approvals, and the agents do the ticket work.
+
+| Piece | Rule |
+|---|---|
+| Agents | One background agent per ticket, started with the shared brief |
+| Waiting | Agents wait for the coordinator's wake-up, because their sandbox blocks `sleep`. The coordinator polls on a cron (every 3 minutes) and wakes an agent with `SendMessage` |
+| Shared brief | One file in the scratchpad with the context, the briefing format, the plan-review checks, the stop conditions and the report format; each agent reads it and its own ticket |
+| Phase 1: prepare | The agent reads the ticket and the code, settles the names, writes its briefing to a file, reports back and posts nothing |
+| Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
+| State file | A JSON file in the scratchpad, one entry per ticket: agent id, branch, last Jaidev comment id, last PR head, last reported CI head, merged flag |
+| Events | Each poll compares Jaidev's newest comment and the PR head with the state file. A new question, plan, Blocked comment, PR, finished revision, completed CI run or merge is an event; status and progress comments change nothing. One `SendMessage` per event, then the state file updates |
+| Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides |
+| Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
+| Cleanup | After the last merge, delete the poll job and mark the tickets merged in the state file |
+
+Name the session after the batch (`/rename`) when it starts a poll.
 
 ## Progress table
 
