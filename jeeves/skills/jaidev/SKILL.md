@@ -337,6 +337,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
 | State file | A JSON file in the scratchpad, one entry per ticket: agent id, branch, last Jaidev comment id, last PR head, last reported CI head, merged flag |
 | Events | Each poll compares Jaidev's newest comment and the PR head with the state file. A new question, plan, Blocked comment, PR, finished revision, completed CI run or merge is an event; status and progress comments change nothing. One `SendMessage` per event, then the state file updates |
+| Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
 | Cleanup | After the last merge, delete the poll job and mark the tickets merged in the state file |
