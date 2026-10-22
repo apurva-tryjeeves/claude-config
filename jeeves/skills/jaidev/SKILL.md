@@ -337,9 +337,9 @@ keeps the user's approvals, and the agents do the ticket work.
 
 | Piece | Rule |
 |---|---|
-| Agents | One background agent per ticket, started with the shared brief |
-| Waiting | Agents wait for the coordinator's wake-up, because their sandbox blocks `sleep`. The coordinator polls on a cron (every 3 minutes) and wakes an agent with `SendMessage` |
-| Shared brief | One file in the scratchpad with the context, the briefing format, the plan-review checks, the stop conditions and the report format; each agent reads it and its own ticket |
+| Agents | One background agent per ticket, started with the shared brief and an explicit tier: Phase 1 prepare `model: sonnet`, `effort: medium`; Phase 2 run `model: sonnet`, `effort: high` |
+| Waiting | Agents wait for the coordinator's wake-up, because their sandbox blocks `sleep`. The coordinator learns of events from two watchers (see "Poll events") and wakes an agent with `SendMessage` |
+| Shared brief | One file in the scratchpad with the context, the briefing format, the plan-review checks, the stop conditions and the report format; each agent reads it and its own ticket. Copy every rule an agent needs into the brief, so agents work from the brief alone and leave `SKILL.md` and `references/jaidev-reference.md` (33 KB) to the coordinator |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
 | Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
 | State file | A JSON file in the scratchpad, one entry per ticket: agent id, branch, last Jaidev comment id, last PR head, last reported CI head, merged flag |
@@ -348,13 +348,33 @@ keeps the user's approvals, and the agents do the ticket work.
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
 | Next ticket | Start a Phase 1 agent for the next unblocked ticket while a PR waits in review or CI (see "Preparing the next ticket") |
-| Cleanup | After the last merge, delete the poll job and mark the tickets merged in the state file |
+| Cleanup | After the last merge, delete the cron job, stop the PR watcher and mark the tickets merged in the state file |
 
 ### Poll events
 
-Each poll compares Jaidev's newest comment and the PR head with the state file.
+Two watchers split the work, and only the cron costs a model turn per tick.
 
-- Events: a new question, a plan, a Blocked comment, a PR, a finished revision, a completed CI run or a merge.
+| Watcher | Covers | Cost |
+|---|---|---|
+| PR watcher (`scripts/pr-watch.zsh`, run with `Monitor`) | New PR head, CI result, review decision, merge or close | One model turn per printed line |
+| Linear cron | Jaidev's newest comment: a question, a plan, a Blocked comment or a PR opened | One model turn per tick |
+
+Start the PR watcher when a PR opens, from the PR's repo directory so `gh` picks the right account:
+
+```bash
+cd <repo-dir> && <skill-base-dir>/scripts/pr-watch.zsh 60 <pr-number> [<pr-number> ...]
+```
+
+Pace the Linear cron by the phase:
+
+| Phase | Interval |
+|---|---|
+| Waiting for analysis or plan v1 or v2 | 2 minutes |
+| Implementation running | 5 minutes |
+| Every PR open | Delete the cron job; the PR watcher covers the rest, and a Jaidev revision shows as a new PR head |
+
+Events: a new question, a plan, a Blocked comment, a PR, a finished revision, a completed CI run or a merge. On each one:
+- Compare it with the state file.
 - Status and progress comments change nothing.
 - Send one `SendMessage` per event, then update the state file.
 
