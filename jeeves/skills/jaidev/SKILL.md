@@ -181,17 +181,10 @@ Write the briefing to these rules:
 - Ask Jaidev to quote back, at the top of its plan, one key code signature
   (when the briefing gives code) and one acceptance criterion. Check both
   against the briefing before reviewing the rest of the plan.
-- Write the start comment as prose and short lists, with identifiers,
-  branch names, paths and code left out of it. Inline backticks and plain
-  fenced blocks both reach Jaidev blank in the start comment, while thread
-  replies and plan feedback arrive intact (reference §5).
-- Send the exact names and code as a reply: answer Jaidev's first question
-  (it reports what arrived blank) with a Names table and the code, each in a
-  plain fenced block. When it plans without
-  asking, send the same content as plan feedback.
-- Ask Jaidev to write any code to copy out in full in the plan's
-  Implementation Sequence. Implementation works from the plan's text, not
-  from the thread.
+- Write the start comment as prose and short lists. Identifiers, paths, backticks and
+  code go in the names reply, because they arrive blank in a start comment (reference
+  §5): send the Names table and the code in plain fenced blocks as the answer to
+  Jaidev's first question, or as plan feedback when it plans without asking.
 - Open every other body you post (an approval review, a Linear comment not
   addressed to Jaidev) with `## <emoji>` section headers, as the doc-format
   hook requires. Comments addressed to `@jaidev` follow the briefing
@@ -369,7 +362,7 @@ blocked-by ticket, so the table shows what each merge unblocks.
 - When a ticket is ambiguous or conflicts with the code or another ticket,
   ask the user.
 
-## Reporting
+## Reporting results
 
 Start each message with the progress table, then three parts: what
 happened, what you propose, what you need from the user. Leave out restated ticket

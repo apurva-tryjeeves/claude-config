@@ -166,9 +166,12 @@ allocated develop environments (see At a glance).
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a
   single-file `npx jest <file>` run fails the threshold even when its tests
-  pass. Brief single-file runs as
-  `npx jest --ci --coverage=false --runTestsByPath <file>`; a bare path under
-  `--selectProjects unit` runs the whole suite (2,241 tests on accounting-service).
+  pass. Brief single-file runs with this command; a bare path under
+  `--selectProjects unit` runs the whole suite (2,241 tests on accounting-service):
+
+  ```bash
+  npx jest --ci --coverage=false --runTestsByPath <file>
+  ```
 - Its GitHub token pushes code only; `.github/workflows/*` changes reach the
   branch through a human. A briefing that puts a workflow change in its
   definition of done ends Blocked.
@@ -207,4 +210,4 @@ allocated develop environments (see At a glance).
 ## 6. Timings and costs
 
 Kept outside the plugin, in `~/.claude/memory/jaidev-run-timings.md`. Read it
-to estimate a run and add the new run's column and row there when it closes out.
+to estimate a run and add the new run's row to its cost table when it closes out.

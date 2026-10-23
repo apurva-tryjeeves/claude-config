@@ -16,7 +16,8 @@ keeps the user's approvals, and the agents do the ticket work.
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
-| Next ticket | Start a Phase 1 agent for the next unblocked ticket while a PR waits in review or CI (see "Preparing the next ticket") |
+| Next ticket | Start a fresh Phase 1 agent for the next unblocked ticket while a PR waits in review or CI (see "Preparing the next ticket"). Reuse a finished agent only under "Reuse or spawn" |
+| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn |
 | Cleanup | After the last merge, delete the cron job, stop the PR watcher and mark the tickets merged in the state file |
 
 ### Poll events
@@ -42,8 +43,18 @@ Pace the Linear cron by the phase:
 | Implementation running | 5 minutes |
 | Every PR open | Delete the cron job; the PR watcher covers the rest, and a Jaidev revision shows as a new PR head |
 
-Events: a new question, a plan, a Blocked comment, a PR, a finished revision, a completed CI run or a merge. On each one:
-- Compare it with the state file (`scripts/poll-state.py <state-file> get <ticket>`, then `set <ticket> <field> <value>`).
+Events: a new question, a plan, a Blocked comment, a PR, a finished revision, a completed CI run or a merge. Each wake-up makes the agent re-read its whole context, so wake an agent only for:
+- the first question, a plan, or a Blocked comment;
+- all checks complete on a PR head (a new PR or a finished revision waits for this, and the agent reviews the diff and the CI result together);
+- a merge.
+
+On each event:
+- Compare it with the state file, read and updated with `scripts/poll-state.py`:
+
+  ```bash
+  scripts/poll-state.py <state-file> get <ticket>
+  scripts/poll-state.py <state-file> set <ticket> <field> <value>
+  ```
 - Status and progress comments change nothing.
 - Send one `SendMessage` per event, then update the state file.
 
@@ -55,5 +66,13 @@ When the tickets form a chain, the next unblocked ticket gets its briefing ready
 - Point the agent at the unmerged code on the PR's branch, and at the PR's briefing and names reply.
 - Keep at most 2 agents running.
 - Send "go" after the blocking PR merges.
+
+### Reuse or spawn
+
+A resumed agent re-reads its whole context on every turn, so a long-lived agent taxes every later message. Spawn a fresh agent per ticket and carry knowledge in `references/repo-notes.md`. Reuse a finished agent (`SendMessage` with the next ticket) only when all hold:
+- its completion notice shows under about 50k tokens of context;
+- the next ticket edits the same files or tests;
+- the previous ticket is merged, so nothing runs in parallel;
+- the agent re-fetches origin and treats its earlier notes as unverified.
 
 Name the session after the batch (`/rename`) when it starts a poll.
