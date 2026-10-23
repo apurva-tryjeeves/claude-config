@@ -1,6 +1,6 @@
 ---
 name: jaidev
-description: Coordinate Jaidev (Jeeves AI Developer, `@jaidev` on Linear) through Linear code tickets in batches or parent features — pick ready tickets, write and post the `@jaidev start` briefing, answer its questions, review its plan and PR, resolve blocked runs, run tickets through background agents, track progress. Use when the user wants to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or asks why Jaidev didn't start or got blocked.
+description: Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked.
 ---
 
 # Jaidev
@@ -211,7 +211,9 @@ Write the briefing to these rules:
 
 ### 3. Watch the run
 
-- Check the ticket's comments and Jaidev's status comment every few minutes;
+- Poll with `list_comments` and `limit: 2` (newest first), and compare the newest
+  Jaidev comment id with the state file. Open a full comment only for a new plan,
+  question or Blocked. A full list costs 5k to 25k tokens.
   `~/.claude/memory/jaidev-run-timings.md` shows how long each phase usually takes.
 - In your first report on a ticket, tell the user that Jaidev's status, plan
   and progress comments are the items you review, so a new Jaidev comment
@@ -307,7 +309,7 @@ When Jaidev opens the PR:
 Read the head SHA, review state and checks:
 
 ```bash
-gh pr view <number> --json headRefOid,reviewDecision,mergeStateStatus,statusCheckRollup
+gh pr view <number> --json headRefOid,reviewDecision,mergeStateStatus,statusCheckRollup --jq '{head: .headRefOid, merge: .mergeStateStatus, review: .reviewDecision, checks: [.statusCheckRollup[] | {n: (.name // .context), s: .status, c: (.conclusion // .state)}]}'
 ```
 
 Submit the approval:
@@ -331,63 +333,10 @@ the ticket to the user.
 
 ## Background agents
 
-Run each ticket through its own background agent when several tickets are in
-flight, so each ticket keeps its own context. The coordinator (this session)
-keeps the user's approvals, and the agents do the ticket work.
-
-| Piece | Rule |
-|---|---|
-| Agents | One background agent per ticket, started with the shared brief and an explicit tier: Phase 1 prepare `model: sonnet`, `effort: medium`; Phase 2 run `model: sonnet`, `effort: high` |
-| Waiting | Agents wait for the coordinator's wake-up, because their sandbox blocks `sleep`. The coordinator learns of events from two watchers (see "Poll events") and wakes an agent with `SendMessage` |
-| Shared brief | One file in the scratchpad with the context, the briefing format, the plan-review checks, the stop conditions and the report format; each agent reads it and its own ticket. Copy every rule an agent needs into the brief, so agents work from the brief alone and leave `SKILL.md` and `references/jaidev-reference.md` (33 KB) to the coordinator |
-| Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
-| Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
-| State file | A JSON file in the scratchpad, one entry per ticket: agent id, branch, last Jaidev comment id, last PR head, last reported CI head, merged flag |
-| Events | One `SendMessage` per event, then the state file updates (see "Poll events") |
-| Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
-| Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides |
-| Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
-| Next ticket | Start a Phase 1 agent for the next unblocked ticket while a PR waits in review or CI (see "Preparing the next ticket") |
-| Cleanup | After the last merge, delete the cron job, stop the PR watcher and mark the tickets merged in the state file |
-
-### Poll events
-
-Two watchers split the work, and only the cron costs a model turn per tick.
-
-| Watcher | Covers | Cost |
-|---|---|---|
-| PR watcher (`scripts/pr-watch.zsh`, run with `Monitor`) | New PR head, CI result, review decision, merge or close | One model turn per printed line |
-| Linear cron | Jaidev's newest comment: a question, a plan, a Blocked comment or a PR opened | One model turn per tick |
-
-Start the PR watcher when a PR opens, from the PR's repo directory so `gh` picks the right account:
-
-```bash
-cd <repo-dir> && <skill-base-dir>/scripts/pr-watch.zsh 60 <pr-number> [<pr-number> ...]
-```
-
-Pace the Linear cron by the phase:
-
-| Phase | Interval |
-|---|---|
-| Waiting for analysis or plan v1 or v2 | 2 minutes |
-| Implementation running | 5 minutes |
-| Every PR open | Delete the cron job; the PR watcher covers the rest, and a Jaidev revision shows as a new PR head |
-
-Events: a new question, a plan, a Blocked comment, a PR, a finished revision, a completed CI run or a merge. On each one:
-- Compare it with the state file.
-- Status and progress comments change nothing.
-- Send one `SendMessage` per event, then update the state file.
-
-### Preparing the next ticket
-
-When the tickets form a chain, the next unblocked ticket gets its briefing ready while the current PR waits.
-
-- Start one Phase 1 agent for the next ticket as soon as the current PR is in review or CI.
-- Point the agent at the unmerged code on the PR's branch, and at the PR's briefing and names reply.
-- Keep at most 2 agents running.
-- Send "go" after the blocking PR merges.
-
-Name the session after the batch (`/rename`) when it starts a poll.
+With two or more tickets in flight, run each in its own background agent. Read
+`references/background-agents.md` first: it holds the agent tiers, the shared-brief
+rules, the state file, the PR watcher and the Linear poll cadence. Start from
+`assets/agent-brief-template.md` and keep the state file with `scripts/poll-state.py`.
 
 ## Progress table
 
