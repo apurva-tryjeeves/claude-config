@@ -1,6 +1,6 @@
 {
   "name": "jeeves",
-  "version": "3.7.2",
+  "version": "3.7.3",
   "description": "Skills and agents for JeevesInc engineering work — Linear, Jenkins, MySQL, OpenSearch, AWS secrets, releases, and the git/PR, logging, SQS and SonarCloud conventions.",
   "author": { "name": "Apurva Singh", "email": "apurva@tryjeeves.com" }
 }
