@@ -339,6 +339,11 @@ Show it, current, at the start of every report:
 
 | Ticket | Title | Repo / base | Stage | Next action | Owner |
 |---|---|---|---|---|---|
+| 🟦 ACC-1644 | Add the retry | org/repo / feat/ACC-1644 | 🟡 plan review | Review plan v1 | you |
+
+Put the ticket's identity square in the Ticket cell and the status circle in
+the Stage cell; `references/background-agents.md` ("Color coding") holds the
+rule.
 
 Stages: waiting, briefing, running, questions, plan review, blocked,
 PR review, awaiting merge, merged, manual. Owner: user, you, or Jaidev.
@@ -376,4 +381,6 @@ blocked-by ticket, so the table shows what each merge unblocks.
 Start each message with the progress table, then three parts: what
 happened, what you propose, what you need from the user. Leave out restated ticket
 content and closing offers. Plan and PR reviews are deliverables and run as
-long as the item-by-item table needs.
+long as the item-by-item table needs. Start every line you relay about an
+agent or its ticket with the identity square and ticket id, and put the
+status circle before the verdict.

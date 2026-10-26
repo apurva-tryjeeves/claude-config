@@ -20,6 +20,32 @@ keeps the user's approvals, and the agents do the ticket work.
 | Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn |
 | Cleanup | After the last merge, delete the cron job, stop the PR watcher and mark the tickets merged in the state file |
 
+### Color coding
+
+Give every agent an identity color and every message a status circle.
+
+1. When you spawn an agent, pick one square from 🟦 🟧 🟪 🟫 ⬜ and record it:
+
+   ```bash
+   scripts/poll-state.py <state-file> set <ticket> color <square>
+   ```
+2. Start every message you relay about that agent or its ticket with the square and the ticket id. Tickets batched under one agent share its square.
+3. Mark the status with one circle:
+
+   | Circle | Status |
+   |---|---|
+   | 🟢 | progressing: Jaidev working, CI running, an agent running |
+   | 🟡 | waiting for the user: a plan, briefing, decision or merge needs an answer |
+   | 🔴 | blocked or failing: Blocked comment, failed check, third revision round, a stopped agent |
+   | ⚪ | done or idle: merged, finished agent |
+4. Reserve green, yellow and red for status circles, and use squares only for identity.
+
+Example line:
+
+```text
+🟦 ACC-1644 🟡 Plan v1 is ready for your review.
+```
+
 ### Poll events
 
 Two watchers split the work, and only the cron costs a model turn per tick.
