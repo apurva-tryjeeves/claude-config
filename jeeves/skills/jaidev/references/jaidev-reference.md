@@ -201,9 +201,6 @@ allocated develop environments (see At a glance).
 - After the PR it posts a "Deploy this ticket" comment. The user deploys; agents
   leave the comment unanswered and run no `@jaidev deploy`.
 - A correction posted while Jaidev is already writing the next plan version can be missed: on ACC-1636 plan v2 was posted before it read the correction in the v1 thread. Repeat the correction in the v2 thread (the next plan then carries it).
-- Plan v1 needed one correction round on every ticket briefed with a prose-only
-  start comment plus a names reply (base branch, names, Done-when). Check the
-  first plan hardest.
 - Plan code blocks can carry literal `\n` text (ACC-1645 plan v2). Check the opened PR's source for stray `\n` sequences.
 - The doc-format hook requires `## <emoji>` section headers in GitHub
   approval bodies and Linear comments; comments starting with `@jaidev`

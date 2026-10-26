@@ -10,7 +10,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 - Route: {{HOW_PRS_REACH_THE_DEFAULT_BRANCH, e.g. the user merges each PR into the parent; the parent is squash-merged into <branch> at the end}}. The user is the only one who deploys and tests.
 - Scope source: the Linear ticket and its comments. Decisions in force: {{ONE_LINE_PER_TICKET}}. Tickets outside this batch edit nearby files later; pull none of their scope into yours.
 - Code to read first: {{FILES_AND_TESTS}}. Golden tests pin today's behaviour; a ticket that changes behaviour updates them and the PR calls the change out.
-- Linear: use the mcp__linear__* tools (load them with ToolSearch). Read the ticket, its comments and its relations. List comments with `limit: 1` (the status comment's timeline) and `limit: 2` only to read a new plan; a full list costs 5k to 25k tokens.
+- Linear: use the mcp__claude_ai_Linear__* tools, or mcp__linear__* when that server is connected (load them with ToolSearch). Read the ticket, its comments and its relations. List comments with `limit: 1` (the status comment's timeline) and `limit: 2` only to read a new plan; a full list costs 5k to 25k tokens.
 - Load the skill jeeves:jaidev and follow it: Ticket patterns, Write the briefing, Review the plan, Review the PR. Where this brief and the skill differ, this brief wins.
 - Treat {{MAIN_CHECKOUT}} and every other worktree as read-only. Read code with:
 
@@ -27,11 +27,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 ## Phase 1: prepare (do now, post nothing)
 
 1. Read your ticket, its comments and the code on origin/{{PARENT_BRANCH}}.
-2. Check every claim in the ticket against the code (paths, function names, helpers, repository methods, logger usage, test patterns). Run any command you put in an acceptance criterion in a scratch copy only (git worktree add in your scratchpad directory, then remove it), single test files with the command below. A bare path runs the whole suite.
-
-   ```bash
-   NODE_ENV=test npx jest --ci --coverage=false --selectProjects unit --runTestsByPath <file>
-   ```
+2. Check every claim in the ticket against the code (paths, function names, helpers, repository methods, logger usage, test patterns). Run any command you put in an acceptance criterion in a scratch copy only (git worktree add in your scratchpad directory, then remove it), single test files with the command under "Repo facts".
 3. Plan the names with the skill jeeves:typescript-naming, following its "During planning" steps: read the repo rules and the surrounding code, then settle a Names section (kind, name, file, purpose) and list renames separately, flagging any public contract. A ticket that adds no cross-file identifier says so.
 4. Write TWO files to {{SCRATCHPAD}}:
    - <ticket-id>-briefing.md: the start comment in the jeeves:jaidev skill format, as prose and short lists. Write it as prose; identifiers, branch names, file paths, PR titles, code and inline backticks go in the names reply, because they arrive blank in a start comment. First line exactly: @jaidev start. State the start branch and the PR base as {{PARENT_BRANCH}} in the opening paragraph and again under Constraints. Keep every .github/workflows change out of Jaidev's scope and in the user's manual follow-up. Acceptance criteria are commands Jaidev can run (ts-lint, lint, named single test files with --coverage=false) plus the CI check names: test / Unit Test, test / Code Analysis, SonarCloud Code Analysis. Jaidev's sandbox has no Docker, so brief tests that mock the DB layer. Ask Jaidev to quote back one key signature and acceptance criterion 1, and to write the definitions from the names reply out in full in its Implementation Sequence.

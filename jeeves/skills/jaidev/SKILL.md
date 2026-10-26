@@ -26,13 +26,8 @@ skill's team and workflow-state tables when filtering tickets. Read PRs with
 
 Confirm only what's missing:
 
-- Linear project (identifier or name), or an explicit list of tickets. To
-  pick a project, narrow by the team or keyword the user gave and offer up
-  to 4 via `AskUserQuestion`; with more than 4 matches, print them as a
-  numbered list and ask the user to reply with a name or number.
+- Linear project or list of tickets.
 - Tickets in scope: every code ticket in the project, or a list.
-- Batch size: tickets run in parallel (default 2). Each ticket in a batch
-  touches its own set of files.
 - Default repository and base branch, for tickets that leave them unstated.
 
 ## Ticket patterns
@@ -51,8 +46,6 @@ For a parent feature:
 
 - Cut the parent branch from the default branch and push it before the
   first briefing, so Jaidev has a base with a commit.
-- State the start branch and the PR base in the briefing's opening
-  paragraph and again under Constraints.
 - Merge tickets that edit the same files one at a time (for example a
   worker start file, or one block of the config files). Merge the first,
   then ask the next ticket's PR to catch up with the parent.
@@ -76,7 +69,7 @@ For a parent feature:
 ## The loop
 
 Repeat until every ticket in scope is merged, blocked, or manual. Show the
-progress table after every step.
+progress after every step.
 
 ### 1. Pick the next batch
 
@@ -89,15 +82,9 @@ progress table after every step.
      needs a first commit.
 3. Mark tickets whose work lives outside code (repository settings, docs,
    DevOps, access requests) **manual** and list them for the user.
-4. Look for an existing "**Jaidev — <ID>**" status comment. When one exists,
-   resume from its current stage. When none exists, treat the ticket as not
-   started by Jaidev, whatever its Linear state — a project can have every
-   ticket bulk-moved to In Progress.
-5. List every `@jaidev` comment that a status comment does not follow — a
-   leftover that never triggered — so the user can delete it.
-6. Pick up to the batch size of ready tickets with disjoint files, favouring
-   tickets that unblock others.
-7. Show the user the batch, why it was chosen, and what each blocked ticket
+4. Read an existing "**Jaidev — <ID>**" status comment and resume from its stage.
+5. Pick the ready tickets with disjoint files, favouring tickets that unblock others.
+6. Show the user the batch, why it was chosen, and what each blocked ticket
    waits on.
 
 ### 2. Write the briefing
@@ -191,10 +178,9 @@ Write the briefing to these rules:
   format.
 - Describe credentials by name and location (e.g. the Secrets Manager key);
   keep their values out of the comment.
-- Show the user each draft and wait for explicit approval of that draft:
-  "post it", "yes" or "approved". A general go-ahead ("coordinate with
-  Jaidev per the skill") starts the drafting; posting waits for approval of
-  the draft itself. Then post it as a **new top-level comment**.
+- Show the user each draft and wait for explicit approval (see Rules). A
+  general go-ahead ("coordinate with Jaidev per the skill") starts the
+  drafting. Then post it as a **new top-level comment**.
 - Include the Manual follow-up section only when it has items, and then add "A human makes the items under Manual follow-up." to the
   workflows Constraint.
 - Write acceptance criteria Jaidev can meet in its sandbox: commands that
@@ -209,18 +195,9 @@ Write the briefing to these rules:
   shows a new plan, and read the status line for Blocked. A full list costs 5k to
   25k tokens.
   `~/.claude/memory/jaidev-run-timings.md` shows how long each phase usually takes.
-- In your first report on a ticket, tell the user that Jaidev's status, plan
-  and progress comments are the items you review, so a new Jaidev comment
-  means a review from you is on its way.
-- When no status comment appears within a few minutes of posting, check the
-  trigger against the reference file and tell the user.
 - When Jaidev asks questions: if the ticket, code or related tickets answer
   it, draft the reply, show the user, and post it in the question's thread
   once they approve. If it needs a decision, ask the user.
-- During implementation, read the rolling notes in the live progress
-  comment. When a note signals a blocker — a rejected push, missing access,
-  a failing check outside the ticket — tell the user at once with the
-  options; Jaidev spends its remaining attempts before posting Blocked.
 - When Jaidev posts "🚫 Blocked — Needs Human Help": read "What Failed" and
   "What I Tried", inspect the pushed branch, and give the user the options.
   Once they choose, make any approved manual change, then post
@@ -266,12 +243,7 @@ plan (v2)"), and Jaidev resolves the previous plan's thread.
 
 When Jaidev opens the PR:
 
-1. Read `.github/CODEOWNERS` and the merge box, and tell the user now which
-   approvals the merge needs besides theirs: the code-owner teams for the
-   PR's files, whether the user belongs to them
-   (`gh api orgs/<org>/teams/<team>/memberships/<login>`), and two members
-   who can approve. When the membership lookup is denied, name the
-   code-owner teams and ask the user whether they belong to them.
+1. Read `.github/CODEOWNERS` when the file exists and tell the user any approval the merge needs besides theirs.
 2. Wait until every check has completed, SonarCloud included. Jaidev pushes
    fixes for bot findings on its own, so review the head that remains after
    that fix.
@@ -323,7 +295,7 @@ the ticket to the user.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
 - Add the run's row to the cost table in `~/.claude/memory/jaidev-run-timings.md`, and widen a typical range or edit a pattern when the run falls outside it.
-- Update the progress table and return to step 1.
+- Update the progress and return to step 1.
 
 ## Background agents
 
@@ -332,26 +304,17 @@ With two or more tickets in flight, run each in its own background agent. Read
 rules, the state file, the PR watcher and the Linear poll cadence. Start from
 `assets/agent-brief-template.md` and keep the state file with `scripts/poll-state.py`.
 
-## Progress table
+## Progress
 
-Show it, current, at the start of every report:
+Show it, current, at the start of every report.
 
-| Ticket | Title | Repo / base | Stage | Next action | Owner |
-|---|---|---|---|---|---|
-| 🟦 ACC-1644 | Add the retry | org/repo / feat/ACC-1644 | 🟡 plan review | Review plan v1 | you |
-
-Put the ticket's identity square in the Ticket cell and the status circle in
-the Stage cell; `references/background-agents.md` ("Color coding") holds the
-rule.
+Show the current state of each ticket with the color coding: identity square, ticket id, status circle, stage, next action. `references/background-agents.md` ("Color coding") holds the rule. Collapse tickets still waiting into one line: "Waiting (N): WAL-1, WAL-2".
 
 Stages: waiting, briefing, running, questions, plan review, blocked,
-PR review, awaiting merge, merged, manual. Owner: user, you, or Jaidev.
+PR review, awaiting merge, merged, manual.
 
-Collapse tickets in stage `waiting` with owner `you` into one line under the
-table: "Waiting (N): WAL-1, WAL-2". Give every other ticket its own row.
-
-List follow-up tickets created during the run as their own rows, with their
-blocked-by ticket, so the table shows what each merge unblocks.
+List follow-up tickets created during the run with their blocked-by ticket,
+so the progress shows what each merge unblocks.
 
 ## Rules
 
@@ -362,7 +325,8 @@ blocked-by ticket, so the table shows what each merge unblocks.
 - Push to Jaidev's branch only the Manual follow-up changes the user
   approved, commit by commit; every other fix reaches Jaidev as a review
   comment.
-- Leave merging to the user.
+- Merge only after the user's "merge", or a pre-approval that names the PRs;
+  the agent runs the merge.
 - Leave repository settings, branch protection, access and infrastructure
   to the user.
 - When a ticket is ambiguous or conflicts with the code or another ticket,
@@ -370,14 +334,10 @@ blocked-by ticket, so the table shows what each merge unblocks.
 - Ask the user one decision at a time with `AskUserQuestion` (two or three
   options, the recommended one first), and explain any term the user asks about
   before asking again.
-- A user pre-approval to merge a named set of PRs once CI passes (for example
-  "merge both once CI passes") covers only those PRs: after the agent reports a
-  clean review and the head still matches, send the agent "merge" yourself; ask
-  the user when a finding, a failed check or a moved head appears.
 
 ## Reporting results
 
-Start each message with the progress table, then three parts: what
+Start the first colored report with the legend line (`references/background-agents.md`, "Color coding"). Start each message with the progress, then three parts: what
 happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs. Start every line you relay about an
 agent or its ticket with the identity square and ticket id, and put the
