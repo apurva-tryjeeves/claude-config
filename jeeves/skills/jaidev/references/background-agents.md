@@ -21,14 +21,14 @@ keeps the user's approvals, and the agents do the ticket work.
 
 ### Color coding
 
-Give every agent an identity color and every message a status circle.
+Give every agent an identity color and every message a status circle. The identity palette has eight hues: 🟦 indigo, 🟧 amber, 🟪 violet, 🩵 teal, 🩷 rose, 🟫 brown, ⬜ slate, ⬛ ink. Take them in this order, so neighbours differ strongly.
 
-1. When you spawn an agent, pick one square from 🟦 🟧 🟪 🟫 ⬜ and record it:
+1. When you spawn an agent, pick the next unused emoji from the palette and record it:
 
    ```bash
-   scripts/poll-state.py <state-file> set <ticket> color <square>
+   scripts/poll-state.py <state-file> set <ticket> color <emoji>
    ```
-2. Start every message you relay about that agent or its ticket with the square and the ticket id. Tickets batched under one agent share its square.
+2. Start every message you relay about that agent or its ticket with the identity emoji and the ticket id. Tickets batched under one agent share its emoji.
 3. Mark the status with one circle:
 
    | Circle | Status |
@@ -41,8 +41,10 @@ Give every agent an identity color and every message a status circle.
 4. Print this legend as one line the first time the colors appear in a session, again whenever the user asks what a symbol means, and in every report that covers 3 or more agents:
 
    ```text
-   🟦 🟧 🟪 🟫 ⬜ = one agent each (its ticket) · 🟢 progressing · 🟡 waiting for you · 🔴 blocked or failing · ⚪ done or idle
+   🟦 🟧 🟪 🩵 🩷 🟫 ⬜ ⬛ = one agent each (its ticket) · 🟢 progressing · 🟡 waiting for you · 🔴 blocked or failing · ⚪ done or idle
    ```
+
+The terminal draws these emoji in the emoji font's own colors, so the palette is fixed. In an HTML artifact or a document the skill produces, use the same hues as hex tokens: indigo #4F46E5, amber #F59E0B, violet #7C3AED, teal #14B8A6, rose #F43F5E, brown #92400E, slate #94A3B8, ink #0F172A.
 
 Example line:
 
@@ -94,7 +96,7 @@ cd <repo-dir> && <skill-base-dir>/scripts/pr-open-watch.sh 60 <ticket-number> [<
 ```
 
 - Test any watcher against the no-PR case before arming it; an earlier watcher printed the text "null" as if it were a PR.
-- The monitor's expiry notice is the cue to read Jaidev's status comment (`limit: 1`) for a Blocked run, which a PR watcher cannot see.
+- The monitor's expiry notice is the cue to read Jaidev's status comment (`limit: 1`) for a Blocked run, which only the status comment shows.
 - The Linear cron then covers only plans, questions and Blocked comments until a PR opens.
 
 #### Agent tools

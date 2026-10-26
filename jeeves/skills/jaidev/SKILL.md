@@ -308,7 +308,7 @@ rules, the state file, the PR watcher and the Linear poll cadence. Start from
 
 Show it, current, at the start of every report.
 
-Show the current state of each ticket with the color coding: identity square, ticket id, status circle, stage, next action. `references/background-agents.md` ("Color coding") holds the rule. Collapse tickets still waiting into one line: "Waiting (N): WAL-1, WAL-2".
+Show the current state of each ticket with the color coding: identity emoji, ticket id, status circle, stage, next action. `references/background-agents.md` ("Color coding") holds the rule. Collapse tickets still waiting into one line: "Waiting (N): WAL-1, WAL-2".
 
 Stages: waiting, briefing, running, questions, plan review, blocked,
 PR review, awaiting merge, merged, manual.
@@ -340,5 +340,5 @@ so the progress shows what each merge unblocks.
 Start the first colored report with the legend line (`references/background-agents.md`, "Color coding"). Start each message with the progress, then three parts: what
 happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs. Start every line you relay about an
-agent or its ticket with the identity square and ticket id, and put the
+agent or its ticket with the identity emoji and ticket id, and put the
 status circle before the verdict.
