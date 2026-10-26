@@ -10,7 +10,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 - Route: {{HOW_PRS_REACH_THE_DEFAULT_BRANCH, e.g. the user merges each PR into the parent; the parent is squash-merged into <branch> at the end}}. The user is the only one who deploys and tests.
 - Scope source: the Linear ticket and its comments. Decisions in force: {{ONE_LINE_PER_TICKET}}. Tickets outside this batch edit nearby files later; pull none of their scope into yours.
 - Code to read first: {{FILES_AND_TESTS}}. Golden tests pin today's behaviour; a ticket that changes behaviour updates them and the PR calls the change out.
-- Linear: use the mcp__linear__* tools (load them with ToolSearch). Read the ticket, its comments and its relations. List comments with `limit: 2` (newest first); a full list costs 5k to 25k tokens.
+- Linear: use the mcp__linear__* tools (load them with ToolSearch). Read the ticket, its comments and its relations. List comments with `limit: 1` (the status comment's timeline) and `limit: 2` only to read a new plan; a full list costs 5k to 25k tokens.
 - Load the skill jeeves:jaidev and follow it: Ticket patterns, Write the briefing, Review the plan, Review the PR. Where this brief and the skill differ, this brief wins.
 - Treat {{MAIN_CHECKOUT}} and every other worktree as read-only. Read code with:
 
@@ -42,7 +42,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 
 1. Fetch origin, re-read origin/{{PARENT_BRANCH}} for changes since Phase 1, and update both files where they differ.
 2. Post the briefing as a new top-level comment on your ticket (mcp__linear__save_comment). The user approved posting directly.
-3. Your sandbox blocks sleep: wait for the coordinator's wake-up messages. When you wake, list the ticket's comments with `limit: 2`. When Jaidev asks its first question, answer in that question's thread with the names reply. Answer other questions from the ticket, the code and the user's rules; ask the coordinator when a decision is needed.
+3. Your sandbox blocks sleep: wait for the coordinator's wake-up messages. When you wake, list the ticket's comments with `limit: 1` (the status comment's timeline), and with `limit: 2` only to read a new plan. When Jaidev asks its first question, answer in that question's thread with the names reply. Answer other questions from the ticket, the code and the user's rules; ask the coordinator when a decision is needed.
 4. Plan review: when Jaidev posts "Implementation plan", compare it with your briefing and names reply item by item: base and PR target, quote-back, every Change and acceptance criterion word for word, the Done-when criteria, scope limited to your ticket, and each Key Assumption verified on origin/{{PARENT_BRANCH}}. Plan v1 usually needs one correction round (wrong base branch, invented names, reworded or missing Done-when, blank acceptance criteria): reply in the latest plan's thread with one correction listing the base branch, the Names table, every Done-when criterion word for word and the PR title in plain fenced blocks. Report the verdict to the coordinator; post exactly @jaidev plan:approved in the plan thread only after the coordinator confirms the user approved.
 5. Run watch: tell the coordinator at once about a blocker or a "Blocked — Needs Human Help" comment, with the options. Post @jaidev resume in the Blocked thread only after the coordinator confirms.
 6. PR review: the coordinator wakes you once all checks on the PR head are complete. From inside {{MAIN_CHECKOUT}}, read the result with the command below, then read .github/CODEOWNERS (if present) and the merge box. 
@@ -61,7 +61,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
    gh pr merge <n> --squash
    ```
 
-    When the merge needs approvals beyond the user's, or branch protection refuses, stop and report which.
+   When the merge needs approvals beyond the user's, or branch protection refuses, stop and report which.
 10. After the merge: confirm the Linear ticket reached a completed state and report: PR link, merge commit, review rounds, Jaidev's cost from its status comment, timings (start comment to plan v1, plan approval to PR opened, PR opened to merged), and "Repo facts learned" (up to 5 bullets: commands, gotchas, patterns). Leave every other ticket's state as it is.
 
 ## Rules
@@ -69,17 +69,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 - Post only in your own ticket's threads and PR. The user deploys; Jaidev's "Deploy this ticket" comment stays unanswered.
 - Leave repository settings, branch protection, access and infrastructure to the user. Debug pods through Jenkins logs and OpenSearch.
 - Run gh from inside {{MAIN_CHECKOUT}} (read-only gh commands; its branch stays as it is).
+- Name scratch worktrees `wt-<ticket-id>-r<N>` with a new N each run, and remove them when you finish; earlier runs leave `wt-*` directories in the scratchpad.
 - Run single test files. Before deleting a git lock, confirm that no git process is running.
 - Write every commit message, PR comment and Linear comment per the user's authoring guide (load the authoring-guide skill once): short bullets, each fact its own line, commands in fenced blocks.
 - Keep each report short: the verdict first, then only what the coordinator needs to act on.
-
-## Coordinator cron prompt (every 3 minutes, one job per batch)
-
-Poll {{TICKETS}}. State file: {{STATE_FILE}}. For each ticket with mergedReported=false, run these two commands first (<t> is the ticket id in lowercase):
-
-```bash
-gh pr list --head jai-dev/<t> --state all --json number,headRefOid,state,mergedAt
-git ls-remote --heads origin jai-dev/<t>
-```
-
-List Linear comments with limit 2 only when a pushed commit, a PR or every second tick says so. An event is a new Jaidev question, plan, Blocked comment, PR, finished revision, completed CI run on a new head, or merge; status and progress comments are not events. For each event send the ticket's agent ONE SendMessage naming the event, then update the state file with scripts/poll-state.py. When a PR is merged, set mergedReported=true and tell the user. When every ticket is mergedReported, CronDelete this job. Post nowhere, and approve and merge only after the user's "merge".

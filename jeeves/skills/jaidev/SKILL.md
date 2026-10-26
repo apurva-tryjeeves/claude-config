@@ -204,9 +204,11 @@ Write the briefing to these rules:
 
 ### 3. Watch the run
 
-- Poll with `list_comments` and `limit: 2` (newest first), and compare the newest
-  Jaidev comment id with the state file. Open a full comment only for a new plan,
-  question or Blocked. A full list costs 5k to 25k tokens.
+- Poll with `list_comments` and `limit: 1`: Jaidev's status comment is the newest
+  by update, and its Timeline shows "Plan v1 posted", "Plan feedback received" and
+  "Revised plan v2 posted". Open a full plan with `limit: 2` only when the timeline
+  shows a new plan, and read the status line for Blocked. A full list costs 5k to
+  25k tokens.
   `~/.claude/memory/jaidev-run-timings.md` shows how long each phase usually takes.
 - In your first report on a ticket, tell the user that Jaidev's status, plan
   and progress comments are the items you review, so a new Jaidev comment
@@ -321,7 +323,7 @@ the ticket to the user.
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
-- Add the run's timings and costs to `~/.claude/memory/jaidev-run-timings.md`.
+- Add the run's row to the cost table in `~/.claude/memory/jaidev-run-timings.md`, and widen a typical range or edit a pattern when the run falls outside it.
 - Update the progress table and return to step 1.
 
 ## Background agents
@@ -361,6 +363,13 @@ blocked-by ticket, so the table shows what each merge unblocks.
   to the user.
 - When a ticket is ambiguous or conflicts with the code or another ticket,
   ask the user.
+- Ask the user one decision at a time with `AskUserQuestion` (two or three
+  options, the recommended one first), and explain any term the user asks about
+  before asking again.
+- A user pre-approval to merge a named set of PRs once CI passes (for example
+  "merge both once CI passes") covers only those PRs: after the agent reports a
+  clean review and the head still matches, send the agent "merge" yourself; ask
+  the user when a finding, a failed check or a moved head appears.
 
 ## Reporting results
 
