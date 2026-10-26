@@ -11,7 +11,7 @@ Facts agents found while running tickets, one section per repo. Paste the repo's
   ```
 
 - **Lint:** `npm run lint` ends with 4 warnings and 0 errors, and the limit is 5. `npm run ts-lint` must pass. Run `npx eslint --fix` on touched test files first, because a long `mockResolvedValue` line breaks prettier.
-- **Unused destructured fields:** `jeeves-eslint-config` does not set `ignoreRestSiblings`, and an `_` prefix does not clear `no-unused-vars`. Wrap the helper in one `eslint-disable` and `eslint-enable` block with a one-line reason.
+- **Unused destructured fields:** `jeeves-eslint-config` leaves `ignoreRestSiblings` unset, and an `_` prefix still trips `no-unused-vars`. Wrap the helper in one `eslint-disable` and `eslint-enable` block with a one-line reason.
 - **Golden tests:** `src/services/__tests__/*.golden.test.ts` and `src/services/account/__tests__/*.golden.test.ts` pin today's behaviour. A ticket that changes behaviour updates them and the PR calls the change out.
 - **DB-backed tests:** a few tests need a real MySQL (testcontainers). They fail in Jaidev's sandbox and pass in CI `test / Unit Test`.
 - **Reading code:** read the parent branch with `git -C <main-checkout> show origin/<parent>:<path>`; the main checkout stays on its own branch.

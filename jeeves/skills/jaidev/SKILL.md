@@ -68,8 +68,8 @@ For a parent feature:
 
   Jaidev rebases and force-pushes its own branch (ACC-1591, 2026-10-22). It
   counts the request as a revision round, so a ticket with two earlier rounds
-  has no attempt left afterwards. Ask for the rebase when the PR has a round to
-  spare, or when no further fix is expected.
+  leaves 0 attempts afterwards. Ask for the rebase when the PR has a round to
+  spare, or when it is the last change expected.
 - Every sub-ticket PR title carries its own ticket id, so Linear moves that
   ticket when the PR merges.
 
@@ -93,7 +93,7 @@ progress table after every step.
    resume from its current stage. When none exists, treat the ticket as not
    started by Jaidev, whatever its Linear state — a project can have every
    ticket bulk-moved to In Progress.
-5. List every `@jaidev` comment that has no status comment after it — a
+5. List every `@jaidev` comment that a status comment does not follow — a
    leftover that never triggered — so the user can delete it.
 6. Pick up to the batch size of ready tickets with disjoint files, favouring
    tickets that unblock others.
@@ -118,7 +118,7 @@ verified fact in the briefing becomes a correct assumption in its plan:
   inputs it passes to any reusable workflow, and the npm scripts those
   inputs run, including `pre*` hooks (e.g. `prebuild` running lint).
 - Run every acceptance-criterion command in the repository before
-  briefing, and adjust any that can't pass in Jaidev's sandbox (e.g. single
+  briefing, and adjust any that fail in Jaidev's sandbox (e.g. single
   test files need `--coverage=false` when `jest.config.js` enforces a global
   threshold). Run any code the briefing gives the same way: compile it,
   lint it under the rules it will meet (including open PRs that tighten
@@ -167,7 +167,7 @@ Please pick up this ticket in <org/repo>. Start your branch from <start-branch> 
 
 - [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI test / Unit Test passes">
 
-A reply in this thread follows with the exact names and code. Copy every acceptance criterion into your plan's Done when, word for word. Name any you can't meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
+A reply in this thread follows with the exact names and code. Copy every acceptance criterion into your plan's Done when, word for word. Name any you fail to meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
 ````
 
 Write the briefing to these rules:
@@ -195,8 +195,7 @@ Write the briefing to these rules:
   "post it", "yes" or "approved". A general go-ahead ("coordinate with
   Jaidev per the skill") starts the drafting; posting waits for approval of
   the draft itself. Then post it as a **new top-level comment**.
-- Omit the Manual follow-up section when it has no items. When it has
-  items, add "A human makes the items under Manual follow-up." to the
+- Include the Manual follow-up section only when it has items, and then add "A human makes the items under Manual follow-up." to the
   workflows Constraint.
 - Write acceptance criteria Jaidev can meet in its sandbox: commands that
   exist in the base branch's `package.json` and single test files. Name the
@@ -379,8 +378,7 @@ blocked-by ticket, so the table shows what each merge unblocks.
 ## Reporting results
 
 Start each message with the progress table, then three parts: what
-happened, what you propose, what you need from the user. Leave out restated ticket
-content and closing offers. Plan and PR reviews are deliverables and run as
+happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs. Start every line you relay about an
 agent or its ticket with the identity square and ticket id, and put the
 status circle before the verdict.
