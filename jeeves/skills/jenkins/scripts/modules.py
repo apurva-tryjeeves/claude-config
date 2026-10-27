@@ -70,6 +70,7 @@ SERVICES = [
     ("rfiservice", ""),
     ("stablecoinservice", "stablecoin-service"),
     ("gemini", "gemini"),
+    ("jeeveserpservice", "jeeves-erp-service"),
 ]
 NAMES = [s for s, _ in SERVICES]
 MODES = ("latest", "rebuild")
