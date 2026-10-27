@@ -18,9 +18,22 @@ something new — a command, a trigger, a comment format, a limit, a timing —
 update the file now, in this same turn.
 
 Linear tools come from whichever server is connected — `mcp__linear__*` or
-`mcp__claude_ai_Linear__*`; both take the same parameters. Use the `linear`
-skill's team and workflow-state tables when filtering tickets. Read PRs with
-`gh`.
+`mcp__claude_ai_Linear__*`; both take the same parameters. Filter tickets by
+state type: `backlog`, `triage`, `unstarted`, `started`, `completed`,
+`canceled`. Read PRs with `gh`.
+
+## Sessions
+
+Run one session per wave: the batch picked in step 1, through its last merge.
+
+1. Start the wave by reading the previous wave's handoff file, when one exists.
+2. Close the wave by writing `<scratchpad>/<wave>-handoff.md`: tickets
+   merged, follow-up tickets, open items, the state file path.
+3. Delete the wave's cron job, then ask the user to run `/clear` and start
+   the next wave from the handoff.
+
+Each call re-reads the whole session, so a fresh session per wave keeps every
+poll tick and review cheap.
 
 ## Inputs
 
@@ -109,8 +122,10 @@ verified fact in the briefing becomes a correct assumption in its plan:
   test files need `--coverage=false` when `jest.config.js` enforces a global
   threshold). Run any code the briefing gives the same way: compile it,
   lint it under the rules it will meet (including open PRs that tighten
-  them), and test it with coverage on, under the strictest compiler flags
-  the team's guidelines require.
+  them), and test it under the strictest compiler flags the team's
+  guidelines require. Keep test output short: add
+  `--coverageReporters=text-summary` when coverage is on, and pipe long
+  runs through `tail -40`.
 - Settle every identifier the briefing introduces with the
   `jeeves:typescript-naming` skill, following its "During planning" steps.
   Read the repo rules and the surrounding code first, then write the Names
@@ -165,9 +180,6 @@ Write the briefing to these rules:
   GitHub token has no `workflow` scope, so those changes reach the branch
   through the user (see Rules).
 - Keep lists one level deep, with each item's detail on its own line.
-- Ask Jaidev to quote back, at the top of its plan, one key code signature
-  (when the briefing gives code) and one acceptance criterion. Check both
-  against the briefing before reviewing the rest of the plan.
 - Write the start comment as prose and short lists. Identifiers, paths, backticks and
   code go in the names reply, because they arrive blank in a start comment (reference
   §5): send the Names table and the code in plain fenced blocks as the answer to
@@ -189,12 +201,14 @@ Write the briefing to these rules:
 
 ### 3. Watch the run
 
-- Poll with `list_comments` and `limit: 1`: Jaidev's status comment is the newest
-  by update, and its Timeline shows "Plan v1 posted", "Plan feedback received" and
-  "Revised plan v2 posted". Open a full plan with `limit: 2` only when the timeline
-  shows a new plan, and read the status line for Blocked. A full list costs 5k to
-  25k tokens.
-  `~/.claude/memory/jaidev-run-timings.md` shows how long each phase usually takes.
+- Poll with the cron tick in `references/background-agents.md` ("Poll
+  events"), for one ticket or many. Plan v1 typically lands in about 4 min,
+  plan v2 about 1.5 min after feedback, and the PR about 10 min after
+  approval.
+- Read Jaidev's status comment with `list_comments` and `limit: 1`; its
+  Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
+  v2 posted". Open a full plan with `limit: 2` only when the timeline shows a
+  new plan. A full list costs 5k to 25k tokens.
 - When Jaidev asks questions: if the ticket, code or related tickets answer
   it, draft the reply, show the user, and post it in the question's thread
   once they approve. If it needs a decision, ask the user.
@@ -301,12 +315,14 @@ the ticket to the user.
 
 With two or more tickets in flight, run each in its own background agent. Read
 `references/background-agents.md` first: it holds the agent tiers, the shared-brief
-rules, the state file, the PR watcher and the Linear poll cadence. Start from
-`assets/agent-brief-template.md` and keep the state file with `scripts/poll-state.py`.
+rules, the state file and the poll tick. Start from
+`assets/agent-brief-template.md`; it is self-contained, so agents load no other
+skill.
 
 ## Progress
 
-Show it, current, at the start of every report.
+Show it, current, at the start of every report to the user; a poll tick with
+no event skips it.
 
 Show the current state of each ticket with the color coding: identity emoji, ticket id, status circle, stage, next action. `references/background-agents.md` ("Color coding") holds the rule. Collapse tickets still waiting into one line: "Waiting (N): WAL-1, WAL-2".
 
@@ -338,7 +354,10 @@ so the progress shows what each merge unblocks.
 ## Reporting results
 
 Start the first colored report with the legend line (`references/background-agents.md`, "Color coding"). Start each message with the progress, then three parts: what
-happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. Plan and PR reviews are deliverables and run as
+happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. A poll tick with
+no event replies "no events" and nothing more. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs. Start every line you relay about an
 agent or its ticket with the identity emoji and ticket id, and put the
 status circle before the verdict.
+
+authoring-guide: v4

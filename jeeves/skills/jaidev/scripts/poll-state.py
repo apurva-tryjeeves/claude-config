@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Read and update the per-ticket poll state file used by the Jaidev coordinator.
+"""Read and update the per-ticket state file that poll.py and the coordinator share.
 
 Usage:
+  poll-state.py <state-file> init <ticket> <agent-id> <repo-dir>
   poll-state.py <state-file> get <ticket>
   poll-state.py <state-file> set <ticket> <field> <value>
-  poll-state.py <state-file> init <ticket> <agent-id> <branch>
 
-The state file holds {"parent": ..., "tickets": {<ticket>: {agent, branch,
-lastJaidevCommentId, lastPrHead, lastReportedCiHead, mergedReported}}}.
-A set value is read as JSON (true, false, null, a number) and falls back to a string.
+Each ticket holds: agent, repoDir, color, prNumber, lastCiHead, lastTimeline,
+merged. poll.py writes prNumber, lastCiHead and merged; the coordinator writes
+color and lastTimeline. A set value is read as JSON (true, false, null, a
+number) and falls back to a string.
 """
 import json
 import sys
 from pathlib import Path
-
-FIELDS = ("lastJaidevCommentId", "lastPrHead", "lastReportedCiHead", "mergedReported")
 
 
 def main(argv):
@@ -24,11 +23,12 @@ def main(argv):
     state = json.loads(path.read_text()) if path.exists() else {"tickets": {}}
     tickets = state.setdefault("tickets", {})
     if action == "get":
-        print(json.dumps(tickets.get(ticket), indent=2))
+        print(json.dumps(tickets.get(ticket)))
         return
     if action == "init" and len(argv) == 6:
-        tickets[ticket] = {"agent": argv[4], "branch": argv[5],
-                           **{f: (False if f == "mergedReported" else None) for f in FIELDS}}
+        tickets[ticket] = {"agent": argv[4], "repoDir": argv[5], "color": None,
+                           "prNumber": None, "lastCiHead": None,
+                           "lastTimeline": None, "merged": False}
     elif action == "set" and len(argv) == 6:
         if ticket not in tickets:
             sys.exit(f"unknown ticket {ticket}; run init first")

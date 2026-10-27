@@ -210,3 +210,5 @@ allocated develop environments (see At a glance).
 
 Kept outside the plugin, in `~/.claude/memory/jaidev-run-timings.md`. Read it
 to estimate a run and add the new run's row to its cost table when it closes out.
+
+authoring-guide: v4
