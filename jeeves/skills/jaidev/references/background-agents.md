@@ -17,7 +17,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides. A pre-approval to merge a named set of PRs once CI passes covers only those PRs: after the agent reports a clean review and the head still matches, send the agent "merge" yourself; ask the user when a finding, a failed check or a moved head appears |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
 | Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn |
-| Cleanup | `poll.py` marks merged tickets and prints `ALL MERGED` at the end; stop the poller then |
+| Cleanup | `poll.py` marks merged tickets and prints `ALL MERGED` at the end, and the watcher exits |
 
 ### Color coding
 
@@ -54,41 +54,35 @@ Example line:
 
 ### Poll events
 
-Name the session after the batch (`/rename`) when the wave starts. Two pieces
-watch the wave, so the coordinator wakes only when an event arrives:
+Name the session after the batch (`/rename`) when the wave starts. One shell
+script watches the wave, so the coordinator wakes only when an event arrives.
+Start it in the background from the scratchpad once the start comments are
+posted, and start it again after handling each exit:
 
-| Piece | Runs as | Does |
+```bash
+<skill-dir>/scripts/watch.sh <state-file>
+```
+
+| Every | It runs | Which prints |
 |---|---|---|
-| Poller | Background agent, `model: haiku`, `effort: low`, briefed from `assets/poller-brief-template.md` | Every 5 min reads each ticket's Jaidev status comment in Linear (`limit: 1`) and appends one line per Status or Timeline change to the events file. It paces itself with a background `sleep` and needs no wake-up |
-| Watcher | `scripts/watch.sh`, run with Bash `run_in_background: true`; no model | Every 60 s reads new event lines; every 3 min runs `scripts/poll.py` (PR opened, CI finished on a new head, merged, closed). Prints and exits on the first hit |
+| 5 min | `scripts/poll-linear.py`: one headless `claude -p --model haiku` call that reads each open ticket's Jaidev status comment | A Status or Timeline change that waits on the coordinator: a plan, a question, Blocked, PRs created, Complete |
+| 3 min | `scripts/poll.py`: every GitHub check in one call | PR opened, CI finished on a new head, merged, closed |
 
-Start the watch:
-
-1. Fill `assets/poller-brief-template.md` into the scratchpad: the tickets,
-   the connected Linear `list_comments` tool, events file
-   `<scratchpad>/jaidev-events.log`, state file
-   `<scratchpad>/jaidev-poller-state.json`, interval 300 s, 20 wakes.
-2. Spawn the poller with the filled brief as its prompt.
-3. Start the watcher in the background:
-
-   ```bash
-   <skill-dir>/scripts/watch.sh <state-file> <scratchpad>/jaidev-events.log <scratchpad>/jaidev-poller-state.json
-   ```
-
-When the watcher exits, act on each line it printed, then start it again:
+The watcher exits on the first line printed. Headless Haiku runs as its own
+process, so no agent of this session stops or wakes; a background agent that
+paces itself instead wakes the coordinator on every pause. One Linear call
+costs about $0.007 and takes about 10 s (measured 4 Nov 2026). Changes while
+Jaidev works (Analyzing, Planning, Implementing, Addressing PR Feedback) and
+Timeline entries the coordinator caused update the state file silently.
 
 | Line | Action |
 |---|---|
-| `<ticket> TIMELINE "…plan…"`, a `Blocked` status, or a `Waiting for Answers` status | Wake the ticket's agent |
-| `<ticket> TIMELINE …` for any other entry | Update the progress; it is no agent event |
+| `<ticket> STATUS "Awaiting Plan Approval"` or a plan in `TIMELINE` | Wake the ticket's agent to review the plan |
+| `<ticket> STATUS "Gathering Info…"` or `"Blocked…"` | Wake the ticket's agent |
+| `<ticket> STATUS` for any other change | Update the progress; it is no agent event |
 | `<ticket> PR opened`, `CI …`, `MERGED`, `CLOSED` | From `poll.py`; wake the agent for CI finished and a merge, tell the user about MERGED and CLOSED |
-| `POLLER ROTATE`, `POLLER STALE`, `POLLER ERROR` | Spawn a fresh poller from the same brief; it resumes from the state file |
-| `ALL MERGED` | Stop the poller with `TaskStop`; the watcher has already exited |
-
-A poller wake reads about 50k tokens, nearly all of it its fixed prompt from
-cache. Each wake adds about 1.4k tokens (measured 4 Nov 2026) plus about 1k
-per ticket for the status comment, so 20 wakes on two tickets stay under about
-120k. Quiet periods cost the coordinator nothing.
+| `LINEAR POLL ERROR …` | Run `scripts/poll-linear.py <state-file>` once by hand; when it fails again, read the status comments with `limit: 1` and tell the user |
+| `ALL MERGED` | The wave is done; leave the watcher stopped |
 
 Wake an agent only for:
 - a first question, a plan, or a Blocked comment;

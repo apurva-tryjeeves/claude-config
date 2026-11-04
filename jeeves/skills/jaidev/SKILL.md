@@ -29,7 +29,7 @@ Run one session per wave: the batch picked in step 1, through its last merge.
 1. Start the wave by reading the previous wave's handoff file, when one exists.
 2. Close the wave by writing `<scratchpad>/<wave>-handoff.md`: tickets
    merged, follow-up tickets, open items, the state file path.
-3. Stop the wave's poller and watcher, then ask the user to run `/clear` and
+3. Stop the wave's watcher, then ask the user to run `/clear` and
    start the next wave from the handoff.
 
 Each call re-reads the whole session, so a fresh session per wave keeps every
@@ -201,7 +201,7 @@ Write the briefing to these rules:
 
 ### 3. Watch the run
 
-- Watch with the Haiku poller and the `scripts/watch.sh` watcher in
+- Watch with `scripts/watch.sh`, which reads Linear through headless Haiku, in
   `references/background-agents.md` ("Poll events"), for one ticket or many.
   The coordinator wakes only when the watcher prints an event. Plan v1
   typically lands in about 4 min, plan v2 about 1.5 min after feedback, and
@@ -316,15 +316,14 @@ the ticket to the user.
 
 With two or more tickets in flight, run each in its own background agent. Read
 `references/background-agents.md` first: it holds the agent tiers, the shared-brief
-rules, the state file, the poller and the watcher. Start ticket agents from
-`assets/agent-brief-template.md` and the poller from
-`assets/poller-brief-template.md`; both are self-contained, so agents load no
+rules, the state file and the watcher. Start ticket agents from
+`assets/agent-brief-template.md`; it is self-contained, so agents load no
 other skill.
 
 ## Progress
 
 Show it, current, at the start of every report to the user; a watcher wake
-for a poller line alone (`POLLER …`) skips it.
+for a `LINEAR POLL ERROR` line alone skips it.
 
 Show the current state of each ticket with the color coding: identity emoji, ticket id, status circle, stage, next action. `references/background-agents.md` ("Color coding") holds the rule. Collapse tickets still waiting into one line: "Waiting (N): WAL-1, WAL-2".
 
@@ -357,7 +356,7 @@ so the progress shows what each merge unblocks.
 
 Start the first colored report with the legend line (`references/background-agents.md`, "Color coding"). Start each message with the progress, then three parts: what
 happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. A watcher wake
-for a poller line alone gets one line naming the poller action taken. Plan and PR reviews are deliverables and run as
+for a `LINEAR POLL ERROR` line alone gets one line naming the retry. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs. Start every line you relay about an
 agent or its ticket with the identity emoji and ticket id, and put the
 status circle before the verdict.
