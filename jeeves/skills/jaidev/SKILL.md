@@ -42,6 +42,7 @@ Confirm only what's missing:
 - Linear project or list of tickets.
 - Tickets in scope: every code ticket in the project, or a list.
 - Default repository and base branch, for tickets that leave them unstated.
+- The project's design doc (e.g. a Notion plan), when it has one.
 
 ## Ticket patterns
 
@@ -112,6 +113,11 @@ verified fact in the briefing becomes a correct assumption in its plan:
 - Check every factual claim in the ticket against the code — current config,
   versions, file layout, what CI runs. Brief Jaidev on what is true, and
   tell the user each correction.
+- When the project has a design doc, compare the briefing and names reply
+  with it section by section: names, file paths, signatures, behaviour and
+  log messages. Fix clear mismatches, and bring real differences to the
+  user as decisions. Briefings drift from the design doc even when they
+  copy a sibling repo.
 - Read how one or two sibling services do the same thing, and follow the
   setting the team already uses.
 - When the ticket touches build, lint or CI, read `.github/workflows/*`, the
@@ -228,8 +234,8 @@ first:
 - Done-when criteria are reworded or missing;
 - acceptance criteria arrive blank.
 
-Compare Jaidev's latest "Implementation plan" with the ticket and the
-briefing, item by item:
+Compare Jaidev's latest "Implementation plan" with the ticket, the
+briefing and the design doc, item by item:
 
 - repository and base branch match;
 - the quote-back matches the briefing, and any code the briefing gave
@@ -239,6 +245,8 @@ briefing, item by item:
   covered when the plan names its value; a preset that "includes most of
   it" counts as missing;
 - scope matches the ticket, and the files belong to this ticket alone;
+- names, signatures and behaviour match the design doc; report each
+  difference as a decision for the user;
 - each Key Assumption holds — verify it in the code. A revised plan may omit
   the section; verify the assumptions it now relies on;
 - risks and mitigations are acceptable.
@@ -247,8 +255,8 @@ Send the correction as one feedback reply that lists the base branch, the
 Names table, every Done-when criterion word for word and the PR title, in
 plain fenced blocks. Approve v2 when it matches.
 
-Report a verdict (approve / request changes), a table of ticket items →
-covered / missing / wrong, and any wrong assumptions. When changes are
+Report a verdict (approve / request changes), a table of ticket and
+design-doc items → covered / missing / wrong, and any wrong assumptions. When changes are
 needed, draft the feedback reply. Post `@jaidev plan:approved` or the
 feedback as a reply in the thread of the **latest** plan once the user
 confirms. A revised plan arrives as a new top-level comment ("Implementation
@@ -266,6 +274,7 @@ When Jaidev opens the PR:
    - the diff against the briefing's Changes, Constraints and Acceptance
      criteria, using the PR's own file list (the result comment counts only
      the last session's files);
+   - the diff against the design doc: names, signatures and behaviour;
    - the title follows the ticket format (e.g. `feat: [WAL-123] - …`);
    - CI results, noting which failures are known and expected;
    - tests and coverage;
