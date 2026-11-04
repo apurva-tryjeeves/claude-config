@@ -7,7 +7,8 @@
 # Run it with Bash run_in_background. Every interval it may run:
 #   - every 5th interval: poll-linear.py <state-file> (one headless Haiku call
 #     that reads each ticket's Jaidev status comment) → prints Status/Timeline changes
-#   - every 3rd interval: poll.py <state-file> (PRs, CI, merges) → prints its events
+#   - every 3rd interval: poll.py <state-file> (CI, merges) → prints its events;
+#     a new PR only updates the state file, because the agent acts on its CI result
 # It exits after printing, so the harness wakes the coordinator once per batch
 # of events. Restart it after handling them.
 set -u
@@ -29,7 +30,7 @@ while true; do
   fi
 
   if [ $((i % GH_EVERY)) -eq 0 ]; then
-    out=$(python3 "$DIR/poll.py" "$STATE" 2>&1 | grep -v -e '^LINEAR ' -e '^NO EVENTS$')
+    out=$(python3 "$DIR/poll.py" "$STATE" 2>&1 | grep -v -e '^LINEAR ' -e '^NO EVENTS$' -e ' PR opened ')
     if [ -n "$out" ]; then
       echo "$out"
       exit 0
