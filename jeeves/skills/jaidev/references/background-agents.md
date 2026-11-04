@@ -59,22 +59,15 @@ watch the wave, so the coordinator wakes only when an event arrives:
 
 | Piece | Runs as | Does |
 |---|---|---|
-| Poller | Background agent, `model: haiku`, `effort: low`, briefed from `assets/poller-brief-template.md` | Every 5 min reads the team's Linear notifications channel in Slack and appends one line per Jaidev comment to the events file. It paces itself with a background `sleep` and needs no wake-up |
+| Poller | Background agent, `model: haiku`, `effort: low`, briefed from `assets/poller-brief-template.md` | Every 5 min reads each ticket's Jaidev status comment in Linear (`limit: 1`) and appends one line per Status or Timeline change to the events file. It paces itself with a background `sleep` and needs no wake-up |
 | Watcher | `scripts/watch.sh`, run with Bash `run_in_background: true`; no model | Every 60 s reads new event lines; every 3 min runs `scripts/poll.py` (PR opened, CI finished on a new head, merged, closed). Prints and exits on the first hit |
-
-Slack channels that carry each team's Linear comments, Jaidev's included. For
-a team with no row, search Slack messages with bots included for
-`"Jeeves AI Developer" "commented on" <TEAM>-`, then add a row.
-
-| Team | Channel | Channel ID |
-|---|---|---|
-| Accounting & ERP (ACC) | #linear-finance-automation-updates | C07SAFS20TY |
 
 Start the watch:
 
 1. Fill `assets/poller-brief-template.md` into the scratchpad: the tickets,
-   the channel ID, events file `<scratchpad>/jaidev-events.log`, state file
-   `<scratchpad>/jaidev-poller-state.json`, interval 300 s, 30 wakes.
+   the connected Linear `list_comments` tool, events file
+   `<scratchpad>/jaidev-events.log`, state file
+   `<scratchpad>/jaidev-poller-state.json`, interval 300 s, 20 wakes.
 2. Spawn the poller with the filled brief as its prompt.
 3. Start the watcher in the background:
 
@@ -86,15 +79,16 @@ When the watcher exits, act on each line it printed, then start it again:
 
 | Line | Action |
 |---|---|
-| `<ticket> PLAN vN` or `<ticket> BLOCKED` | Wake the ticket's agent |
-| `<ticket> COMMENT <text>` | A question or an in-thread ack; read the status comment with `limit: 1` when the text leaves it unclear, and wake the agent for a first question |
+| `<ticket> TIMELINE "…plan…"`, a `Blocked` status, or a `Waiting for Answers` status | Wake the ticket's agent |
+| `<ticket> TIMELINE …` for any other entry | Update the progress; it is no agent event |
 | `<ticket> PR opened`, `CI …`, `MERGED`, `CLOSED` | From `poll.py`; wake the agent for CI finished and a merge, tell the user about MERGED and CLOSED |
 | `POLLER ROTATE`, `POLLER STALE`, `POLLER ERROR` | Spawn a fresh poller from the same brief; it resumes from the state file |
 | `ALL MERGED` | Stop the poller with `TaskStop`; the watcher has already exited |
 
 A poller wake reads about 50k tokens, nearly all of it its fixed prompt from
-cache, and grows about 1.4k tokens per wake (measured 4 Nov 2026), so 30
-wakes keep it under about 95k. Quiet periods cost the coordinator nothing.
+cache. Each wake adds about 1.4k tokens (measured 4 Nov 2026) plus about 1k
+per ticket for the status comment, so 20 wakes on two tickets stay under about
+120k. Quiet periods cost the coordinator nothing.
 
 Wake an agent only for:
 - a first question, a plan, or a Blocked comment;

@@ -2,42 +2,35 @@
 
 Copy this file to the scratchpad and fill every `{{...}}`. The poller works from the filled brief alone.
 
-You watch one Slack channel for Jaidev's comments on {{TICKETS}} and append one line per event to a file. You post nothing and change nothing outside the two files below.
+You watch Jaidev's status comment on {{TICKETS}} in Linear and append one line per change to a file. You post nothing and change nothing outside the two files below.
 
 ## Files
 
 - Events file: {{EVENTS_FILE}}. Append only, one line per event.
-- State file: {{POLLER_STATE_FILE}}. JSON: `lastPollEpoch` (number), `wakes` (number), `seen` (list of strings, newest 50).
+- State file: {{POLLER_STATE_FILE}}. JSON: `wakes` (number) and `tickets`, a map of ticket id → `{"status": "...", "timeline": "..."}`.
 
 ## Tools
 
-Load the Slack reader once with ToolSearch: `select:mcp__claude_ai_Slack__slack_read_channel`. Use Bash for the clock, the files and the wait.
+Load the Linear comment reader once with ToolSearch: `select:{{LINEAR_LIST_COMMENTS_TOOL}}`. Use Bash for the clock, the files and the wait.
 
 ## Each wake
 
-1. Read the clock with `date +%s` (call it `now`) and the state file. When the state file is missing, start from `{"lastPollEpoch": now - 600, "wakes": 0, "seen": []}`.
-2. Read the channel: `slack_read_channel` with `channel_id` {{CHANNEL_ID}}, `oldest` set to `lastPollEpoch - 60`, `limit` 50, `response_format` "concise".
-3. Keep each message that reads `*Jeeves AI Developer* commented on <…|<TICKET> …>` for a ticket in {{TICKETS}}. Skip Jaidev's status comment (its text starts `Jaidev — `) and its "Deploy this ticket" comment.
-4. Give each kept message a type from the text after the ticket title:
-
-   | Text starts with | Type |
-   |---|---|
-   | `Implementation plan (v<N>)` | `PLAN v<N>` |
-   | `Implementation plan` | `PLAN v1` |
-   | `🚫 Blocked` or `Blocked — Needs Human Help` | `BLOCKED` |
-   | anything else | `COMMENT <first 60 characters, one line>` |
-
-5. Build the key `<TICKET>|<type>|<message time>`. When `seen` holds the key, skip the message. Otherwise append the event and add the key to `seen`:
+1. Read the state file. When it is missing, start from `{"wakes": 0, "tickets": {}}`.
+2. For each ticket in {{TICKETS}}, list its comments with `limit: 1`. When that comment's body does not start with `**Jaidev — <TICKET>**`, list again with `limit: 3` and take the comment that does. When no comment does, Jaidev has not started: go to the next ticket.
+3. From the status comment take:
+   - `status`: the text after `**Status:**` on its line;
+   - `timeline`: the last bullet under `**Timeline**`, without its timestamp and its cost in brackets.
+4. When `status` or `timeline` differs from the ticket's entry in the state file, store the new values. Then append an event, unless the new timeline entry starts with `Started by`, `Plan approved by` or `Plan feedback received` (the coordinator caused those):
 
    ```bash
-   echo "$(date -u +%Y-%m-%dT%H:%MZ) <TICKET> <type>" >> {{EVENTS_FILE}}
+   echo "$(date -u +%Y-%m-%dT%H:%MZ) <TICKET> TIMELINE \"<timeline>\" STATUS \"<status>\"" >> {{EVENTS_FILE}}
    ```
 
-6. Write the state file with `lastPollEpoch` = `now`, `wakes` + 1 and `seen` trimmed to the newest 50.
-7. When `wakes` reaches {{MAX_WAKES}}, append `<UTC time> POLLER ROTATE` to the events file and end with one line: `rotated after {{MAX_WAKES}} wakes`.
-8. Otherwise run Bash with `run_in_background: true` and the command `sleep {{INTERVAL_SECONDS}}`, then end the turn with one word: `waiting`. The harness wakes you when the sleep ends; start again at step 1.
+5. Write the state file with `wakes` + 1.
+6. When `wakes` reaches {{MAX_WAKES}}, append `<UTC time> POLLER ROTATE` to the events file and end with one line: `rotated after {{MAX_WAKES}} wakes`.
+7. Otherwise run Bash with `run_in_background: true` and the command `sleep {{INTERVAL_SECONDS}}`, then end the turn with one word: `waiting`. The harness wakes you when the sleep ends; start again at step 1.
 
 ## Rules
 
-- When a tool call fails, append `<UTC time> POLLER ERROR <one-line message>` to the events file and continue with step 6.
+- When a tool call fails, append `<UTC time> POLLER ERROR <one-line message>` to the events file and continue with step 5.
 - Keep each wake to the calls above, and each reply to one line.
