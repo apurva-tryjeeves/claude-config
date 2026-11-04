@@ -31,6 +31,8 @@ DEFAULT_TOOL = "mcp__claude_ai_Linear__list_comments"
 COORDINATOR_ENTRIES = ("Started by", "Plan approved by", "Plan feedback received")
 # Jaidev is busy in these; the coordinator has nothing to do until it leaves them.
 WORKING_STATUSES = {"Analyzing...", "Planning...", "Implementing...", "Addressing PR Feedback..."}
+# poll.py reports these from GitHub, with the PR number and CI result.
+GITHUB_REPORTED_STATUSES = {"PRs Created"}
 
 
 def status_key_of(status):
@@ -99,7 +101,7 @@ def main(path, tool):
         if (status_key, timeline) == (ticket.get("lastStatus"), ticket.get("lastTimeline")):
             continue
         ticket["lastStatus"], ticket["lastTimeline"] = status_key, timeline
-        if status_key in WORKING_STATUSES or (timeline or "").startswith(COORDINATOR_ENTRIES):
+        if status_key in WORKING_STATUSES | GITHUB_REPORTED_STATUSES or (timeline or "").startswith(COORDINATOR_ENTRIES):
             continue
         lines.append(f'{row["ticket"]} STATUS "{status}" TIMELINE "{timeline}"')
     path.write_text(json.dumps(state, indent=2) + "\n")

@@ -65,22 +65,23 @@ posted, and start it again after handling each exit:
 
 | Every | It runs | Which prints |
 |---|---|---|
-| 5 min | `scripts/poll-linear.py`: one headless `claude -p --model haiku` call that reads each open ticket's Jaidev status comment | A Status or Timeline change that waits on the coordinator: a plan, a question, Blocked, PRs created, Complete |
-| 3 min | `scripts/poll.py`: every GitHub check in one call | PR opened, CI finished on a new head, merged, closed |
+| 5 min | `scripts/poll-linear.py`: one headless `claude -p --model haiku` call that reads each open ticket's Jaidev status comment | A Status or Timeline change that waits on the coordinator: a plan, a question, Blocked, Complete |
+| 3 min | `scripts/poll.py`: every GitHub check in one call | CI finished on a new head, merged, closed |
 
 The watcher exits on the first line printed. Headless Haiku runs as its own
 process, so no agent of this session stops or wakes; a background agent that
 paces itself instead wakes the coordinator on every pause. One Linear call
 costs about $0.007 and takes about 10 s (measured 4 Nov 2026). Changes while
-Jaidev works (Analyzing, Planning, Implementing, Addressing PR Feedback) and
-Timeline entries the coordinator caused update the state file silently.
+Jaidev works (Analyzing, Planning, Implementing, Addressing PR Feedback),
+"PRs Created", a new PR, and Timeline entries the coordinator caused update
+the state file silently; the PR's CI result is the next event.
 
 | Line | Action |
 |---|---|
 | `<ticket> STATUS "Awaiting Plan Approval"` or a plan in `TIMELINE` | Wake the ticket's agent to review the plan |
 | `<ticket> STATUS "Gathering Info…"` or `"Blocked…"` | Wake the ticket's agent |
 | `<ticket> STATUS` for any other change | Update the progress; it is no agent event |
-| `<ticket> PR opened`, `CI …`, `MERGED`, `CLOSED` | From `poll.py`; wake the agent for CI finished and a merge, tell the user about MERGED and CLOSED |
+| `<ticket> CI …`, `MERGED`, `CLOSED` | From `poll.py`; wake the agent for CI finished and a merge, tell the user about MERGED and CLOSED |
 | `LINEAR POLL ERROR …` | Run `scripts/poll-linear.py <state-file>` once by hand; when it fails again, read the status comments with `limit: 1` and tell the user |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
 

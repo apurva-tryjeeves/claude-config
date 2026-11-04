@@ -2,6 +2,7 @@
 name: daily-briefing
 description: Gather the invoking user's daily standup-style briefing (Linear cycle tickets and activity, Notion mentions, GitHub PRs authored/review-requested across JeevesInc, Slack DMs/mentions) and send it as one Slack DM to themself.
 tools: mcp__linear__list_issues, mcp__linear__list_cycles, mcp__linear__get_notifications, mcp__linear__get_issue, mcp__claude_ai_Linear__list_issues, mcp__claude_ai_Linear__list_cycles, mcp__claude_ai_Linear__get_notifications, mcp__claude_ai_Linear__get_issue, mcp__github__search_issues, mcp__notion__notion-search, mcp__notion__notion-get-users, mcp__claude_ai_Slack__slack_read_user_profile, mcp__claude_ai_Slack__slack_send_message, mcp__claude_ai_Slack__slack_search_public_and_private
+model: sonnet
 ---
 
 # Daily Briefing (JeevesInc)

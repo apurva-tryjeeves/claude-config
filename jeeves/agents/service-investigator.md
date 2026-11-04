@@ -2,6 +2,7 @@
 name: service-investigator
 description: Read-only deep-dive into ONE JeevesInc microservice — maps how that service participates in a given flow/feature/issue (entry points, code path, DB tables, external calls, queues, log signatures). Delegate one per service, in parallel, from the feature-plan or prod-debug skill, or whenever you need an isolated per-repo code map.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 # Service Investigator (JeevesInc, read-only)

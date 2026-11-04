@@ -2,6 +2,7 @@
 name: prod-log-investigator
 description: Read-only production investigation across OpenSearch logs and MySQL — searches prod logs for an error signature, transaction/trace id, or time window, cross-checks the rows in prod MySQL, and returns a short finding. Trigger when debugging a prod incident, checking whether a deploy is healthy, or confirming what a cron actually wrote.
 tools: mcp__opensearch-prod__SearchIndexTool, mcp__opensearch-prod__CountTool, mcp__opensearch-prod__MsearchTool, mcp__opensearch-prod__IndexMappingTool, mcp__opensearch-prod__ListIndexTool, Bash, Read, Grep, Glob, Skill
+model: sonnet
 ---
 
 # Production Log Investigator (JeevesInc, read-only)

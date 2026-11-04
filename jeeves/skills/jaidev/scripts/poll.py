@@ -9,7 +9,7 @@ For each ticket in the state file that is still open, reads its Jaidev PR
 picks the right account. Updates the state file and prints only events:
 
   ACC-1634 PR opened #812 head=abc1234
-  ACC-1634 CI passed head=abc1234     (printed once per head, when no check is pending)
+  ACC-1634 CI passed #812 head=abc1234 (printed once per head, when no check is pending)
   ACC-1634 MERGED #812
   LINEAR ACC-1636 last="Plan v1 posted"   (no PR yet: read its status comment)
   NO EVENTS                                (nothing else printed)
@@ -74,7 +74,7 @@ def main(path):
         ci = ci_result(pr.get("statusCheckRollup") or [])
         if ci != "pending" and t.get("lastCiHead") != head:
             t["lastCiHead"] = head
-            lines.append(f"{ticket} CI {ci} head={head}")
+            lines.append(f"{ticket} CI {ci} #{pr['number']} head={head}")
     path.write_text(json.dumps(state, indent=2) + "\n")
     events = [l for l in lines if not l.startswith("LINEAR ")]
     if lines:
