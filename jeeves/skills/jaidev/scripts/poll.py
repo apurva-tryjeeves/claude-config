@@ -13,7 +13,7 @@ picks the right account. Updates the state file and prints only events:
   ACC-1634 MERGED #812
   LINEAR ACC-1636 last="Plan v1 posted"   (no PR yet: read its status comment)
   NO EVENTS                                (nothing else printed)
-  ALL MERGED                               (every ticket merged: delete the cron)
+  ALL MERGED                               (every ticket merged: stop the poller)
 """
 import json
 import subprocess
