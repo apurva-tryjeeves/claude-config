@@ -7,7 +7,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Piece | Rule |
 |---|---|
 | Agents | One background agent per ticket, started with the shared brief and an explicit tier: Phase 1 prepare `model: sonnet`, `effort: medium`; Phase 2 run `model: sonnet`, `effort: high` |
-| Waiting | Agents wait for the coordinator's wake-up, because their sandbox blocks `sleep`. The coordinator learns of events from the poll tick (see "Poll events") and wakes an agent with `SendMessage` |
+| Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only `jeeves:typescript-naming` besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
 | Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
@@ -17,7 +17,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides. A pre-approval to merge a named set of PRs once CI passes covers only those PRs: after the agent reports a clean review and the head still matches, send the agent "merge" yourself; ask the user when a finding, a failed check or a moved head appears |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
 | Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn |
-| Cleanup | `poll.py` marks merged tickets and prints `ALL MERGED` at the end; delete the cron job then |
+| Cleanup | `poll.py` marks merged tickets and prints `ALL MERGED` at the end; stop the poller then |
 
 ### Color coding
 
@@ -54,15 +54,47 @@ Example line:
 
 ### Poll events
 
-Name the session after the batch (`/rename`) when it starts a poll. Run one
-cron job per wave, every 3 minutes, with the tick prompt below.
+Name the session after the batch (`/rename`) when the wave starts. Two pieces
+watch the wave, so the coordinator wakes only when an event arrives:
 
-Each tick runs `scripts/poll.py`, which does every GitHub check in one call:
-PR opened, CI finished on a new head (once no check is pending), merged or
-closed. It updates the state file itself and prints only events. Tickets with
-no PR yet come back as `LINEAR <ticket> last="<timeline entry>"`; read their
-status comment with `limit: 1`, because only Linear shows questions, plans
-and Blocked comments.
+| Piece | Runs as | Does |
+|---|---|---|
+| Poller | Background agent, `model: haiku`, `effort: low`, briefed from `assets/poller-brief-template.md` | Every 5 min reads the team's Linear notifications channel in Slack and appends one line per Jaidev comment to the events file. It paces itself with a background `sleep` and needs no wake-up |
+| Watcher | `scripts/watch.sh`, run with Bash `run_in_background: true`; no model | Every 60 s reads new event lines; every 3 min runs `scripts/poll.py` (PR opened, CI finished on a new head, merged, closed). Prints and exits on the first hit |
+
+Slack channels that carry each team's Linear comments, Jaidev's included. For
+a team with no row, search Slack messages with bots included for
+`"Jeeves AI Developer" "commented on" <TEAM>-`, then add a row.
+
+| Team | Channel | Channel ID |
+|---|---|---|
+| Accounting & ERP (ACC) | #linear-finance-automation-updates | C07SAFS20TY |
+
+Start the watch:
+
+1. Fill `assets/poller-brief-template.md` into the scratchpad: the tickets,
+   the channel ID, events file `<scratchpad>/jaidev-events.log`, state file
+   `<scratchpad>/jaidev-poller-state.json`, interval 300 s, 30 wakes.
+2. Spawn the poller with the filled brief as its prompt.
+3. Start the watcher in the background:
+
+   ```bash
+   <skill-dir>/scripts/watch.sh <state-file> <scratchpad>/jaidev-events.log <scratchpad>/jaidev-poller-state.json
+   ```
+
+When the watcher exits, act on each line it printed, then start it again:
+
+| Line | Action |
+|---|---|
+| `<ticket> PLAN vN` or `<ticket> BLOCKED` | Wake the ticket's agent |
+| `<ticket> COMMENT <text>` | A question or an in-thread ack; read the status comment with `limit: 1` when the text leaves it unclear, and wake the agent for a first question |
+| `<ticket> PR opened`, `CI …`, `MERGED`, `CLOSED` | From `poll.py`; wake the agent for CI finished and a merge, tell the user about MERGED and CLOSED |
+| `POLLER ROTATE`, `POLLER STALE`, `POLLER ERROR` | Spawn a fresh poller from the same brief; it resumes from the state file |
+| `ALL MERGED` | Stop the poller with `TaskStop`; the watcher has already exited |
+
+A poller wake reads about 50k tokens, nearly all of it its fixed prompt from
+cache, and grows about 1.4k tokens per wake (measured 4 Nov 2026), so 30
+wakes keep it under about 95k. Quiet periods cost the coordinator nothing.
 
 Wake an agent only for:
 - a first question, a plan, or a Blocked comment;
@@ -71,17 +103,8 @@ Wake an agent only for:
 - a merge.
 
 Send the ticket's agent one `SendMessage` naming every pending event. Status
-and progress changes on their own are no event.
-
-Tick prompt (fill `{{TICKETS}}`, `{{STATE_FILE}}` and `{{SKILL_DIR}}`):
-
-```text
-Poll {{TICKETS}}. Run {{SKILL_DIR}}/scripts/poll.py {{STATE_FILE}}.
-For each LINEAR line, list that ticket's comments with limit 1 and read the newest Timeline entry of Jaidev's status comment. When it differs from last= and is a question, a plan or a Blocked comment, it is an event: record it with {{SKILL_DIR}}/scripts/poll-state.py {{STATE_FILE}} set <ticket> lastTimeline "<entry>".
-Send each agent one SendMessage naming its events. Tell the user about each MERGED or CLOSED line.
-With no events, reply "no events" and stop. On ALL MERGED, delete this cron job.
-Approve and merge only after the user's "merge", or a pre-approval naming that PR.
-```
+and progress changes on their own are no event. Approve and merge only after
+the user's "merge", or a pre-approval naming that PR.
 
 #### Agent tools
 

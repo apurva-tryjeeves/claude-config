@@ -29,11 +29,11 @@ Run one session per wave: the batch picked in step 1, through its last merge.
 1. Start the wave by reading the previous wave's handoff file, when one exists.
 2. Close the wave by writing `<scratchpad>/<wave>-handoff.md`: tickets
    merged, follow-up tickets, open items, the state file path.
-3. Delete the wave's cron job, then ask the user to run `/clear` and start
-   the next wave from the handoff.
+3. Stop the wave's poller and watcher, then ask the user to run `/clear` and
+   start the next wave from the handoff.
 
 Each call re-reads the whole session, so a fresh session per wave keeps every
-poll tick and review cheap.
+event and review cheap.
 
 ## Inputs
 
@@ -201,12 +201,13 @@ Write the briefing to these rules:
 
 ### 3. Watch the run
 
-- Poll with the cron tick in `references/background-agents.md` ("Poll
-  events"), for one ticket or many. Plan v1 typically lands in about 4 min,
-  plan v2 about 1.5 min after feedback, and the PR about 10 min after
-  approval.
-- Read Jaidev's status comment with `list_comments` and `limit: 1`; its
-  Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
+- Watch with the Haiku poller and the `scripts/watch.sh` watcher in
+  `references/background-agents.md` ("Poll events"), for one ticket or many.
+  The coordinator wakes only when the watcher prints an event. Plan v1
+  typically lands in about 4 min, plan v2 about 1.5 min after feedback, and
+  the PR about 10 min after approval.
+- When an event needs context, read Jaidev's status comment with
+  `list_comments` and `limit: 1`; its Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
   v2 posted". Open a full plan with `limit: 2` only when the timeline shows a
   new plan. A full list costs 5k to 25k tokens.
 - When Jaidev asks questions: if the ticket, code or related tickets answer
@@ -315,14 +316,15 @@ the ticket to the user.
 
 With two or more tickets in flight, run each in its own background agent. Read
 `references/background-agents.md` first: it holds the agent tiers, the shared-brief
-rules, the state file and the poll tick. Start from
-`assets/agent-brief-template.md`; it is self-contained, so agents load no other
-skill.
+rules, the state file, the poller and the watcher. Start ticket agents from
+`assets/agent-brief-template.md` and the poller from
+`assets/poller-brief-template.md`; both are self-contained, so agents load no
+other skill.
 
 ## Progress
 
-Show it, current, at the start of every report to the user; a poll tick with
-no event skips it.
+Show it, current, at the start of every report to the user; a watcher wake
+for a poller line alone (`POLLER …`) skips it.
 
 Show the current state of each ticket with the color coding: identity emoji, ticket id, status circle, stage, next action. `references/background-agents.md` ("Color coding") holds the rule. Collapse tickets still waiting into one line: "Waiting (N): WAL-1, WAL-2".
 
@@ -354,8 +356,8 @@ so the progress shows what each merge unblocks.
 ## Reporting results
 
 Start the first colored report with the legend line (`references/background-agents.md`, "Color coding"). Start each message with the progress, then three parts: what
-happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. A poll tick with
-no event replies "no events" and nothing more. Plan and PR reviews are deliverables and run as
+happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. A watcher wake
+for a poller line alone gets one line naming the poller action taken. Plan and PR reviews are deliverables and run as
 long as the item-by-item table needs. Start every line you relay about an
 agent or its ticket with the identity emoji and ticket id, and put the
 status circle before the verdict.
