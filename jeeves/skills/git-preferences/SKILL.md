@@ -125,7 +125,7 @@ Jeeves repos squash-merge, so the PR title becomes the commit subject on the bas
 
 ### PR body format
 
-Write every PR description, PR comment and review summary in this style:
+Write the PR title and the description's sections to the structure in `references/pr-description.md` (sub-ticket and parent-ticket shapes, with a skeleton). Write every PR description, PR comment and review summary in this style:
 
 - Start each section with a `## <emoji> Header`, one emoji per header. Use the repo's PR template sections:
   `## ❗ Problem`, `## 🛠️ Solution`, `## 🔗 References`, `## 🧪 How to test`, `## 🚀 Deployed to`.
@@ -135,16 +135,19 @@ Write every PR description, PR comment and review summary in this style:
 - Use a table for anything with repeating columns.
 - Wrap long logs in `<details>`.
 - Describe the change itself. Keep rebase and cherry-pick mechanics, stacking banners and commit SHAs in the branch graph.
-- Point to other work only through `## 🔗 Related PRs`.
+- Point to PRs in other repos only through `## 🔗 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.
 - Cherry-pick with plain `git cherry-pick` (no `-x`) for commits that land in a PR.
 
 ## Cross-Repo Related PRs
 
-When a change spans PRs in different repos, link each PR to the others in its description. Add a `## 🔗 Related PRs` section listing every sibling PR as a full link with a one-line note on what it covers:
+When a change spans PRs in different repos, link each PR to the others in its description. Add a `## 🔗 Related PRs` table listing every sibling PR as a full link, what it covers, and its state:
 
 ```markdown
 ## 🔗 Related PRs
-- https://github.com/JeevesInc/jeeves-web/pull/3739 — reads the renamed provider columns
+
+| PR | Covers | State |
+|---|---|---|
+| https://github.com/JeevesInc/jeeves-web/pull/3739 | Reads the renamed provider columns | 🟢 open |
 ```
 
 Once the sibling PR exists, update the earlier PR's description too, so every PR links to all the others:
