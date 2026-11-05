@@ -188,8 +188,9 @@ Write the briefing to these rules:
 - Keep lists one level deep, with each item's detail on its own line.
 - Write the start comment as prose and short lists. Identifiers, paths, backticks and
   code go in the names reply, because they arrive blank in a start comment (reference
-  §5): send the Names table and the code in plain fenced blocks as the answer to
-  Jaidev's first question, or as plan feedback when it plans without asking.
+  §5): post the Names table and the code in plain fenced blocks as a reply in
+  the start comment's thread, straight after the start comment. Jaidev may plan
+  without asking a question, so the reply is in the thread before it plans.
 - Open every other body you post (an approval review, a Linear comment not
   addressed to Jaidev) with `## <emoji>` section headers, as the doc-format
   hook requires. Comments addressed to `@jaidev` follow the briefing
@@ -198,7 +199,8 @@ Write the briefing to these rules:
   keep their values out of the comment.
 - Show the user each draft and wait for explicit approval (see Rules). A
   general go-ahead ("coordinate with Jaidev per the skill") starts the
-  drafting. Then post it as a **new top-level comment**.
+  drafting. Then post it as a **new top-level comment**, and post the names
+  reply in its thread straight after, as part of the same step.
 - Include the Manual follow-up section only when it has items, and then add "A human makes the items under Manual follow-up." to the
   workflows Constraint.
 - Write acceptance criteria Jaidev can meet in its sandbox: commands that
@@ -216,8 +218,9 @@ Write the briefing to these rules:
   `list_comments` and `limit: 1`; its Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
   v2 posted". Open a full plan with `limit: 2` only when the timeline shows a
   new plan. A full list costs 5k to 25k tokens.
-- When Jaidev asks questions: if the ticket, code or related tickets answer
-  it, draft the reply, show the user, and post it in the question's thread
+- When Jaidev asks questions: the names reply is already in the start thread,
+  so point to it when it answers. If the ticket, code or related tickets
+  answer it, draft the reply, show the user, and post it in the question's thread
   once they approve. If it needs a decision, ask the user.
 - When Jaidev posts "🚫 Blocked — Needs Human Help": read "What Failed" and
   "What I Tried", inspect the pushed branch, and give the user the options.
@@ -232,14 +235,17 @@ first:
 - the base branch is the default branch instead of the briefed one;
 - names are invented where the briefing's names arrived blank;
 - Done-when criteria are reworded or missing;
-- acceptance criteria arrive blank.
+- acceptance criteria arrive blank;
+- the names reply's code is missing or its names are invented (plan v1 on
+  ACC-1666 and ACC-1667).
 
 Compare Jaidev's latest "Implementation plan" with the ticket, the
 briefing and the design doc, item by item:
 
 - repository and base branch match;
 - the quote-back matches the briefing, and any code the briefing gave
-  appears in the Implementation Sequence exactly as briefed;
+  appears in the Implementation Sequence exactly as briefed, and plan v1
+  writes out the names reply's code in full;
 - every Change and Acceptance criterion is covered, value by value — rule
   names, options, versions and file names exactly as briefed. An item is
   covered when the plan names its value; a preset that "includes most of
