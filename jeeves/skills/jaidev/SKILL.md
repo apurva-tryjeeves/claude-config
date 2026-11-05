@@ -10,8 +10,8 @@ Jaidev writes the code; you brief it, review its plans and PRs against the
 ticket, and keep every approval and merge with the user.
 
 Read `references/jaidev-reference.md` before the first step — it holds
-Jaidev's exact commands, lifecycle, comment formats and limits. An exact trigger is what makes Jaidev start, so
-follow its wording to the letter.
+Jaidev's exact commands, lifecycle, comment formats and limits. An exact
+trigger is what makes Jaidev start, so follow its wording to the letter.
 
 Check the reference file first whenever Jaidev acts. When Jaidev shows
 something new — a command, a trigger, a comment format, a limit, a timing —
@@ -113,7 +113,7 @@ verified fact in the briefing becomes a correct assumption in its plan:
 - Check every factual claim in the ticket against the code — current config,
   versions, file layout, what CI runs. Brief Jaidev on what is true, and
   tell the user each correction.
-- When the project has a design doc, compare the briefing and names reply
+- When the project has a design doc, compare the briefing and names comment
   with it section by section: names, file paths, signatures, behaviour and
   log messages. Fix clear mismatches, and bring real differences to the
   user as decisions. Briefings drift from the design doc even when they
@@ -135,7 +135,7 @@ verified fact in the briefing becomes a correct assumption in its plan:
 - Settle every identifier the briefing introduces with the
   `jeeves:typescript-naming` skill, following its "During planning" steps.
   Read the repo rules and the surrounding code first, then write the Names
-  table (kind, name, file, purpose) and the renames list. The names reply
+  table (kind, name, file, purpose) and the renames list. The names comment
   carries the table, and Jaidev uses the names as written.
 
 Then draft one comment in exactly this format:
@@ -183,34 +183,40 @@ Write the briefing to these rules:
 - Carry every ticket item into Changes, Acceptance criteria or Manual
   follow-up, word for word where possible.
 - Put every change to `.github/workflows/*` under Manual follow-up. Jaidev's
-  GitHub token has no `workflow` scope, so those changes reach the branch
-  through the user (see Rules).
-- Keep lists one level deep, with each item's detail on its own line.
-- Write the start comment as prose and short lists. Identifiers, paths, backticks and
-  code go in the names reply, because they arrive blank in a start comment (reference
-  §5): post the Names table and the code in plain fenced blocks as their own
-  top-level comment (the names reply), before the start comment. Jaidev begins
-  planning as soon as the start comment lands, so the names reply is already on
-  the ticket when it reads the briefing.
-- Open each section of the names reply with a `## <emoji>` header, as the
-  doc-format hook requires, and end it with a line that sends questions to the
-  replies under the `@jaidev start` comment.
-- Open every other body you post (an approval review, a Linear comment not
-  addressed to Jaidev) with `## <emoji>` section headers, as the doc-format
-  hook requires. Comments addressed to `@jaidev` follow the briefing
-  format.
-- Describe credentials by name and location (e.g. the Secrets Manager key);
-  keep their values out of the comment.
-- Show the user each draft and wait for explicit approval (see Rules). A
-  general go-ahead ("coordinate with Jaidev per the skill") starts the
-  drafting. Then post the names reply as a **top-level comment**, and the
-  briefing as a second top-level comment straight after it, both under that one
-  approval.
-- Include the Manual follow-up section only when it has items, and then add "A human makes the items under Manual follow-up." to the
-  workflows Constraint.
+  GitHub token pushes code only, so those changes reach the branch through
+  the user (see Rules).
+- Include the Manual follow-up section only when it has items, and then add
+  "A human makes the items under Manual follow-up." to the workflows
+  Constraint.
 - Write acceptance criteria Jaidev can meet in its sandbox: commands that
   exist in the base branch's `package.json` and single test files. Name the
   full suite and coverage gate by their CI check (reference §5).
+- Keep lists one level deep, with each item's detail on its own line.
+- Describe credentials by name and location (e.g. the Secrets Manager key);
+  keep their values out of the comment.
+
+Jaidev plans as soon as the start comment lands, and a start comment loses
+identifiers, paths, backticks and code, so split the content across three
+posts (reference §5):
+
+| Post | Holds | Where and when |
+|---|---|---|
+| Names comment | The Names table and code blocks up to ~20 lines | Top-level comment, posted first |
+| Start comment | The briefing above, as prose and short lists | Second top-level comment, straight after the names comment |
+| Plan feedback | Every code block over ~20 lines, and the base branch restated | Reply in plan v1's thread (step 4) |
+
+- Draft the plan feedback's long code blocks now, with the names comment: a
+  45-line block reached Jaidev empty even there (ACC-1670).
+- Put code in plain fenced blocks and keep every section expanded, without
+  `+++` collapsibles.
+- Open each section of the names comment with a `## <emoji>` header, as the
+  doc-format hook requires, and end it with a line that sends questions to the
+  replies under the `@jaidev start` comment.
+- Show the user each draft and wait for explicit approval (see Rules). A
+  general go-ahead ("coordinate with Jaidev per the skill") starts the
+  drafting. Then post the names comment as a **top-level comment**, and the
+  briefing as a second top-level comment straight after it, both under that one
+  approval. The plan feedback goes up after plan v1, under its own approval.
 
 ### 3. Watch the run
 
@@ -223,10 +229,11 @@ Write the briefing to these rules:
   `list_comments` and `limit: 1`; its Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
   v2 posted". Open a full plan with `limit: 2` only when the timeline shows a
   new plan. A full list costs 5k to 25k tokens.
-- When Jaidev asks questions: the names reply is the top-level comment above the start comment,
-  so point to it when it answers. If the ticket, code or related tickets
-  answer it, draft the reply, show the user, and post it in the question's thread
-  once they approve. If it needs a decision, ask the user.
+- When Jaidev asks a question that the ticket, code or related tickets
+  answer, draft the reply, show the user, and post it in the question's
+  thread once they approve. Point to the names comment above the start
+  comment when it holds the answer. When the question needs a decision, ask
+  the user.
 - When Jaidev posts "🚫 Blocked — Needs Human Help": read "What Failed" and
   "What I Tried", inspect the pushed branch, and give the user the options.
   Once they choose, make any approved manual change, then post
@@ -237,7 +244,8 @@ Write the briefing to these rules:
 Plan v1 usually needs one correction round. Expect these gaps and check each
 first:
 
-- the Affected Services table shows the base as `development`, the default branch, instead of the briefed one;
+- the Affected Services table shows the base as `development`, the default
+  branch, instead of the briefed one (ACC-1669, ACC-1670);
 - names are invented where the briefing's names arrived blank;
 - Done-when is short of the full criteria list (4 of 8 on ACC-1669);
 - acceptance criteria arrive blank;
@@ -247,9 +255,9 @@ Compare Jaidev's latest "Implementation plan" with the ticket, the
 briefing and the design doc, item by item:
 
 - repository and base branch match;
-- the quote-back matches the briefing, and any code the briefing gave
-  appears in the Implementation Sequence exactly as briefed, and plan v1
-  writes out the names reply's code in full;
+- the quote-back matches the briefing;
+- the Implementation Sequence writes out every code block from the names
+  comment and the plan feedback in full, exactly as briefed;
 - every Change and Acceptance criterion is covered, value by value — rule
   names, options, versions and file names exactly as briefed. An item is
   covered when the plan names its value; a preset that "includes most of
@@ -261,10 +269,17 @@ briefing and the design doc, item by item:
   the section; verify the assumptions it now relies on;
 - risks and mitigations are acceptable.
 
-Send the correction as one feedback reply that lists the base branch, the
-Names table, every Done-when criterion word for word and the PR title, in
-plain fenced blocks. When plan v1 still misses names or code, send the names reply again as that
-feedback. Approve v2 when it matches.
+Send the correction as one feedback reply that holds, in plain fenced
+blocks:
+
+- the base branch, restated;
+- the Names table, and the rest of the names comment again when plan v1
+  still misses names or code;
+- every code block over ~20 lines held back from the names comment;
+- every Done-when criterion, word for word;
+- the PR title.
+
+Approve v2 when it matches.
 
 Report a verdict (approve / request changes), a table of ticket and
 design-doc items → covered / missing / wrong, and any wrong assumptions. When changes are
@@ -337,8 +352,8 @@ the ticket to the user.
 With two or more tickets in flight, run each in its own background agent. Read
 `references/background-agents.md` first: it holds the agent tiers, the shared-brief
 rules, the state file and the watcher. Start ticket agents from
-`assets/agent-brief-template.md`; it is self-contained, so agents load no
-other skill.
+`assets/agent-brief-template.md`; it is self-contained, so agents load only
+`jeeves:typescript-naming` besides it.
 
 ## Progress
 
@@ -366,6 +381,10 @@ so the progress shows what each merge unblocks.
   the agent runs the merge.
 - Leave repository settings, branch protection, access and infrastructure
   to the user.
+- Open every approval review, and every Linear comment addressed to someone
+  other than Jaidev, with `## <emoji>` section headers, as the doc-format
+  hook requires. Comments addressed to `@jaidev` follow the
+  briefing format.
 - When a ticket is ambiguous or conflicts with the code or another ticket,
   ask the user.
 - Ask the user one decision at a time with `AskUserQuestion` (two or three
@@ -374,11 +393,17 @@ so the progress shows what each merge unblocks.
 
 ## Reporting results
 
-Start the first colored report with the legend line (`references/background-agents.md`, "Color coding"). Start each message with the progress, then three parts: what
-happened, what you propose, what you need from the user. Report new facts only, and end on the request to the user. A watcher wake
-for a `LINEAR POLL ERROR` line alone gets one line naming the retry. Plan and PR reviews are deliverables and run as
-long as the item-by-item table needs. Start every line you relay about an
-agent or its ticket with the identity emoji and ticket id, and put the
-status circle before the verdict.
+- Start the first colored report with the legend line
+  (`references/background-agents.md`, "Color coding").
+- Start each message with the progress, then three parts: what happened,
+  what you propose, what you need from the user.
+- Report new facts only, and end on the request to the user; leave out
+  restated context and closing offers.
+- A watcher wake for a `LINEAR POLL ERROR` line alone gets one line naming
+  the retry.
+- Plan and PR reviews are deliverables and run as long as the item-by-item
+  table needs.
+- Start every line you relay about an agent or its ticket with the identity
+  emoji and ticket id, and put the status circle before the verdict.
 
 authoring-guide: v4
