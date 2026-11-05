@@ -10,7 +10,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only `jeeves:typescript-naming` besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
-| Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the briefing, answers questions, reviews the plan and the PR |
+| Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the names comment and the briefing, answers questions, reviews the plan and the PR |
 | State file | A JSON file in the scratchpad, one entry per ticket, created with `scripts/poll-state.py <state-file> init <ticket> <agent-id> <repo-dir>` |
 | Events | Wake agents and update the state file as "Poll events" describes |
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
@@ -68,13 +68,16 @@ posted, and start it again after handling each exit:
 | 5 min | `scripts/poll-linear.py`: one headless `claude -p --model haiku` call that reads each open ticket's Jaidev status comment | A Status or Timeline change that waits on the coordinator: a plan, a question, Blocked, Complete |
 | 3 min | `scripts/poll.py`: every GitHub check in one call | CI finished on a new head, merged, closed |
 
-The watcher exits on the first line printed. Headless Haiku runs as its own
-process, so no agent of this session stops or wakes; a background agent that
-paces itself instead wakes the coordinator on every pause. One Linear call
-costs about $0.007 and takes about 10 s (measured 4 Nov 2026). Changes while
-Jaidev works (Analyzing, Planning, Implementing, Addressing PR Feedback),
-"PRs Created", a new PR, and Timeline entries the coordinator caused update
-the state file silently; the PR's CI result is the next event.
+- The watcher exits on the first line printed.
+- Headless Haiku runs as its own process, so the agents of this session stay
+  asleep between events. A background agent that paces itself instead wakes
+  the coordinator on every pause.
+- One Linear call costs about $0.007 and takes about 10 s (measured 4 Nov
+  2026).
+- Changes while Jaidev works (Analyzing, Planning, Implementing, Addressing
+  PR Feedback), "PRs Created", a new PR, and Timeline entries the
+  coordinator caused update the state file silently; the PR's CI result is
+  the next event.
 
 | Line | Action |
 |---|---|
@@ -104,7 +107,7 @@ Linear tools may be `mcp__claude_ai_Linear__*` or `mcp__linear__*`. Tell each ag
 When the tickets form a chain, the next unblocked ticket gets its briefing ready while the current PR waits.
 
 - Start one Phase 1 agent for the next ticket as soon as the current PR is in review or CI.
-- Point the agent at the unmerged code on the PR's branch, and at the PR's briefing and names reply.
+- Point the agent at the unmerged code on the PR's branch, and at the PR's briefing and names comment.
 - Run the agents the batch needs; two to five ran together without trouble, and an idle agent costs nothing until woken.
 - Send "go" after the blocking PR merges.
 
@@ -119,7 +122,7 @@ A resumed agent re-reads its whole context on every turn, so a long-lived agent 
 #### Batch small tickets
 
 Up to 3 one-point tickets with disjoint files may share one agent:
-- Phase 1 writes the two files per ticket in one pass.
+- Phase 1 writes each ticket's files in one pass.
 - The coordinator sends "go <ticket-id>" per ticket.
 - PR reviews run one after another.
 

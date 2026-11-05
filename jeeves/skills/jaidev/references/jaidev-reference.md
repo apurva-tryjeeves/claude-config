@@ -96,8 +96,8 @@ phase, repositories, PR links and a timeline.
   ticket…`.
 - To retrigger, post a fresh comment. Jaidev reads new comments only; a
   comment edited to begin `@jaidev start .` stayed idle for 85 min.
-- Assignment alone leaves Jaidev idle — it replies "I don't pick up tickets
-  via assignment anymore. Reply `@jaidev start`".
+- Start runs by comment: on assignment alone Jaidev stays idle and replies
+  "I don't pick up tickets via assignment anymore. Reply `@jaidev start`".
 - "Started by" in the status comment names the Linear account that posted
   the start comment.
 
@@ -160,30 +160,37 @@ allocated develop environments (see At a glance).
 - Knowledge-base files cover existing repositories. For a new repository
   Jaidev explores the code directly, so give the briefing extra context.
 - The start comment loses identifiers, inline backticks and fenced code
-  (WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive intact.
-  Keep the start comment to prose and short lists, post names and code as their
-  own top-level comment before the start comment, send them again as plan
-  feedback when plan v1 still misses them, and ask it to quote key lines back.
-- Jaidev plans v1 without waiting for a thread reply (Nov 2026 evidence):
-  - ACC-1666 and ACC-1667: a names reply held back for a first question never
-    reached it; plan v1 on ACC-1667 said "I don't have the thread reply… the
-    names in this plan are my own design".
+  (WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive
+  intact. Post in this order, and ask Jaidev to quote key lines back:
+  1. The names comment: a top-level comment with the Names table and code
+     blocks up to ~20 lines.
+  2. The start comment, as prose and short lists, as a second top-level
+     comment.
+  3. Plan feedback in plan v1's thread: every code block over ~20 lines, the
+     base branch restated, and the names again when plan v1 still misses them.
+- Put code in plain fenced blocks and keep every section expanded: a
+  briefing in a `+++` collapsible reached Jaidev with its identifiers blanked.
+- Jaidev plans v1 without waiting for a thread reply. Evidence for the order
+  above (Nov 2026):
+  - ACC-1666 and ACC-1667: a names thread reply held back for a first
+    question never reached it; plan v1 on ACC-1667 said "I don't have the
+    thread reply… the names in this plan are my own design".
   - ACC-1668: planning began at 16:42:31 IST and the thread reply landed at
-    16:43:26; plan v1 invented names and wrote the code as prose; planning cost
-    $4.10.
-  - ACC-1669: the names reply went up as its own top-level comment, and 10 s
-    later the `@jaidev start` briefing went up as a second top-level comment
-    whose closing paragraph pointed to the comment above it.
-  - ACC-1669 plan v1 used every name exactly, quoted the signature and reused
-    the reply's test-setup notes; planning cost $0.90.
-  - ACC-1669 plan v1 still showed `development` as the base in the Affected
-    Services table, cut Done-when to 4 of 8 criteria and described a class in
-    prose; plan review checks all three.
-  - ACC-1669 plan v2 reported that the names comment's long service-code
-    section was outside its context, and rebuilt the class from the plan. The
-    Names table and short code blocks reached it intact. Keep the names comment
-    to the Names table and short blocks where possible, and send long code again
-    as plan feedback.
+    16:43:26; plan v1 invented names and wrote the code as prose; planning
+    cost $4.10.
+  - ACC-1669 (names comment, then 10 s later a start comment whose closing
+    paragraph pointed to the comment above it): plan v1 used every name
+    exactly, quoted the signature and reused the test-setup notes; planning
+    cost $0.90. It still showed `development` as the base in the Affected
+    Services table, cut Done-when to 4 of 8 criteria and described a class
+    in prose; plan review checks all three.
+  - ACC-1669 plan v2 reported the names comment's long service-code section
+    as outside its context, and rebuilt the class from the plan. The Names
+    table and short code blocks reached it intact.
+  - ACC-1670 (names comment 22 s before the start comment): plan v1 reported
+    the 45-line config block as "empty in the prompt" while the prose around
+    it arrived. It also read `development` instead of the briefed parent
+    branch, so its hit list named files the parent had already deleted.
 - Implementation works from the plan's text (WAL-6301): code that must land verbatim
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a
@@ -194,6 +201,7 @@ allocated develop environments (see At a glance).
   ```bash
   npx jest --ci --coverage=false --runTestsByPath <file>
   ```
+
 - Its GitHub token pushes code only; `.github/workflows/*` changes reach the
   branch through a human. A briefing that puts a workflow change in its
   definition of done ends Blocked.
@@ -221,7 +229,7 @@ allocated develop environments (see At a glance).
 - Its plan can raise the estimate (ACC-1633: 1 to 2 points) and the new value
   overwrites the Linear estimate.
 - After the PR it posts a "Deploy this ticket" comment. The user deploys; agents
-  leave the comment unanswered and run no `@jaidev deploy`.
+  leave the comment unanswered and leave `@jaidev deploy` to the user.
 - A correction posted while Jaidev is already writing the next plan version can be missed: on ACC-1636 plan v2 was posted before it read the correction in the v1 thread. Repeat the correction in the v2 thread (the next plan then carries it).
 - Plan code blocks can carry literal `\n` text (ACC-1645 plan v2). Check the opened PR's source for stray `\n` sequences.
 - The doc-format hook requires `## <emoji>` section headers in GitHub
