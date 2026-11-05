@@ -184,6 +184,12 @@ allocated develop environments (see At a glance).
     Names table and short code blocks reached it intact. Keep the names comment
     to the Names table and short blocks where possible, and send long code again
     as plan feedback.
+  - ACC-1670 (names comment 22 s before the start comment): plan v1 reported
+    the 45-line config block as "empty in the prompt" while the prose around it
+    arrived. It also read `development` instead of the briefed parent branch, so
+    its hit list named files the parent had already deleted. Send any code block
+    over ~20 lines as plan feedback, and expect plan v1 to need the base branch
+    restated.
 - Implementation works from the plan's text (WAL-6301): code that must land verbatim
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a
