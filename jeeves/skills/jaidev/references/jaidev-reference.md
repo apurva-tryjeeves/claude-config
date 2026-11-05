@@ -179,6 +179,11 @@ allocated develop environments (see At a glance).
   - ACC-1669 plan v1 still showed `development` as the base in the Affected
     Services table, cut Done-when to 4 of 8 criteria and described a class in
     prose; plan review checks all three.
+  - ACC-1669 plan v2 reported that the names comment's long service-code
+    section was outside its context, and rebuilt the class from the plan. The
+    Names table and short code blocks reached it intact. Keep the names comment
+    to the Names table and short blocks where possible, and send long code again
+    as plan feedback.
 - Implementation works from the plan's text (WAL-6301): code that must land verbatim
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a
