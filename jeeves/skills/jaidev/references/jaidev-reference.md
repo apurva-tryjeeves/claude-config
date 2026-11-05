@@ -44,7 +44,8 @@ no row, read its deploy comment, then add a row.
 2. **Analysis**: Jaidev reads the ticket, its comments and its knowledge base
    (`PRODUCT.md`, `PLATFORM.md`, `SERVICE.md`, one file per repository) and
    explores the repositories.
-3. **Questions** (optional): it posts questions and waits. Status shows
+3. **Questions** (optional): it posts questions and waits; it can also plan
+   without asking. Status shows
    "Gathering Info (Waiting for Answers)".
 4. **Plan**: it posts an "Implementation plan" comment and waits for
    approval. Feedback in the plan thread gets an in-thread ack within ~10 s;
@@ -159,9 +160,13 @@ allocated develop environments (see At a glance).
   Jaidev explores the code directly, so give the briefing extra context.
 - The start comment loses identifiers, inline backticks and fenced code
   (WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive intact.
-  Keep the start comment to prose and short lists, send names and code as the
-  answer in Jaidev's question thread or as plan feedback, and ask it to quote key
-  lines back.
+  Keep the start comment to prose and short lists, post names and code as a reply
+  in the start comment's thread straight after it, send them again as plan
+  feedback when plan v1 still misses them, and ask it to quote key lines back.
+- Jaidev can plan v1 without asking a question, so a names reply held back for a
+  first question never reaches it (ACC-1666 and ACC-1667, Nov 2026). Plan v1 on
+  ACC-1667 said "I don't have the thread reply… the names in this plan are my own
+  design", and each ticket spent a correction round.
 - Implementation works from the plan's text (WAL-6301): code that must land verbatim
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a
