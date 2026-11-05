@@ -40,7 +40,8 @@ no row, read its deploy comment, then add a row.
 
 ## 1. Lifecycle
 
-1. **Start**: a user posts `@jaidev start` as a new top-level comment.
+1. **Start**: a user posts the names comment, then `@jaidev start` as a second
+   new top-level comment (§5).
 2. **Analysis**: Jaidev reads the ticket, its comments and its knowledge base
    (`PRODUCT.md`, `PLATFORM.md`, `SERVICE.md`, one file per repository) and
    explores the repositories.
@@ -160,13 +161,29 @@ allocated develop environments (see At a glance).
   Jaidev explores the code directly, so give the briefing extra context.
 - The start comment loses identifiers, inline backticks and fenced code
   (WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive intact.
-  Keep the start comment to prose and short lists, post names and code as a reply
-  in the start comment's thread straight after it, send them again as plan
+  Keep the start comment to prose and short lists, post names and code as their
+  own top-level comment before the start comment, send them again as plan
   feedback when plan v1 still misses them, and ask it to quote key lines back.
-- Jaidev can plan v1 without asking a question, so a names reply held back for a
-  first question never reaches it (ACC-1666 and ACC-1667, Nov 2026). Plan v1 on
-  ACC-1667 said "I don't have the thread reply… the names in this plan are my own
-  design", and each ticket spent a correction round.
+- Jaidev plans v1 without waiting for a thread reply (Nov 2026 evidence):
+  - ACC-1666 and ACC-1667: a names reply held back for a first question never
+    reached it; plan v1 on ACC-1667 said "I don't have the thread reply… the
+    names in this plan are my own design".
+  - ACC-1668: planning began at 16:42:31 IST and the thread reply landed at
+    16:43:26; plan v1 invented names and wrote the code as prose; planning cost
+    $4.10.
+  - ACC-1669: the names reply went up as its own top-level comment, and 10 s
+    later the `@jaidev start` briefing went up as a second top-level comment
+    whose closing paragraph pointed to the comment above it.
+  - ACC-1669 plan v1 used every name exactly, quoted the signature and reused
+    the reply's test-setup notes; planning cost $0.90.
+  - ACC-1669 plan v1 still showed `development` as the base in the Affected
+    Services table, cut Done-when to 4 of 8 criteria and described a class in
+    prose; plan review checks all three.
+  - ACC-1669 plan v2 reported that the names comment's long service-code
+    section was outside its context, and rebuilt the class from the plan. The
+    Names table and short code blocks reached it intact. Keep the names comment
+    to the Names table and short blocks where possible, and send long code again
+    as plan feedback.
 - Implementation works from the plan's text (WAL-6301): code that must land verbatim
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a

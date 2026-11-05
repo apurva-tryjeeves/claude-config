@@ -158,7 +158,7 @@ Please pick up this ticket in <org/repo>. Start your branch from <start-branch> 
 
 ## 🛠️ Changes
 
-- <every change in prose: what changes and why; the exact names, paths and values follow in the thread reply>
+- <every change in prose: what changes and why; the exact names, paths and values are in the names comment just above the start comment>
 
 ## 🚧 Constraints
 
@@ -175,7 +175,7 @@ Please pick up this ticket in <org/repo>. Start your branch from <start-branch> 
 
 - [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI test / Unit Test passes">
 
-A reply in this thread follows with the exact names and code. Copy every acceptance criterion into your plan's Done when, word for word. Name any you fail to meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
+The exact names and code are in the comment just above this one; use them as written. Copy every acceptance criterion into your plan's Done when, word for word. Name any you fail to meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
 ````
 
 Write the briefing to these rules:
@@ -188,9 +188,13 @@ Write the briefing to these rules:
 - Keep lists one level deep, with each item's detail on its own line.
 - Write the start comment as prose and short lists. Identifiers, paths, backticks and
   code go in the names reply, because they arrive blank in a start comment (reference
-  §5): post the Names table and the code in plain fenced blocks as a reply in
-  the start comment's thread, straight after the start comment. Jaidev may plan
-  without asking a question, so the reply is in the thread before it plans.
+  §5): post the Names table and the code in plain fenced blocks as their own
+  top-level comment (the names reply), before the start comment. Jaidev begins
+  planning as soon as the start comment lands, so the names reply is already on
+  the ticket when it reads the briefing.
+- Open each section of the names reply with a `## <emoji>` header, as the
+  doc-format hook requires, and end it with a line that sends questions to the
+  replies under the `@jaidev start` comment.
 - Open every other body you post (an approval review, a Linear comment not
   addressed to Jaidev) with `## <emoji>` section headers, as the doc-format
   hook requires. Comments addressed to `@jaidev` follow the briefing
@@ -199,8 +203,9 @@ Write the briefing to these rules:
   keep their values out of the comment.
 - Show the user each draft and wait for explicit approval (see Rules). A
   general go-ahead ("coordinate with Jaidev per the skill") starts the
-  drafting. Then post it as a **new top-level comment**, and post the names
-  reply in its thread straight after, as part of the same step.
+  drafting. Then post the names reply as a **top-level comment**, and the
+  briefing as a second top-level comment straight after it, both under that one
+  approval.
 - Include the Manual follow-up section only when it has items, and then add "A human makes the items under Manual follow-up." to the
   workflows Constraint.
 - Write acceptance criteria Jaidev can meet in its sandbox: commands that
@@ -218,7 +223,7 @@ Write the briefing to these rules:
   `list_comments` and `limit: 1`; its Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
   v2 posted". Open a full plan with `limit: 2` only when the timeline shows a
   new plan. A full list costs 5k to 25k tokens.
-- When Jaidev asks questions: the names reply is already in the start thread,
+- When Jaidev asks questions: the names reply is the top-level comment above the start comment,
   so point to it when it answers. If the ticket, code or related tickets
   answer it, draft the reply, show the user, and post it in the question's thread
   once they approve. If it needs a decision, ask the user.
@@ -232,12 +237,11 @@ Write the briefing to these rules:
 Plan v1 usually needs one correction round. Expect these gaps and check each
 first:
 
-- the base branch is the default branch instead of the briefed one;
+- the Affected Services table shows the base as `development`, the default branch, instead of the briefed one;
 - names are invented where the briefing's names arrived blank;
-- Done-when criteria are reworded or missing;
+- Done-when is short of the full criteria list (4 of 8 on ACC-1669);
 - acceptance criteria arrive blank;
-- the names reply's code is missing or its names are invented (plan v1 on
-  ACC-1666 and ACC-1667).
+- code is written as prose instead of in full (a class on ACC-1669).
 
 Compare Jaidev's latest "Implementation plan" with the ticket, the
 briefing and the design doc, item by item:
@@ -259,7 +263,8 @@ briefing and the design doc, item by item:
 
 Send the correction as one feedback reply that lists the base branch, the
 Names table, every Done-when criterion word for word and the PR title, in
-plain fenced blocks. Approve v2 when it matches.
+plain fenced blocks. When plan v1 still misses names or code, send the names reply again as that
+feedback. Approve v2 when it matches.
 
 Report a verdict (approve / request changes), a table of ticket and
 design-doc items → covered / missing / wrong, and any wrong assumptions. When changes are
