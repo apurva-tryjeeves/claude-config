@@ -30,6 +30,10 @@ class StateFileError(Exception):
     """The state file is unreadable, or a value in it has the wrong type."""
 
 
+class FieldValueError(ValueError):
+    """A `state set` value does not fit its field."""
+
+
 class Kind(StrEnum):
     """How a field is stored in JSON."""
 
@@ -254,12 +258,12 @@ def parse_value(key: str, text: str, now: datetime) -> object:
     if kind is Kind.TIME and text == "now":
         return now
     raw: object = text
-    if kind in (Kind.INT, Kind.BOOL):
-        try:
+    try:
+        if kind in (Kind.INT, Kind.BOOL):
             raw = json.loads(text)
-        except json.JSONDecodeError as error:
-            raise StateFileError(f"{key}: expected {kind}, got {text!r}") from error
-    return _decode(kind, key, raw)
+        return _decode(kind, key, raw)
+    except (json.JSONDecodeError, StateFileError) as error:
+        raise FieldValueError(f"{key}: expected {kind}, got {text!r}") from error
 
 
 def set_field(ticket: TicketState, key: str, value: object) -> TicketState:

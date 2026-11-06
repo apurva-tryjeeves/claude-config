@@ -27,7 +27,7 @@ _COLUMNS: Final = (
 )
 
 
-class CiTimingError(ValueError):
+class CiTimingError(Exception):
     """The timing file or one of its cells could not be read."""
 
 

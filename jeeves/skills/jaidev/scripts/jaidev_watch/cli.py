@@ -1,7 +1,7 @@
 """Command line: `watch`, `due`, `explain` and `state get|set|init`.
 
 Events go to stdout, one per line; diagnostics go to stderr through logging.
-Exit codes: 0 events printed, 1 runtime error, 2 usage error, 3 idle.
+Exit codes: 0 events printed, 1 runtime error, 2 usage error, 3 idle, 4 stopped by a signal.
 """
 
 from __future__ import annotations
@@ -38,6 +38,7 @@ EXIT_EVENT: Final = 0
 EXIT_ERROR: Final = 1
 EXIT_USAGE: Final = 2
 EXIT_IDLE: Final = 3
+EXIT_STOPPED: Final = 4
 TICK_SECONDS: Final = 30
 ERROR_CHARS: Final = 200
 INPUT_KEYS: Final = frozenset(
@@ -226,11 +227,16 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 time.sleep(args.tick)
     except StopRequested as stop:
         log.info("stopped by %s", stop)
-        return EXIT_EVENT
+        return EXIT_STOPPED
 
 
 def _at(args: argparse.Namespace) -> datetime:
-    return parse_time(args.at) if args.at else utc_now()
+    if not args.at:
+        return utc_now()
+    try:
+        return parse_time(args.at)
+    except ValueError as error:
+        raise UsageError(f"--at: {error}") from error
 
 
 def _show(value: datetime | None) -> str:
@@ -302,6 +308,8 @@ def cmd_state(args: argparse.Namespace) -> int:
 
     def change(wave: WaveState) -> WaveState:
         if args.action == "init":
+            if ticket_id in wave.tickets and not args.force:
+                raise UsageError(f"{ticket_id} exists; pass --force to replace it")
             ticket = TicketState(agent=args.agent, repo_dir=args.repo_dir)
         else:
             ticket = _require(wave, ticket_id)
@@ -360,6 +368,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("ticket")
     init.add_argument("agent")
     init.add_argument("repo_dir")
+    init.add_argument("--force", action="store_true", help="replace an existing ticket")
     state.set_defaults(handler=cmd_state)
     return parser
 
@@ -375,9 +384,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     handler: Callable[[argparse.Namespace], int] = args.handler
     try:
         return handler(args)
-    except UsageError as error:
+    except (UsageError, ValueError) as error:
         log.error("%s", error)
         return EXIT_USAGE
-    except (state_store.StateFileError, ci_timing.CiTimingError) as error:
+    except (state_store.StateFileError, ci_timing.CiTimingError, OSError) as error:
         log.error("%s", error)
         return EXIT_ERROR

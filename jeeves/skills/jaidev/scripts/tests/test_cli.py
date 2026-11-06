@@ -6,10 +6,14 @@ import contextlib
 import io
 import json
 import shutil
+import signal
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from jaidev_watch import cli, policy, state_store
@@ -248,6 +252,60 @@ class CommandTest(unittest.TestCase):
             self.assertEqual(
                 self.run_cli("state", "set", str(self.path), "ACC-0", "estimate", "1")[0], 2
             )
+
+    def test_exit_codes_for_bad_input(self) -> None:
+        path = str(self.path)
+        cases = [
+            (("due", path, "--at", "garbage"), cli.EXIT_USAGE),
+            (("explain", path, "--at", "2026-13-40"), cli.EXIT_USAGE),
+            (("state", "set", path, "ACC-1670", "prNumber", "abc"), cli.EXIT_USAGE),
+            (("state", "set", path, "ACC-1670", "stage", "bogus"), cli.EXIT_USAGE),
+            (("state", "set", path, "ACC-1670", "approvedAt", "yesterday"), cli.EXIT_USAGE),
+            (("state", "get", str(self.dir / "missing" / "s.json"), "ACC-1"), cli.EXIT_ERROR),
+            (("state", "init", path, "ACC-1670", "a", REPO), cli.EXIT_USAGE),
+        ]
+        for argv, code in cases:
+            with self.subTest(argv=argv), self.assertLogs("jaidev_watch", "ERROR"):
+                self.assertEqual(self.run_cli(*argv)[0], code)
+
+    def test_init_keeps_an_existing_ticket_unless_forced(self) -> None:
+        path = str(self.path)
+        with self.assertLogs("jaidev_watch", "ERROR"):
+            self.run_cli("state", "init", path, "ACC-1670", "new-agent", REPO)
+        kept = state_store.load(self.path).tickets["ACC-1670"]
+        self.assertEqual(kept.agent, "a40bb3fcdbb02da5b")
+        self.assertEqual(
+            self.run_cli("state", "init", path, "ACC-1670", "b", REPO, "--force")[0], 0
+        )
+        self.assertEqual(state_store.load(self.path).tickets["ACC-1670"].agent, "b")
+
+    def test_sigterm_stops_the_watcher_with_exit_4(self) -> None:
+        now = datetime.now(UTC).replace(microsecond=0)
+        state = self.dir / "live.json"
+        state_store.save(
+            state,
+            WaveState(
+                tickets={
+                    "ACC-1": TicketState(
+                        repo_dir=str(self.dir), stage=Stage.IMPLEMENTING, stage_since=now
+                    )
+                }
+            ),
+        )
+        scripts = Path(__file__).resolve().parents[1]
+        process = subprocess.Popen(
+            [sys.executable, "-m", "jaidev_watch", "watch", str(state)],
+            cwd=scripts,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        time.sleep(1.5)
+        process.send_signal(signal.SIGTERM)
+        out, err = process.communicate(timeout=10)
+        self.assertEqual(process.returncode, cli.EXIT_STOPPED, err)
+        self.assertEqual(out, "")
+        self.assertNotIn("Traceback", err)
 
     def test_due_reports_none_for_wave2(self) -> None:
         self.assertEqual(self.run_cli("due", str(self.path)), (3, "NONE\n"))
