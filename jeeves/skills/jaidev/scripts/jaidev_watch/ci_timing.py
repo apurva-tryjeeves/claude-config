@@ -8,6 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Final
 
+from jaidev_watch.ci_derive import source_table_path
 from jaidev_watch.models import CiTiming
 
 # scripts/jaidev_watch/ci_timing.py → skills/git-preferences/references/ci-check-timing.md
@@ -86,6 +87,7 @@ def load(path: Path = DEFAULT_PATH) -> Mapping[str, CiTiming]:
         raise CiTimingError(f"cannot read {path}: {error}") from error
 
 
-def repo_name(repo_dir: str | None) -> str:
-    """The repo a ticket's `repoDir` points at: its last path part."""
-    return Path(repo_dir or ".").resolve().name
+def table_path() -> Path:
+    """The source clone's copy of the table when it exists, else the installed one."""
+    source = source_table_path()
+    return source if source.exists() else DEFAULT_PATH

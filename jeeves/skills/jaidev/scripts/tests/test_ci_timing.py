@@ -37,11 +37,6 @@ class CiTimingTest(unittest.TestCase):
         with self.assertRaises(ci_timing.CiTimingError):
             ci_timing.parse_table("| Repo | Max |\n|---|---|\n| a | 1m |\n")
 
-    def test_repo_name(self) -> None:
-        self.assertEqual(
-            ci_timing.repo_name("/x/JeevesInc/ap-data-source-connector"), "ap-data-source-connector"
-        )
-
 
 if __name__ == "__main__":
     unittest.main()

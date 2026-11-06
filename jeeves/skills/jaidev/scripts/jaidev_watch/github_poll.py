@@ -75,9 +75,12 @@ def parse_checks(rollup: object) -> tuple[Check, ...]:
     return tuple(checks)
 
 
-def ci_result(checks: Sequence[Check], settles_on: Sequence[str]) -> CiResult:
-    """Settled only when every check completed and every `Settles on` check is present."""
-    if not checks or any(check.status in PENDING for check in checks):
+def ci_result(checks: Sequence[Check], settles_on: Sequence[str] | None) -> CiResult:
+    """Settled only when every check completed and every `Settles on` check is present.
+
+    Without a timing row (`settles_on` None) CI stays pending.
+    """
+    if settles_on is None or not checks or any(check.status in PENDING for check in checks):
         return CiResult.PENDING
     names = {check.name for check in checks}
     if any(name not in names for name in settles_on):
@@ -92,7 +95,7 @@ def sonar_findings(checks: Sequence[Check]) -> bool:
     return any(c.name == SONAR_CHECK and c.conclusion not in SONAR_CLEAN for c in checks)
 
 
-def parse_pr_list(stdout: str, settles_on: Sequence[str]) -> GithubObservation | None:
+def parse_pr_list(stdout: str, settles_on: Sequence[str] | None) -> GithubObservation | None:
     """Turn `gh pr list` JSON into the newest PR's observation, or None without a PR."""
     try:
         prs = json.loads(stdout or "[]")
@@ -122,7 +125,7 @@ def parse_pr_list(stdout: str, settles_on: Sequence[str]) -> GithubObservation |
 def read_pr(
     ticket_id: str,
     repo_dir: Path,
-    settles_on: Sequence[str],
+    settles_on: Sequence[str] | None,
     *,
     runner: Runner = subprocess.run,
 ) -> GithubObservation | None:

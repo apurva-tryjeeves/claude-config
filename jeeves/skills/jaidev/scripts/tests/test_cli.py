@@ -17,7 +17,8 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from jaidev_watch import cli, policy, state_store
+from jaidev_watch import cli, state_store
+from jaidev_watch.ci_derive import CiDeriveError, DerivedRow
 from jaidev_watch.ci_timing import load
 from jaidev_watch.linear_poll import LinearPollError
 from jaidev_watch.models import (
@@ -66,8 +67,8 @@ class FakePollers:
         return None
 
     def pollers(self) -> cli.Pollers:
-        def timing_for(ticket: TicketState) -> CiTiming:
-            return TIMINGS.get("ap-data-source-connector", policy.FALLBACK_CI_TIMING)
+        def timing_for(ticket: TicketState) -> CiTiming | None:
+            return TIMINGS["ap-data-source-connector"]
 
         return cli.Pollers(timing_for, self.read_linear, self.read_github)
 
@@ -275,6 +276,62 @@ class TickTest(unittest.TestCase):
         self.assertEqual((fake.linear_calls, fake.github_calls), ([], []))
 
 
+class CiRowsTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.derived: list[str] = []
+        self.written: list[str] = []
+
+    def rows(self, fail: bool) -> cli.CiRows:
+        def derive(repo: str) -> DerivedRow:
+            self.derived.append(repo)
+            if fail:
+                raise CiDeriveError("no successful PR runs")
+            return DerivedRow(
+                replace(TIMINGS["ap-data-source-connector"], repo=repo), "unit-test.yml", 10
+            )
+
+        def write(row: DerivedRow) -> bool:
+            self.written.append(row.timing.repo)
+            return True
+
+        return cli.CiRows({}, derive=derive, write=write, resolve=lambda d: "new-repo")
+
+    def test_a_missing_row_is_derived_once_and_announced(self) -> None:
+        rows = self.rows(fail=False)
+        ticket = TicketState(repo_dir="/x/new-repo", stage=Stage.PR_CI)
+        self.assertIsNotNone(rows.for_ticket(ticket))
+        self.assertIsNotNone(rows.for_ticket(ticket))
+        self.assertEqual(self.derived, ["new-repo"])
+        self.assertEqual(self.written, ["new-repo"])
+        self.assertEqual([e.render() for e in rows.notices()], ["CI ROW ADDED new-repo"])
+        self.assertEqual(rows.notices(), [])
+
+    def test_a_failed_derivation_turns_ci_polling_off(self) -> None:
+        rows = self.rows(fail=True)
+        ticket = TicketState(
+            repo_dir="/x/new-repo",
+            stage=Stage.PR_CI,
+            stage_since=parse_time("2026-11-06T03:00:00Z"),
+        )
+        self.assertIsNone(rows.for_ticket(ticket))
+        self.assertIsNone(rows.for_ticket(ticket))
+        self.assertEqual(self.derived, ["new-repo"])
+        self.assertEqual(
+            [e.render() for e in rows.notices()],
+            ["CI ROW MISSING new-repo no successful PR runs"],
+        )
+        decision = cli.schedule.decide(ticket, parse_time("2026-11-06T04:00:00Z"), None)
+        self.assertFalse(decision.github_due)
+        self.assertIsNone(decision.ticket.deadline)
+
+    def test_stages_before_the_pr_derive_nothing(self) -> None:
+        rows = self.rows(fail=False)
+        self.assertIsNone(
+            rows.for_ticket(TicketState(repo_dir="/x/new-repo", stage=Stage.PLANNING))
+        )
+        self.assertEqual(self.derived, [])
+
+
 class CommandTest(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp())
@@ -356,7 +413,10 @@ class CommandTest(unittest.TestCase):
             WaveState(
                 tickets={
                     "ACC-1": TicketState(
-                        repo_dir=str(self.dir), stage=Stage.IMPLEMENTING, stage_since=now
+                        repo_dir=str(self.dir),
+                        stage=Stage.APPROVED,
+                        stage_since=now,
+                        approved_at=now,
                     )
                 }
             ),

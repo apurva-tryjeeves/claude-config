@@ -47,6 +47,43 @@ class CiResultTest(unittest.TestCase):
         self.assertFalse(github_poll.sonar_findings([]))
 
 
+class ParsePrListTest(unittest.TestCase):
+    def test_completed_rollup_without_a_settles_on_check_is_pending(self) -> None:
+        payload = [
+            {
+                "number": 1,
+                "headRefOid": "abcdef0123",
+                "state": "OPEN",
+                "statusCheckRollup": [
+                    {"name": "test / Unit Test", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                    {
+                        "name": "test / Scan for secrets",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                    },
+                ],
+            }
+        ]
+        got = github_poll.parse_pr_list(json.dumps(payload), SETTLES_ON)
+        assert got is not None
+        self.assertIs(got.ci, CiResult.PENDING)
+
+    def test_no_row_keeps_ci_pending(self) -> None:
+        payload = [
+            {
+                "number": 1,
+                "headRefOid": "abc",
+                "state": "OPEN",
+                "statusCheckRollup": [
+                    {"name": "x", "status": "COMPLETED", "conclusion": "SUCCESS"}
+                ],
+            }
+        ]
+        got = github_poll.parse_pr_list(json.dumps(payload), None)
+        assert got is not None
+        self.assertIs(got.ci, CiResult.PENDING)
+
+
 class ReadPrTest(unittest.TestCase):
     def test_runs_gh_in_the_repo_and_parses(self) -> None:
         calls: list[dict[str, Any]] = []

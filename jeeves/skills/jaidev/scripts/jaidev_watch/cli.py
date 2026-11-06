@@ -20,7 +20,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Final
 
-from jaidev_watch import ci_timing, github_poll, linear_poll, policy, schedule, state_store
+from jaidev_watch import ci_derive, ci_timing, github_poll, linear_poll, schedule, state_store
 from jaidev_watch.models import (
     CiTiming,
     Event,
@@ -51,8 +51,9 @@ log = logging.getLogger("jaidev_watch")
 
 Emit = Callable[[Sequence[Event]], None]
 LinearReader = Callable[[Sequence[str]], Sequence[LinearObservation]]
-GithubReader = Callable[[str, Path, Sequence[str]], GithubObservation | None]
-TimingLookup = Callable[[TicketState], CiTiming]
+GithubReader = Callable[[str, Path, Sequence[str] | None], GithubObservation | None]
+TimingLookup = Callable[[TicketState], CiTiming | None]
+Notices = Callable[[], Sequence[Event]]
 
 
 class UsageError(Exception):
@@ -70,6 +71,7 @@ class Pollers:
     timing_for: TimingLookup
     read_linear: LinearReader
     read_github: GithubReader
+    notices: Notices = lambda: ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,21 +87,63 @@ def utc_now() -> datetime:
     return datetime.now(UTC).replace(microsecond=0)
 
 
-def timing_lookup(timings: Mapping[str, CiTiming]) -> TimingLookup:
-    """Pick each ticket's CI row by its repo; warn once for a repo without a row."""
-    warned: set[str] = set()
+# Stages that read CI, and so need the repo's timing row.
+CI_STAGES: Final = frozenset(
+    {Stage.IMPLEMENTING, Stage.PR_CI, Stage.PR_READY, Stage.PR_REVIEW_SENT, Stage.PR_REVISING}
+)
 
-    def lookup(ticket: TicketState) -> CiTiming:
-        repo = ci_timing.repo_name(ticket.repo_dir)
-        found = timings.get(repo)
-        if found is not None:
+
+class CiRows:
+    """Each ticket's CI row by repo; a missing row is derived once, the git-preferences way."""
+
+    def __init__(
+        self,
+        timings: Mapping[str, CiTiming],
+        *,
+        derive: Callable[[str], ci_derive.DerivedRow] | None = None,
+        write: Callable[[ci_derive.DerivedRow], bool] | None = None,
+        resolve: Callable[[str | None], str] = ci_derive.resolve_repo,
+    ) -> None:
+        self._timings = dict(timings)
+        self._derive, self._write, self._resolve = derive, write, resolve
+        self._repos: dict[str, str] = {}
+        self._missing: set[str] = set()
+        self._notices: list[Event] = []
+
+    def _repo(self, repo_dir: str | None) -> str:
+        key = repo_dir or "."
+        if key not in self._repos:
+            self._repos[key] = self._resolve(repo_dir)
+        return self._repos[key]
+
+    def for_ticket(self, ticket: TicketState) -> CiTiming | None:
+        """The ticket's row; None until a row exists for its repo."""
+        repo = self._repo(ticket.repo_dir)
+        found = self._timings.get(repo)
+        if found is not None or self._derive is None:
             return found
-        if repo not in warned:
-            warned.add(repo)
-            log.warning("no ci-check-timing.md row for %s; add one, using the fallback", repo)
-        return policy.FALLBACK_CI_TIMING
+        if ticket.stage not in CI_STAGES or repo in self._missing:
+            return None
+        try:
+            row = self._derive(repo)
+        except ci_derive.CiDeriveError as error:
+            self._missing.add(repo)
+            self._notices.append(Event(EventKind.CI_ROW_MISSING, detail=f"{repo} {error}"))
+            return None
+        written = self._write(row) if self._write else False
+        self._timings[repo] = row.timing
+        detail = repo if written else f"{repo} (source clone absent) {ci_derive.format_row(row)}"
+        self._notices.append(Event(EventKind.CI_ROW_ADDED, detail=detail))
+        return row.timing
 
-    return lookup
+    def notices(self) -> list[Event]:
+        """The row events since the last call."""
+        out, self._notices = self._notices, []
+        return out
+
+
+def _settles_on(timing: CiTiming | None) -> Sequence[str] | None:
+    return None if timing is None else timing.settles_on
 
 
 def _first_line(error: Exception) -> str:
@@ -166,7 +210,7 @@ def _read_github(
         ticket = wave.tickets[ticket_id]
         try:
             reads.github[ticket_id] = pollers.read_github(
-                ticket_id, Path(ticket.repo_dir or "."), pollers.timing_for(ticket).settles_on
+                ticket_id, Path(ticket.repo_dir or "."), _settles_on(pollers.timing_for(ticket))
             )
         except github_poll.GithubPollError as error:
             reads.events.append(Event(EventKind.GITHUB_POLL_ERROR, ticket_id, _first_line(error)))
@@ -231,6 +275,7 @@ def run_tick(
             decision = schedule.decide(ticket, now, timing, merge_watch=merge_watch)
             events.extend(schedule.with_ticket_id(decision.events, ticket_id))
             tickets[ticket_id] = decision.ticket
+        events.extend(pollers.notices())
         if tickets and all(t.stage is Stage.DONE for t in tickets.values()):
             events.append(Event(EventKind.ALL_MERGED))
         if events:
@@ -258,17 +303,23 @@ def stop_on_signals() -> Iterator[None]:
 
 
 def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming]) -> Pollers:
+    """Pollers that run claude, gh and git, and derive missing CI rows."""
+    rows = CiRows(
+        timings,
+        derive=ci_derive.derive_row,
+        write=lambda row: ci_derive.write_row(row, ci_derive.source_table_path()),
+    )
     usage_log = path.with_suffix(".usage.log")
 
     def read_linear(ticket_ids: Sequence[str]) -> Sequence[LinearObservation]:
         return linear_poll.read_statuses(ticket_ids, usage_log, utc_now(), tool=tool)
 
     def read_github(
-        ticket_id: str, repo_dir: Path, settles_on: Sequence[str]
+        ticket_id: str, repo_dir: Path, settles_on: Sequence[str] | None
     ) -> GithubObservation | None:
         return github_poll.read_pr(ticket_id, repo_dir, settles_on)
 
-    return Pollers(timing_lookup(timings), read_linear, read_github)
+    return Pollers(rows.for_ticket, read_linear, read_github, rows.notices)
 
 
 def cmd_watch(args: argparse.Namespace) -> int:
@@ -309,7 +360,7 @@ def cmd_due(args: argparse.Namespace) -> int:
     """Print the checks a tick would run now; poll nothing."""
     with state_store.locked(args.state_file):
         wave = state_store.load(args.state_file)
-    timing_for = timing_lookup(ci_timing.load(args.ci_timing))
+    timing_for = CiRows(ci_timing.load(args.ci_timing)).for_ticket
     linear, github = _due_checks(wave, _at(args), timing_for, args.merge_watch)
     lines = [f"{t} linear" for t in linear] + [f"{t} github" for t in github]
     print("\n".join(lines) if lines else "NONE")
@@ -320,7 +371,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
     """Print each ticket's stage, next checks and deadline as a tick would see them."""
     with state_store.locked(args.state_file):
         wave = state_store.load(args.state_file)
-    timing_for = timing_lookup(ci_timing.load(args.ci_timing))
+    timing_for = CiRows(ci_timing.load(args.ci_timing)).for_ticket
     now = _at(args)
     print(f"at {format_time(now)}")
     for ticket_id, stored in wave.tickets.items():
@@ -338,7 +389,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
             f"deadline={_show(t.deadline)} {t.deadline_event or ''}".rstrip()
         )
         print(
-            f"  ci={timing.repo} due-now={','.join(due) or 'none'} "
+            f"  ci={timing.repo if timing else '(no row)'} due-now={','.join(due) or 'none'} "
             f"fired={t.fired_event or 'none'} inputs={json.dumps(inputs)}"
         )
         for event in schedule.with_ticket_id(decision.events, ticket_id):
@@ -395,7 +446,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     def with_schedule_options(sub: argparse.ArgumentParser) -> None:
         sub.add_argument("state_file", type=Path)
-        sub.add_argument("--ci-timing", type=Path, default=ci_timing.DEFAULT_PATH)
+        sub.add_argument("--ci-timing", type=Path, default=ci_timing.table_path())
         sub.add_argument(
             "--merge-watch", action="store_true", help="check pr-ready PRs for merges every 15 min"
         )

@@ -248,7 +248,7 @@ def _next_pr_check(ticket: TicketState, since: datetime, last: datetime | None) 
     return last + (rules.github_every_late if late else rules.github_every)
 
 
-def _next_github(ticket: TicketState, ci: CiTiming, merge_watch: bool) -> datetime | None:
+def _next_github(ticket: TicketState, ci: CiTiming | None, merge_watch: bool) -> datetime | None:
     stage, since, last = ticket.stage, ticket.stage_since, ticket.last_github_at
     if stage is None or since is None:
         return None
@@ -256,7 +256,7 @@ def _next_github(ticket: TicketState, ci: CiTiming, merge_watch: bool) -> dateti
     if stage is Stage.IMPLEMENTING:
         return _next_pr_check(ticket, since, last)
     if stage is Stage.PR_CI:
-        return _cadence(since + ci.first_check, ci.interval, last)
+        return None if ci is None else _cadence(since + ci.first_check, ci.interval, last)
     if stage is Stage.PR_READY and not merge_watch:
         return None
     if rules.github_first is None or rules.github_every is None:
@@ -268,7 +268,7 @@ def _steps(size: int | None, free: int, step: int) -> int:
     return math.ceil(max(0, (size or 0) - free) / step)
 
 
-def _base_deadline(ticket: TicketState, ci: CiTiming) -> tuple[timedelta, EventKind] | None:
+def _base_deadline(ticket: TicketState, ci: CiTiming | None) -> tuple[timedelta, EventKind] | None:
     stage = ticket.stage
     if stage is None:
         return None
@@ -283,7 +283,7 @@ def _base_deadline(ticket: TicketState, ci: CiTiming) -> tuple[timedelta, EventK
         extra_attempts = max(0, (ticket.attempt or 1) - 1)
         return due * policy.PR_LATE_FACTOR + due * extra_attempts, rules.deadline_event
     if stage is Stage.PR_CI:
-        return ci.maximum * policy.CI_LATE_FACTOR, rules.deadline_event
+        return None if ci is None else (ci.maximum * policy.CI_LATE_FACTOR, rules.deadline_event)
     assert rules.deadline is not None
     units = 0
     if stage is Stage.PLANNING:
@@ -299,7 +299,7 @@ def _base_deadline(ticket: TicketState, ci: CiTiming) -> tuple[timedelta, EventK
     return after, rules.deadline_event
 
 
-def pending_deadline(ticket: TicketState, ci: CiTiming) -> Deadline | None:
+def pending_deadline(ticket: TicketState, ci: CiTiming | None) -> Deadline | None:
     """The stage's deadline, shifted by time spent queued; None once it has fired."""
     if ticket.stage_since is None or ticket.fired_event is not None:
         return None
@@ -315,7 +315,11 @@ def pending_deadline(ticket: TicketState, ci: CiTiming) -> Deadline | None:
 
 
 def decide(
-    ticket: TicketState, now: datetime, ci_timing: CiTiming, *, merge_watch: bool = False
+    ticket: TicketState,
+    now: datetime,
+    ci_timing: CiTiming | None,
+    *,
+    merge_watch: bool = False,
 ) -> Decision:
     """Which checks are due now, and which deadline events fire.
 

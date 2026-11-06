@@ -14,7 +14,7 @@ from datetime import timedelta
 from types import MappingProxyType
 from typing import Final
 
-from jaidev_watch.models import CiTiming, EventKind, Source, Stage, StagePolicy
+from jaidev_watch.models import EventKind, Source, Stage, StagePolicy
 
 
 def _s(seconds: int) -> timedelta:
@@ -128,18 +128,6 @@ PR_LATE_FACTOR: Final = 3
 
 # PR CI: the deadline is this multiple of the repo's slowest observed run.
 CI_LATE_FACTOR: Final = 1.5
-
-# Used for a repo with no ci-check-timing.md row until the coordinator adds one.
-FALLBACK_CI_TIMING: Final = CiTiming(
-    repo="(no row)",
-    check_name="",
-    settles_on=(),
-    minimum=_m(1),
-    maximum=_m(20),
-    mean=_m(10),
-    first_check=_m(2),
-    interval=_m(3),
-)
 
 
 def plan_first_check(pre_estimate: int | None) -> timedelta:
