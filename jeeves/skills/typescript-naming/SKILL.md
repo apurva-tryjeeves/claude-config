@@ -107,5 +107,3 @@ When asked to review or fix naming in a PR, read `references/pr-review.md` and f
 - Writing new code: deliver the code; mention naming only when you followed a repo rule that differs from these conventions.
 - PR review: use the report shape in `references/pr-review.md`.
 - Keep the reply to these items; usage examples, restated conventions and closing questions stay out.
-
-authoring-guide: v4

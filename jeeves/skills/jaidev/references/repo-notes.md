@@ -33,5 +33,3 @@ Facts agents found while running tickets, one section per repo. Paste the repo's
 - **Non-enumerable fields:** `useDefineForClassFields` is off, so a declared class field without an initializer emits nothing. `readonly cause?: unknown` plus a guarded `Object.defineProperty` stays non-enumerable, and ts-lint needs no `override`. `ErpProviderError` carries `cause` (ACC-1636) next to the non-enumerable `providerCause`.
 - **Plan reviews of cleanups:** check each import change against the whole file (ACC-1645 v1 would have dropped an `ErpPlatform` import that `resolveForNewConnection` still uses, which fails ts-lint).
 - **Repository methods:** `getTransactionsByTransactionIds(companyId, ids)` and `getByIdOrCode(companyId, value)` are the company-scoped lookups; the older `getTransactionById` and `getById` are unscoped.
-
-authoring-guide: v4

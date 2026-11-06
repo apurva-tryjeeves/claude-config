@@ -131,5 +131,3 @@ Such an agent reached about 220k tokens of context, so 3 is the cap.
 ### Agent run endings
 
 An agent ends each run with "I cannot wait for wake-ups, resume me via SendMessage". That is expected; resume it by message.
-
-authoring-guide: v4
