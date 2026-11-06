@@ -230,6 +230,7 @@ allocated develop environments (see At a glance).
   overwrites the Linear estimate.
 - After the PR it posts a "Deploy this ticket" comment. The user deploys; agents
   leave the comment unanswered and leave `@jaidev deploy` to the user.
+- ACC-1670: a plan feedback reply without `@jaidev` (20:56 UTC) drew no ack for 5.5 h; a one-line reply in the same thread starting `@jaidev please revise the plan per the feedback reply above` (02:31:17 UTC) drew "Plan feedback received" 23 s later, and plan v2 used the earlier reply in full. When a feedback reply gets no ack within 1 min, post that `@jaidev` line in the same thread.
 - A correction posted while Jaidev is already writing the next plan version can be missed: on ACC-1636 plan v2 was posted before it read the correction in the v1 thread. Repeat the correction in the v2 thread (the next plan then carries it).
 - Plan code blocks can carry literal `\n` text (ACC-1645 plan v2). Check the opened PR's source for stray `\n` sequences.
 - The doc-format hook requires `## <emoji>` section headers in GitHub
