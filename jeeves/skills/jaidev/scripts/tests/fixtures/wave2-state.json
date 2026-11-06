@@ -1,0 +1,42 @@
+{
+  "tickets": {
+    "ACC-1668": {
+      "repoDir": "/Users/apurvasingh/github/JeevesInc/ap-data-source-connector",
+      "prNumber": 94,
+      "lastCiHead": "92cbccb",
+      "lastTimeline": "ap-data-source-connector#94: addressing review feedback",
+      "lastStatus": "Addressing PR Feedback...",
+      "merged": true,
+      "agent": "a571bcbaf35ef2888",
+      "color": "🟩",
+      "agentNote": "principal briefing agent, Phase 1",
+      "mergeCommit": "f36b431"
+    },
+    "ACC-1669": {
+      "repoDir": "/Users/apurvasingh/github/JeevesInc/ap-data-source-connector",
+      "prNumber": 95,
+      "lastCiHead": "565d50b",
+      "lastTimeline": "2026-11-05T13:33:41Z — Complete",
+      "lastStatus": "Complete ✅",
+      "merged": true,
+      "agent": "ad6951f1f92d0fc07",
+      "color": "🟨",
+      "agentNote": "Phase 2 names-first posting",
+      "mergeCommit": "da1da44"
+    },
+    "ACC-1670": {
+      "repoDir": "/Users/apurvasingh/github/JeevesInc/ap-data-source-connector",
+      "prNumber": 96,
+      "merged": true,
+      "agent": "a40bb3fcdbb02da5b",
+      "color": "🟦",
+      "agentNote": "Phase 1 briefing prep, names-first",
+      "lastStatus": "Complete ✅",
+      "lastTimeline": "1 PR(s) created — awaiting review",
+      "approvedAt": "2026-11-06T02:41:33Z",
+      "estimate": 1,
+      "lastCiHead": "ae165dd",
+      "mergeCommit": "0ac0f14"
+    }
+  }
+}
