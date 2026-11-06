@@ -405,5 +405,3 @@ so the progress shows what each merge unblocks.
   table needs.
 - Start every line you relay about an agent or its ticket with the identity
   emoji and ticket id, and put the status circle before the verdict.
-
-authoring-guide: v4

@@ -144,5 +144,3 @@ The exact names and code are in the comment just above this one; use them as wri
 
 - Start every report with the status circle (🟢 progressing, 🟡 waiting for the user, 🔴 blocked or failing, ⚪ done or idle), then the verdict, then only what the coordinator needs to act on.
 - Keep each report short: Phase 1 step 6 and Phase 2 step 10 list what goes in; leave out restated context and closing offers.
-
-authoring-guide: v4

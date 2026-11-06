@@ -36,5 +36,3 @@ Reply with exactly:
 When nothing needed renaming, reply with one line saying so plus the verification status.
 
 Keep the reply to these items; usage examples, restated conventions and closing questions stay out. Add one line when a check fails for a reason outside this PR, naming the failing check and its cause.
-
-authoring-guide: v4
