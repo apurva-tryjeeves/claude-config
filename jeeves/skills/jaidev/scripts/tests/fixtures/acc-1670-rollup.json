@@ -1,0 +1,65 @@
+[
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:47:48Z",
+    "conclusion": "SUCCESS",
+    "name": "lint / Validate PR title",
+    "startedAt": "2026-11-06T02:47:43Z",
+    "status": "COMPLETED",
+    "workflowName": "PR title"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:49:05Z",
+    "conclusion": "SUCCESS",
+    "name": "test / Unit Test",
+    "startedAt": "2026-11-06T02:47:43Z",
+    "status": "COMPLETED",
+    "workflowName": "Unit Test"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:48:05Z",
+    "conclusion": "SUCCESS",
+    "name": "test / Scan for secrets",
+    "startedAt": "2026-11-06T02:47:45Z",
+    "status": "COMPLETED",
+    "workflowName": "Unit Test"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:45:28Z",
+    "conclusion": "SUCCESS",
+    "name": "test / check-snapshots",
+    "startedAt": "2026-11-06T02:45:23Z",
+    "status": "COMPLETED",
+    "workflowName": "Unit Test"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:50:04Z",
+    "conclusion": "SUCCESS",
+    "name": "test / Code Analysis",
+    "startedAt": "2026-11-06T02:49:07Z",
+    "status": "COMPLETED",
+    "workflowName": "Unit Test"
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:45:19Z",
+    "conclusion": "SUCCESS",
+    "name": "SentinelOne CNS Hardcoded Secret Detection Check",
+    "startedAt": "2026-11-06T02:45:19Z",
+    "status": "COMPLETED",
+    "workflowName": ""
+  },
+  {
+    "__typename": "CheckRun",
+    "completedAt": "2026-11-06T02:50:01Z",
+    "conclusion": "SUCCESS",
+    "name": "SonarCloud Code Analysis",
+    "startedAt": "2026-11-06T02:49:32Z",
+    "status": "COMPLETED",
+    "workflowName": ""
+  }
+]

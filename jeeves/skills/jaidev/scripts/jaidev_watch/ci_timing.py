@@ -1,0 +1,108 @@
+"""Read the per-repo CI cadence from git-preferences' `ci-check-timing.md`."""
+
+from __future__ import annotations
+
+import os
+import re
+from collections.abc import Mapping
+from datetime import timedelta
+from pathlib import Path
+from typing import Final
+
+from jaidev_watch.models import CiTiming
+
+# scripts/jaidev_watch/ci_timing.py → skills/git-preferences/references/ci-check-timing.md
+DEFAULT_PATH: Final = (
+    Path(__file__).resolve().parents[3] / "git-preferences" / "references" / "ci-check-timing.md"
+)
+SOURCE_ENV: Final = "JEEVES_PLUGIN_SRC"
+SOURCE_DEFAULT: Final = Path.home() / "github" / "apurva-tryjeeves" / "claude-config"
+TABLE_IN_SOURCE: Final = Path("jeeves/skills/git-preferences/references/ci-check-timing.md")
+_PIPE: Final = re.compile(r"(?<!\\)\|")
+_DURATION: Final = re.compile(r"^(?:(\d+)m(?:in)?)?(?:(\d+)s)?$")
+_COLUMNS: Final = (
+    "Repo",
+    "Check name",
+    "Settles on",
+    "Min",
+    "Max",
+    "Mean",
+    "First check",
+    "Interval",
+)
+
+
+class CiTimingError(Exception):
+    """The timing file or one of its cells could not be read."""
+
+
+def parse_duration(text: str) -> timedelta:
+    """Parse `2m12s`, `14min`, `45s` or `3m` into a timedelta."""
+    match = _DURATION.match(text.strip())
+    if match is None or not any(match.groups()):
+        raise CiTimingError(f"unreadable duration {text!r}")
+    minutes, seconds = (int(group or 0) for group in match.groups())
+    return timedelta(minutes=minutes, seconds=seconds)
+
+
+def _cells(line: str) -> list[str]:
+    """Split a table row on unescaped pipes; `\\|` inside a cell is a literal pipe."""
+    parts = _PIPE.split(line.strip())
+    if parts and not parts[0].strip():
+        parts = parts[1:]
+    if parts and not parts[-1].strip():
+        parts = parts[:-1]
+    return [part.strip().replace("\\|", "|") for part in parts]
+
+
+def source_table_path() -> Path:
+    """The source clone's copy of the timing table."""
+    return Path(os.environ.get(SOURCE_ENV) or SOURCE_DEFAULT) / TABLE_IN_SOURCE
+
+
+def _names(cell: str) -> tuple[str, ...]:
+    return tuple(re.findall(r"`([^`]+)`", cell))
+
+
+def parse_table(text: str) -> dict[str, CiTiming]:
+    """Parse the markdown table into one CiTiming per repo."""
+    lines = [line for line in text.splitlines() if line.lstrip().startswith("|")]
+    header_index = next(
+        (i for i, line in enumerate(lines) if set(_COLUMNS) <= set(_cells(line))), None
+    )
+    if header_index is None:
+        raise CiTimingError("no table with the columns " + ", ".join(_COLUMNS))
+    header = _cells(lines[header_index])
+    column = {name: header.index(name) for name in _COLUMNS}
+    timings: dict[str, CiTiming] = {}
+    for line in lines[header_index + 1 :]:
+        cells = _cells(line)
+        if set("".join(cells)) <= set("-: ") or len(cells) < len(header):
+            continue
+        repo = cells[column["Repo"]]
+        check_names = _names(cells[column["Check name"]])
+        timings[repo] = CiTiming(
+            repo=repo,
+            check_name=check_names[0] if check_names else "",
+            settles_on=_names(cells[column["Settles on"]]),
+            minimum=parse_duration(cells[column["Min"]]),
+            maximum=parse_duration(cells[column["Max"]]),
+            mean=parse_duration(cells[column["Mean"]]),
+            first_check=parse_duration(cells[column["First check"]]),
+            interval=parse_duration(cells[column["Interval"]]),
+        )
+    return timings
+
+
+def load(path: Path = DEFAULT_PATH) -> Mapping[str, CiTiming]:
+    """Read and parse the timing file."""
+    try:
+        return parse_table(path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise CiTimingError(f"cannot read {path}: {error}") from error
+
+
+def table_path() -> Path:
+    """The source clone's copy of the table when it exists, else the installed one."""
+    source = source_table_path()
+    return source if source.exists() else DEFAULT_PATH

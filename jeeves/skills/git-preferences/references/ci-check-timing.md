@@ -17,6 +17,7 @@ row if a later PR's actual settle time differs noticeably — both per "Write ba
 | jeeves-simulation-server | unit-test.yml | `test / Unit Test` | `test / Scan for secrets`, `SonarCloud Code Analysis` | 1m15s | 5m31s | 3m27s | 10 | 1min | 3min |
 | jeeves-web | unit-test.yml | `Unit Test` | `Code Analysis`, `SonarCloud Code Analysis` | 33m00s | 36m43s | 35m09s | 18 | 32min | 2min |
 | billpay-service | unit-test.yml | `test / Unit Test` | `test / Scan for secrets`, `SonarCloud Code Analysis` | 12m34s | 16m28s | 14m37s | 9 | 12min | 3min |
+| ap-data-source-connector | unit-test.yml | `test / Unit Test` | `test / Scan for secrets`, `SonarCloud Code Analysis` | 2m12s | 4m54s | 3m18s | 10 | 2min | 2min |
 
 **Check names:** copy them from the PR's own rollup (`gh pr view <n> --json statusCheckRollup`).
 Repos on the shared `infra-reusable-workflows` unit-test workflow prefix each job with `test / `;
