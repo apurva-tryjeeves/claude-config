@@ -400,3 +400,20 @@ class BaselineTest(unittest.TestCase):
                 ticket = TicketState(stage=Stage.STARTING, stage_since=T0, started_at=T0)
                 ticket, _ = schedule.apply_linear(ticket, observation, at(30))
                 self.assertIs(ticket.stage, expected)
+
+
+class BaselineOnlyFirstReadTest(unittest.TestCase):
+    def test_only_the_first_read_is_the_baseline(self) -> None:
+        ticket = TicketState(stage=Stage.STARTING, stage_since=T0, started_at=T0)
+        ticket, events = schedule.apply_linear(ticket, obs("Complete ✅", "Merged"), at(30))
+        self.assertEqual((ticket.stage, events), (Stage.STARTING, ()))
+        ticket, events = schedule.apply_linear(
+            ticket, obs("Awaiting Plan Approval", "Plan v1 posted"), at(60)
+        )
+        self.assertIs(ticket.stage, Stage.PLAN_READY)
+        self.assertEqual(len(events), 1)
+
+    def test_new_run_statuses_match_case_insensitively(self) -> None:
+        ticket = TicketState(stage=Stage.STARTING, stage_since=T0, started_at=T0)
+        ticket, _ = schedule.apply_linear(ticket, obs("analyzing...", "started by A"), at(30))
+        self.assertIs(ticket.stage, Stage.PLANNING)

@@ -114,13 +114,14 @@ def _changed(ticket: TicketState, observation: LinearObservation) -> bool:
 
 
 def is_baseline(ticket: TicketState, observation: LinearObservation) -> bool:
-    """True for a first read after startedAt that still shows the previous run's comment."""
-    if ticket.stage is not Stage.STARTING:
+    """True for the first read after startedAt when it still shows the previous run's comment."""
+    if ticket.stage is not Stage.STARTING or ticket.last_linear_at is not None:
         return False
-    status_key = status_key_of(observation.status)
-    timeline = observation.timeline or ""
-    new_run = status_key.startswith(NEW_RUN_PREFIXES) or "Blocked" in status_key
-    return not (new_run or timeline.startswith(STARTED_ENTRY))
+    status_key = _plain(status_key_of(observation.status))
+    timeline = _plain(observation.timeline or "")
+    new_run = status_key.startswith(tuple(p.lower() for p in NEW_RUN_PREFIXES))
+    new_run = new_run or "blocked" in status_key
+    return not (new_run or timeline.startswith(STARTED_ENTRY.lower()))
 
 
 def _stage_for_status(status_key: str, current: Stage | None) -> Stage | None:
