@@ -132,6 +132,7 @@ def enter(
         deadline=None,
         deadline_event=None,
         paused_seconds=ticket.paused_seconds if keep_pause else 0,
+        queued_since=ticket.queued_since if keep_pause else None,
     )
 
 
@@ -193,7 +194,7 @@ def _next_linear(ticket: TicketState) -> datetime | None:
         assert rules.after_ack_first is not None and rules.after_ack_every is not None
         first, every = ticket.ack_at + rules.after_ack_first, rules.after_ack_every
     elif stage is Stage.IMPLEMENTING:
-        first = since + policy.pr_due(ticket.estimate)
+        first = since + policy.pr_due(ticket.estimate) + _paused(ticket)
     elif stage is Stage.PR_READY and not ticket.sonar_findings:
         first = None
     if first is None:
@@ -201,15 +202,20 @@ def _next_linear(ticket: TicketState) -> datetime | None:
     return _once(first, last) if every is None else _cadence(first, every, last)
 
 
-def _next_pr_check(estimate: int | None, since: datetime, last: datetime | None) -> datetime:
-    """Implementing: first at PR due, every 1 min, every 2 min after 2x PR due."""
+def _paused(ticket: TicketState) -> timedelta:
+    return timedelta(seconds=ticket.paused_seconds)
+
+
+def _next_pr_check(ticket: TicketState, since: datetime, last: datetime | None) -> datetime:
+    """Implementing: first at PR due, every 1 min, every 2 min after 2x PR due, after queue time."""
     rules = policy.STAGE_POLICY[Stage.IMPLEMENTING]
     assert rules.github_every is not None and rules.github_every_late is not None
-    due = policy.pr_due(estimate)
-    first = since + due
+    due = policy.pr_due(ticket.estimate)
+    start = since + _paused(ticket)
+    first = start + due
     if last is None or last < first:
         return first
-    late = last >= since + due * policy.GITHUB_LATE_FACTOR
+    late = last >= start + due * policy.GITHUB_LATE_FACTOR
     return last + (rules.github_every_late if late else rules.github_every)
 
 
@@ -219,7 +225,7 @@ def _next_github(ticket: TicketState, ci: CiTiming, merge_watch: bool) -> dateti
         return None
     rules = policy.STAGE_POLICY[stage]
     if stage is Stage.IMPLEMENTING:
-        return _next_pr_check(ticket.estimate, since, last)
+        return _next_pr_check(ticket, since, last)
     if stage is Stage.PR_CI:
         return _cadence(since + ci.first_check, ci.interval, last)
     if stage is Stage.PR_READY and not merge_watch:
@@ -275,7 +281,7 @@ def pending_deadline(ticket: TicketState, ci: CiTiming) -> Deadline | None:
     source = policy.STAGE_POLICY[ticket.stage or Stage.DONE].deadline_source
     if kind is EventKind.NO_ACK:
         source = Source.LINEAR
-    at = ticket.stage_since + after + timedelta(seconds=ticket.paused_seconds)
+    at = ticket.stage_since + after + _paused(ticket)
     return Deadline(at=at, kind=kind, source=source)
 
 

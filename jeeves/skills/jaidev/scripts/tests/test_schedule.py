@@ -311,3 +311,47 @@ class DeadlineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PauseCarryOverTest(unittest.TestCase):
+    def test_queue_time_stays_in_the_stage_it_was_spent_in(self) -> None:
+        ticket = TicketState(
+            stage=Stage.IMPLEMENTING,
+            stage_since=T0,
+            approved_at=T0,
+            estimate=1,
+            last_status="Implementing...",
+            last_timeline="x",
+        )
+        ticket, _ = schedule.apply_linear(ticket, obs("Queued", "waiting"), at(300))
+        ticket, _ = schedule.apply_linear(ticket, obs("PRs Created", "opened"), at(2100))
+        self.assertIs(ticket.stage, Stage.PR_CI)
+        self.assertEqual(ticket.paused_seconds, 0)
+        self.assertIsNone(ticket.queued_since)
+
+    def test_a_stamp_while_queued_restarts_the_queue_clock(self) -> None:
+        ticket = TicketState(
+            stage=Stage.PLANNING,
+            stage_since=T0,
+            started_at=T0,
+            last_status="Queued",
+            last_timeline="q",
+            queued_since=at(60),
+        )
+        ticket = schedule.reconcile(replace(ticket, approved_at=at(1800)), at(1860))
+        self.assertIs(ticket.stage, Stage.APPROVED)
+        self.assertIsNone(ticket.queued_since)
+        ticket, _ = schedule.apply_linear(ticket, obs("Queued", "q"), at(1890))
+        self.assertEqual(ticket.queued_since, at(1890))
+        ticket, _ = schedule.apply_linear(ticket, obs("Implementing...", "go"), at(1950))
+        self.assertEqual(ticket.paused_seconds, 60)
+
+    def test_pause_shifts_the_implementing_checks(self) -> None:
+        ticket = TicketState(
+            stage=Stage.IMPLEMENTING, stage_since=T0, estimate=2, paused_seconds=120
+        )
+        decision = schedule.decide(ticket, T0, CI)
+        self.assertEqual(decision.ticket.next_github_at, at(240 + 120))
+        self.assertEqual(decision.ticket.next_linear_at, at(240 + 120))
+        late = replace(ticket, last_github_at=at(480 + 60))
+        self.assertEqual(schedule.decide(late, T0, CI).ticket.next_github_at, at(600))
