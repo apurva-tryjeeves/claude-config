@@ -220,11 +220,24 @@ posts (reference §5):
 
 ### 3. Watch the run
 
-- Watch with `scripts/watch.sh`, which reads Linear through headless Haiku, in
-  `references/background-agents.md` ("Poll events"), for one ticket or many.
-  The coordinator wakes only when the watcher prints an event. Plan v1
-  typically lands in about 4 min, plan v2 about 1.5 min after feedback, and
-  the PR about 10 min after approval.
+- Watch with `python3 -m jaidev_watch watch <state-file>` from `scripts/`, as
+  `references/background-agents.md` ("Poll events") describes, for one ticket
+  or many. The coordinator wakes only when the watcher prints an event. Plan
+  v1 typically lands in about 4 min, plan v2 about 1.5 min after feedback,
+  and the PR about 10 min after approval.
+- Stamp each post in the state file right after it goes up: `startedAt`,
+  `feedbackAt`, `approvedAt`, `reviewAt`, with their inputs ("Stamp each
+  post"). The watcher reads only where the stage expects an answer, so an
+  unstamped post goes unwatched.
+- Act on the watcher's deadline events:
+  - `NO ACK` on plan feedback: post `@jaidev please revise the plan per the
+    feedback reply above` in the same thread once the user approves, then
+    stamp `feedbackAt` again.
+  - `PLAN LATE`, `PR LATE`, `FIX LATE`: read the status comment with
+    `limit: 1` and tell the user what it shows.
+  - `CI LATE`: read the PR's checks and tell the user which one is stuck.
+  - `IDLE`: every ticket waits on you; restart the watcher after the next
+    stamp.
 - When an event needs context, read Jaidev's status comment with
   `list_comments` and `limit: 1`; its Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
   v2 posted". Open a full plan with `limit: 2` only when the timeline shows a

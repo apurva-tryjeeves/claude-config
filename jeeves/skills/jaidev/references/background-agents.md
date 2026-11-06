@@ -11,13 +11,13 @@ keeps the user's approvals, and the agents do the ticket work.
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only `jeeves:typescript-naming` besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
 | Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the names comment and the briefing, answers questions, reviews the plan and the PR |
-| State file | A JSON file in the scratchpad, one entry per ticket, created with `scripts/poll-state.py <state-file> init <ticket> <agent-id> <repo-dir>` |
+| State file | A JSON file in the scratchpad, one entry per ticket, created with `state init` (see "Poll events") |
 | Events | Wake agents and update the state file as "Poll events" describes |
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides. A pre-approval to merge a named set of PRs once CI passes covers only those PRs: after the agent reports a clean review and the head still matches, send the agent "merge" yourself; ask the user when a finding, a failed check or a moved head appears |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
 | Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn |
-| Cleanup | `poll.py` marks merged tickets and prints `ALL MERGED` at the end, and the watcher exits |
+| Cleanup | After each merge, run `state set <state-file> <ticket> merged true`; the watcher prints `ALL MERGED` once every ticket is done, and exits |
 
 ### Color coding
 
@@ -26,7 +26,7 @@ Give every agent an identity color and every message a status circle. The identi
 1. When you spawn an agent, pick the next unused emoji from the palette and record it:
 
    ```bash
-   scripts/poll-state.py <state-file> set <ticket> color <emoji>
+   cd <skill-dir>/scripts && python3 -m jaidev_watch state set <state-file> <ticket> color <emoji>
    ```
 2. Start every message you relay about that agent or its ticket with the identity emoji and the ticket id. Tickets batched under one agent share its emoji.
 3. Mark the status with one circle:
@@ -54,38 +54,79 @@ Example line:
 
 ### Poll events
 
-Name the session after the batch (`/rename`) when the wave starts. One shell
-script watches the wave, so the coordinator wakes only when an event arrives.
-Start it in the background from the scratchpad once the start comments are
-posted, and start it again after handling each exit:
+Name the session after the batch (`/rename`) when the wave starts. One
+watcher follows the wave and reads Linear and GitHub only where the ticket's
+stage expects an answer, so the coordinator wakes only for an event. Run every
+command from the skill's `scripts` directory, with an absolute state-file path:
 
 ```bash
-<skill-dir>/scripts/watch.sh <state-file>
+cd <skill-dir>/scripts
+python3 -m jaidev_watch state init <state-file> <ticket> <agent-id> <repo-dir>
+python3 -m jaidev_watch watch <state-file>
 ```
 
-| Every | It runs | Which prints |
-|---|---|---|
-| 5 min | `scripts/poll-linear.py`: one headless `claude -p --model haiku` call that reads each open ticket's Jaidev status comment | A Status or Timeline change that waits on the coordinator: a plan, a question, Blocked, Complete |
-| 3 min | `scripts/poll.py`: every GitHub check in one call | CI finished on a new head, merged, closed |
+- Start `watch` in the background once the start comments are posted, and again after handling each exit.
+- It ticks every 30 s and exits on the first tick with events, with exit code 0.
+- It prints `IDLE` and exits with code 3 when no ticket has a check or a deadline left; every ticket then waits on you.
+- One Linear read is one headless `claude -p --model haiku` call for every ticket due on that tick, $0.0057 and 7 to 10 s each (wave 2 usage log, 5 Nov 2026); its cost goes to `<state-file stem>.usage.log`.
+- GitHub reads (`gh pr list`, from the ticket's `repoDir`) cost nothing.
+- `explain <state-file>` prints each ticket's stage, next checks and deadline; `due <state-file>` prints the checks due now. Both poll nothing.
+- `--merge-watch` adds a 15-min GitHub check for merges made in the GitHub UI.
 
-- The watcher exits on the first line printed.
-- Headless Haiku runs as its own process, so the agents of this session stay
-  asleep between events. A background agent that paces itself instead wakes
-  the coordinator on every pause.
-- One Linear call costs about $0.007 and takes about 10 s (measured 4 Nov
-  2026).
-- Changes while Jaidev works (Analyzing, Planning, Implementing, Addressing
-  PR Feedback), "PRs Created", a new PR, and Timeline entries the
-  coordinator caused update the state file silently; the PR's CI result is
-  the next event.
+#### Stamp each post
+
+The watcher's stage clock starts from your stamps. Stamp each post right after it goes up (`now` is the current time):
+
+```bash
+python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
+```
+
+| After you post | Stamp | Also set |
+|---|---|---|
+| The `@jaidev start` comment | `startedAt` | `preEstimate` (Linear estimate), `namesBytes` (names comment size), `repoCount` when over 1 |
+| Plan feedback, an answer to a question, or the `NO ACK` nudge | `feedbackAt` | `feedbackBytes` |
+| `@jaidev plan:approved`, or `@jaidev resume` on a Blocked run | `approvedAt` | `estimate` (from the plan header "Estimate: N pts") |
+| A GitHub review that asks for changes | `reviewAt` | `reviewComments` |
+| The merge | `merged` = `true` | — |
+
+#### Stages
+
+| Stage | Linear | GitHub | Deadline → event |
+|---|---|---|---|
+| `starting` | +30 s; every 2 min while "Queued" | off | `NO START` at 2 min |
+| `planning` | from `startedAt`: +2 min (1 pt), +3 min (2–3 pt), +4 min (5+); then every 1 min | off | `PLAN LATE` at 10 min, +1 min per 10 KB of names comment over 10 KB and per extra repo |
+| `questions`, `plan-ready`, `blocked` | off | off | the `STATUS` line on entry |
+| `plan-feedback` | +30 s; after the ack, +1 min then every 30 s | off | `NO ACK` at 1 min; after the ack, `PLAN LATE` at 4 min +1 min per 5 KB of feedback |
+| `approved` | +30 s | off | `NO START` at 1 min |
+| `implementing` | every 3 min from PR due | from PR due: every 1 min, every 2 min after 2× PR due | `PR LATE` at 3× PR due, +1× per attempt after the first |
+| `pr-ci` | off | the repo's `First check`, then its `Interval` | `CI LATE` at 1.5× the repo's `Max` |
+| `pr-ready` | +1 min, only after SonarCloud findings | off, or every 15 min with `--merge-watch` | none |
+| `pr-review-sent` | +30 s, then every 1 min | off | `NO ACK` at 2 min |
+| `pr-revising` | off | every 1 min until a new head | `FIX LATE` at 2 min +1 min per review comment, capped at 10 min |
+
+- PR due after `plan:approved`: 4 min for 1 or 2 points, 6 min for 3, 8 min for 5 or more.
+- CI cadence comes from `git-preferences/references/ci-check-timing.md`; a new head restarts the CI clock. Add the repo's row before its first PR (that skill's "Checks poller" derives it).
+- CI counts as settled once every check completed and every `Settles on` check is present.
+- While Jaidev's timeline shows "Queued" or "API provider overloaded — retrying", every deadline pauses.
+- A deadline fires after one last read at the deadline, once per stage; after it, the ticket's Linear reads stop until your next stamp.
+- The numbers live in `scripts/jaidev_watch/policy.py`. Move a stage to measured values once `jaidev-run-timings.md` holds 3 runs of it.
+
+#### Event lines
 
 | Line | Action |
 |---|---|
 | `<ticket> STATUS "Awaiting Plan Approval"` or a plan in `TIMELINE` | Wake the ticket's agent to review the plan |
 | `<ticket> STATUS "Gathering Info…"` or `"Blocked…"` | Wake the ticket's agent |
 | `<ticket> STATUS` for any other change | Update the progress; it is no agent event |
-| `<ticket> CI …`, `MERGED`, `CLOSED` | From `poll.py`; wake the agent for CI finished and a merge, tell the user about MERGED and CLOSED |
-| `LINEAR POLL ERROR …` | Run `scripts/poll-linear.py <state-file>` once by hand; when it fails again, read the status comments with `limit: 1` and tell the user |
+| `<ticket> CI passed #<n> head=<sha>` or `CI failed …` | Wake the agent: CI finished on that head |
+| `<ticket> MERGED #<n>`, `<ticket> CLOSED unmerged #<n>` | Tell the user |
+| `<ticket> NO ACK stage=plan-feedback …` | Post `@jaidev please revise the plan per the feedback reply above` in the same thread, after the user's OK; stamp `feedbackAt` |
+| `<ticket> NO ACK stage=pr-review-sent …` | Check the PR's review threads and Jaidev's status comment; tell the user |
+| `<ticket> NO START …` | Read the status comment with `limit: 1`; check the trigger against `references/jaidev-reference.md` §3 and tell the user |
+| `<ticket> PLAN LATE …`, `PR LATE …`, `FIX LATE …` | Read the status comment with `limit: 1` and tell the user what it shows |
+| `<ticket> CI LATE …` | Read the PR's checks with `gh pr view`; tell the user which check is stuck |
+| `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
+| `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
 
 Wake an agent only for:
