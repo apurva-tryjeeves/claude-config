@@ -80,6 +80,13 @@ class LinearPollTest(unittest.TestCase):
             self.log.read_text().startswith("2026-11-06T03:00:00Z cost_usd=0.0057 input=8")
         )
 
+    def test_an_unwritable_usage_log_still_returns_the_rows(self) -> None:
+        rows = json.dumps([{"ticket": "ACC-1", "status": "Planning...", "timeline": "t"}])
+        log = self.dir / "missing" / "wave-state.usage.log"
+        with self.assertLogs("jaidev_watch", "WARNING"):
+            got = linear_poll.read_statuses(["ACC-1"], log, NOW, runner=FakeRunner(envelope(rows)))
+        self.assertEqual(got[0].status, "Planning...")
+
     def test_malformed_replies_raise(self) -> None:
         cases = [
             ("not json at all", 0),

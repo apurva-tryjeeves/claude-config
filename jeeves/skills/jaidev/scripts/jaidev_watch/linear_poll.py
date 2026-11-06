@@ -8,6 +8,7 @@ coordinator's session wakes. Each call appends its cost and token counts to
 from __future__ import annotations
 
 import json
+import logging
 import re
 import subprocess
 from collections.abc import Callable, Sequence
@@ -20,6 +21,8 @@ from jaidev_watch.models import LinearObservation, format_time
 DEFAULT_TOOL: Final = "mcp__claude_ai_Linear__list_comments"
 TIMEOUT_SECONDS: Final = 240
 _DIGITS: Final = re.compile(r"\d+")
+
+log = logging.getLogger("jaidev_watch")
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 
@@ -150,6 +153,9 @@ def read_statuses(
     if out.returncode != 0:
         raise LinearPollError((out.stderr or out.stdout or "claude failed").strip()[-200:])
     reply = parse_envelope(out.stdout)
-    with usage_log.open("a", encoding="utf-8") as handle:
-        handle.write(usage_line(reply, now))
+    try:
+        with usage_log.open("a", encoding="utf-8") as handle:
+            handle.write(usage_line(reply, now))
+    except OSError as error:
+        log.warning("cannot write the usage log %s: %s", usage_log, error)
     return parse_result(reply.get("result"))

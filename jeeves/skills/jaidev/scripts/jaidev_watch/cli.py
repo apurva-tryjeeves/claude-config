@@ -337,7 +337,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 if result.idle:
                     print(EventKind.IDLE, flush=True)
                     return EXIT_IDLE
-                time.sleep(args.tick)
+                time.sleep(TICK_SECONDS)
     except StopRequested as stop:
         log.info("stopped by %s", stop)
         return EXIT_STOPPED
@@ -453,7 +453,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     watch = commands.add_parser("watch", help="tick every 30 s until an event or idle")
     with_schedule_options(watch)
-    watch.add_argument("--tick", type=float, default=TICK_SECONDS, help=argparse.SUPPRESS)
     watch.add_argument("--tool", default=linear_poll.DEFAULT_TOOL, help="Linear list_comments tool")
     watch.set_defaults(handler=cmd_watch)
 

@@ -12,7 +12,7 @@ from dataclasses import fields, replace
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 from jaidev_watch.models import (
     EventKind,
@@ -132,7 +132,7 @@ def _encode(value: object) -> object:
 
 def ticket_from_json(data: Mapping[str, object]) -> TicketState:
     """Parse one ticket's JSON object; unknown keys are kept in `extra`."""
-    known: dict[str, object] = {}
+    known: dict[str, Any] = {}
     extra: dict[str, object] = {}
     for key, raw in data.items():
         if key in BY_KEY:
@@ -142,7 +142,7 @@ def ticket_from_json(data: Mapping[str, object]) -> TicketState:
                 known[name] = value
         else:
             extra[key] = raw
-    return TicketState(**known, extra=extra)  # type: ignore[arg-type]
+    return TicketState(**known, extra=extra)
 
 
 def ticket_to_json(ticket: TicketState) -> dict[str, object]:
@@ -276,7 +276,8 @@ def set_field(ticket: TicketState, key: str, value: object) -> TicketState:
             value = 0
         if name == "merged" and value is None:
             value = False
-        return replace(ticket, **{name: value})  # type: ignore[arg-type]
+        changes: dict[str, Any] = {name: value}
+        return replace(ticket, **changes)
     extra = dict(ticket.extra)
     if value is None:
         extra.pop(key, None)

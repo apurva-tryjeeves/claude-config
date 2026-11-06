@@ -7,7 +7,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
-from typing import Final
+from typing import Final, TypeVar
 
 from jaidev_watch import policy
 from jaidev_watch.models import (
@@ -65,6 +65,16 @@ NEW_RUN_PREFIXES: Final = ("Queued", "Analyzing", "Planning", "Gathering Info")
 STARTED_ENTRY: Final = "Started by"
 _TIMESTAMP: Final = re.compile(r"^\s*\d{4}-\d{2}-\d{2}[T ][0-9:.]+Z?\s*[\u2014\u2013-]\s*")
 _COST: Final = re.compile(r"\(\$\d+(?:\.\d+)?\)")
+
+
+_T = TypeVar("_T")
+
+
+def _need(value: _T | None, what: str) -> _T:
+    """A policy table entry the stage relies on; a gap is a bug in policy.py."""
+    if value is None:
+        raise RuntimeError(f"policy.py is missing {what}")
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,8 +230,8 @@ def _next_linear(ticket: TicketState) -> datetime | None:
     if stage is Stage.PLANNING:
         first = since + policy.plan_first_check(ticket.pre_estimate)
     elif stage is Stage.PLAN_FEEDBACK and ticket.ack_at is not None:
-        assert rules.after_ack_first is not None and rules.after_ack_every is not None
-        first, every = ticket.ack_at + rules.after_ack_first, rules.after_ack_every
+        first = ticket.ack_at + _need(rules.after_ack_first, "plan-feedback after_ack_first")
+        every = _need(rules.after_ack_every, "plan-feedback after_ack_every")
     elif stage is Stage.IMPLEMENTING:
         first = since + policy.pr_due(ticket.estimate) + _paused(ticket)
     elif stage is Stage.PR_READY and not ticket.sonar_findings:
@@ -238,14 +248,15 @@ def _paused(ticket: TicketState) -> timedelta:
 def _next_pr_check(ticket: TicketState, since: datetime, last: datetime | None) -> datetime:
     """Implementing: first at PR due, every 1 min, every 2 min after 2x PR due, after queue time."""
     rules = policy.STAGE_POLICY[Stage.IMPLEMENTING]
-    assert rules.github_every is not None and rules.github_every_late is not None
+    every = _need(rules.github_every, "implementing github_every")
+    every_late = _need(rules.github_every_late, "implementing github_every_late")
     due = policy.pr_due(ticket.estimate)
     start = since + _paused(ticket)
     first = start + due
     if last is None or last < first:
         return first
     late = last >= start + due * policy.GITHUB_LATE_FACTOR
-    return last + (rules.github_every_late if late else rules.github_every)
+    return last + (every_late if late else every)
 
 
 def _next_github(ticket: TicketState, ci: CiTiming | None, merge_watch: bool) -> datetime | None:
@@ -274,8 +285,10 @@ def _base_deadline(ticket: TicketState, ci: CiTiming | None) -> tuple[timedelta,
         return None
     rules = policy.STAGE_POLICY[stage]
     if stage is Stage.PLAN_FEEDBACK and ticket.ack_at is None:
-        assert rules.ack_deadline is not None and rules.ack_event is not None
-        return rules.ack_deadline, rules.ack_event
+        return (
+            _need(rules.ack_deadline, "plan-feedback ack_deadline"),
+            _need(rules.ack_event, "plan-feedback ack_event"),
+        )
     if rules.deadline_event is None:
         return None
     if stage is Stage.IMPLEMENTING:
@@ -284,7 +297,7 @@ def _base_deadline(ticket: TicketState, ci: CiTiming | None) -> tuple[timedelta,
         return due * policy.PR_LATE_FACTOR + due * extra_attempts, rules.deadline_event
     if stage is Stage.PR_CI:
         return None if ci is None else (ci.maximum * policy.CI_LATE_FACTOR, rules.deadline_event)
-    assert rules.deadline is not None
+    deadline = _need(rules.deadline, f"{stage} deadline")
     units = 0
     if stage is Stage.PLANNING:
         units = _steps(ticket.names_bytes, policy.NAMES_FREE_BYTES, policy.NAMES_STEP_BYTES)
@@ -293,7 +306,7 @@ def _base_deadline(ticket: TicketState, ci: CiTiming | None) -> tuple[timedelta,
         units = _steps(ticket.feedback_bytes, 0, policy.FEEDBACK_STEP_BYTES)
     elif stage is Stage.PR_REVISING:
         units = ticket.review_comments or 0
-    after = rules.deadline + rules.deadline_step * units
+    after = deadline + rules.deadline_step * units
     if rules.deadline_cap is not None:
         after = min(after, rules.deadline_cap)
     return after, rules.deadline_event
