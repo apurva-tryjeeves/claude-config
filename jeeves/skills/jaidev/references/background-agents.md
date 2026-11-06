@@ -10,7 +10,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only the skills their agent type names besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
-| Phase 2: run | The coordinator sends "go" once the base is ready; the ticket agent posts the names comment and the briefing, answers questions and reviews the plan; each PR head goes to a fresh `jeeves:jaidev-pr-reviewer`, which writes the draft review to the scratchpad |
+| Phase 2: run | The coordinator sends "go" once the base is ready; the ticket agent posts the names comment and the briefing, answers questions and reviews the plan; the ticket agent reads CODEOWNERS and waits for the checks to settle; the coordinator then starts a fresh `jeeves:jaidev-pr-reviewer` on that head, which writes the draft review to the scratchpad; the ticket agent relays the draft for the user's approval, posts it, and runs Jaidev's revision rounds |
 | State file | A JSON file in the scratchpad, one entry per ticket, created with `state init` (see "Poll events") |
 | Events | Wake agents and update the state file as "Poll events" describes |
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
@@ -131,8 +131,8 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 
 Wake an agent only for:
 - a first question, a plan, or a Blocked comment;
-- CI finished on a PR head (the agent reviews the diff and the CI result
-  together);
+- CI finished on a PR head (the ticket agent reports the settled head, and
+  you start a fresh `jeeves:jaidev-pr-reviewer` on it);
 - a merge.
 
 Send the ticket's agent one `SendMessage` naming every pending event. Status

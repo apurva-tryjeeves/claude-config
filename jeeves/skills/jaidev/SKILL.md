@@ -309,7 +309,11 @@ When Jaidev opens the PR:
 2. Wait until every check has completed, SonarCloud included. Jaidev pushes
    fixes for bot findings on its own, so review the head that remains after
    that fix.
-3. Review the PR and record the head SHA you reviewed:
+3. Review the PR in a fresh `jeeves:jaidev-pr-reviewer` agent when background
+   agents run the batch: the ticket agent reports the settled head, the
+   reviewer writes the draft to the scratchpad, and the ticket agent posts it
+   after the user approves. The review covers these, against the head SHA
+   it records:
    - the diff against the briefing's Changes, Constraints and Acceptance
      criteria, using the PR's own file list (the result comment counts only
      the last session's files);
