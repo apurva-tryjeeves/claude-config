@@ -105,6 +105,9 @@ QUEUED_LINEAR_EVERY: Final = _m(2)
 QUEUED_STATUS: Final = "Queued"
 OVERLOADED_MARKER: Final = "API provider overloaded"
 
+# A failed read waits this long before its retry.
+POLL_ERROR_RETRY: Final = _m(2)
+
 # Planning: first Linear check after startedAt, by the pre-plan Linear estimate.
 PLAN_FIRST_CHECK: Final[tuple[tuple[int, timedelta], ...]] = ((1, _m(2)), (3, _m(3)))
 PLAN_FIRST_CHECK_LARGE: Final = _m(4)

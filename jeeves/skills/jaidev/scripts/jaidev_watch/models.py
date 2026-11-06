@@ -178,6 +178,8 @@ class TicketState:
     sonar_findings: bool | None = None
     last_linear_at: datetime | None = None
     last_github_at: datetime | None = None
+    last_linear_error_at: datetime | None = None
+    last_github_error_at: datetime | None = None
     next_linear_at: datetime | None = None
     next_github_at: datetime | None = None
     deadline: datetime | None = None

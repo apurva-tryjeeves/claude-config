@@ -14,7 +14,7 @@ import sys
 import time
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from types import FrameType
@@ -27,6 +27,7 @@ from jaidev_watch.models import (
     EventKind,
     GithubObservation,
     LinearObservation,
+    Source,
     Stage,
     TicketState,
     WaveState,
@@ -48,6 +49,7 @@ INPUT_KEYS: Final = frozenset(
 
 log = logging.getLogger("jaidev_watch")
 
+Emit = Callable[[Sequence[Event]], None]
 LinearReader = Callable[[Sequence[str]], Sequence[LinearObservation]]
 GithubReader = Callable[[str, Path, Sequence[str]], GithubObservation | None]
 TimingLookup = Callable[[TicketState], CiTiming]
@@ -119,65 +121,124 @@ def _due_checks(
     return linear, github
 
 
-def run_tick(
-    path: Path, now: datetime, pollers: Pollers, *, merge_watch: bool = False
-) -> TickResult:
-    """One tick: decide, poll the due tickets without the lock, then apply under it."""
-    timing_for, read_linear, read_github = (
-        pollers.timing_for,
-        pollers.read_linear,
-        pollers.read_github,
-    )
-    with state_store.locked(path):
-        wave = state_store.load(path)
-    linear_ids, github_ids = _due_checks(wave, now, timing_for, merge_watch)
+def _ignore(events: Sequence[Event]) -> None:
+    """An emitter that prints nothing."""
 
-    events: list[Event] = []
-    linear_obs: dict[str, LinearObservation] = {}
-    if linear_ids:
-        try:
-            replies = {obs.ticket.upper(): obs for obs in read_linear(linear_ids)}
-            for ticket_id in linear_ids:
-                found_row = replies.get(ticket_id.upper())
-                if found_row is None:
-                    events.append(
-                        Event(EventKind.LINEAR_POLL_ERROR, ticket_id, "missing from the reply")
-                    )
-                    continue
-                linear_obs[ticket_id] = replace(found_row, ticket=ticket_id)
-        except linear_poll.LinearPollError as error:
-            events.append(Event(EventKind.LINEAR_POLL_ERROR, detail=_first_line(error)))
-    github_obs: dict[str, GithubObservation | None] = {}
+
+def print_events(events: Sequence[Event]) -> None:
+    """Print event lines and flush, so they are out before the state commits."""
+    print("\n".join(event.render() for event in events), flush=True)
+
+
+@dataclass(slots=True)
+class Reads:
+    """What phase 2 of a tick read, and which reads failed."""
+
+    linear: dict[str, LinearObservation] = field(default_factory=dict)
+    github: dict[str, GithubObservation | None] = field(default_factory=dict)
+    linear_failed: set[str] = field(default_factory=set)
+    github_failed: set[str] = field(default_factory=set)
+    events: list[Event] = field(default_factory=list)
+
+
+def _read_linear(reads: Reads, linear_ids: Sequence[str], read_linear: LinearReader) -> None:
+    try:
+        replies = {obs.ticket.upper(): obs for obs in read_linear(linear_ids)}
+    except linear_poll.LinearPollError as error:
+        reads.events.append(Event(EventKind.LINEAR_POLL_ERROR, detail=_first_line(error)))
+        reads.linear_failed.update(linear_ids)
+        return
+    for ticket_id in linear_ids:
+        row = replies.get(ticket_id.upper())
+        if row is None:
+            reads.events.append(
+                Event(EventKind.LINEAR_POLL_ERROR, ticket_id, "missing from the reply")
+            )
+            reads.linear_failed.add(ticket_id)
+        else:
+            reads.linear[ticket_id] = replace(row, ticket=ticket_id)
+
+
+def _read_github(
+    reads: Reads, wave: WaveState, github_ids: Sequence[str], pollers: Pollers
+) -> None:
     for ticket_id in github_ids:
         ticket = wave.tickets[ticket_id]
         try:
-            github_obs[ticket_id] = read_github(
-                ticket_id, Path(ticket.repo_dir or "."), timing_for(ticket).settles_on
+            reads.github[ticket_id] = pollers.read_github(
+                ticket_id, Path(ticket.repo_dir or "."), pollers.timing_for(ticket).settles_on
             )
         except github_poll.GithubPollError as error:
-            events.append(Event(EventKind.GITHUB_POLL_ERROR, ticket_id, _first_line(error)))
+            reads.events.append(Event(EventKind.GITHUB_POLL_ERROR, ticket_id, _first_line(error)))
+            reads.github_failed.add(ticket_id)
+
+
+def _apply_reads(
+    ticket_id: str, ticket: TicketState, reads: Reads, now: datetime, fresh_read: bool
+) -> tuple[TicketState, list[Event]]:
+    """Fold one ticket's reads in; a read that crossed a stage change is dropped."""
+    events: list[Event] = []
+    if ticket_id in reads.linear_failed:
+        ticket = schedule.record_poll_error(ticket, Source.LINEAR, now)
+    if ticket_id in reads.github_failed:
+        ticket = schedule.record_poll_error(ticket, Source.GITHUB, now)
+    if not fresh_read:
+        return ticket, events
+    if ticket_id in reads.linear:
+        ticket, found = schedule.apply_linear(ticket, reads.linear[ticket_id], now)
+        events.extend(found)
+    if ticket_id in reads.github:
+        ticket, found = schedule.apply_github(ticket, reads.github[ticket_id], now)
+        events.extend(schedule.with_ticket_id(found, ticket_id))
+    return ticket, events
+
+
+def run_tick(
+    path: Path,
+    now: datetime,
+    pollers: Pollers,
+    *,
+    emit: Emit = _ignore,
+    merge_watch: bool = False,
+) -> TickResult:
+    """One tick: decide, poll the due tickets without the lock, then apply under it.
+
+    The events are emitted before the new state is saved, so a failed print
+    leaves the old state and the next tick emits them again.
+    """
+    with state_store.locked(path):
+        wave = state_store.load(path)
+    linear_ids, github_ids = _due_checks(wave, now, pollers.timing_for, merge_watch)
+    read_from = {tid: schedule.reconcile(t, now) for tid, t in wave.tickets.items()}
+    reads = Reads()
+    if linear_ids:
+        _read_linear(reads, linear_ids, pollers.read_linear)
+    _read_github(reads, wave, github_ids, pollers)
+    events = reads.events
 
     def apply(fresh: WaveState) -> WaveState:
         tickets: dict[str, TicketState] = {}
         for ticket_id, stored in fresh.tickets.items():
             ticket = schedule.reconcile(stored, now)
-            found: tuple[Event, ...] = ()
-            if ticket_id in linear_obs:
-                ticket, found = schedule.apply_linear(ticket, linear_obs[ticket_id], now)
-                events.extend(found)
-            if ticket_id in github_obs:
-                ticket, found = schedule.apply_github(ticket, github_obs[ticket_id], now)
-                events.extend(schedule.with_ticket_id(found, ticket_id))
-            decision = schedule.decide(ticket, now, timing_for(ticket), merge_watch=merge_watch)
+            before = read_from.get(ticket_id)
+            same_stage = before is not None and (ticket.stage, ticket.stage_since) == (
+                before.stage,
+                before.stage_since,
+            )
+            ticket, found = _apply_reads(ticket_id, ticket, reads, now, same_stage)
+            events.extend(found)
+            timing = pollers.timing_for(ticket)
+            decision = schedule.decide(ticket, now, timing, merge_watch=merge_watch)
             events.extend(schedule.with_ticket_id(decision.events, ticket_id))
             tickets[ticket_id] = decision.ticket
+        if tickets and all(t.stage is Stage.DONE for t in tickets.values()):
+            events.append(Event(EventKind.ALL_MERGED))
+        if events:
+            emit(tuple(events))
         return replace(fresh, tickets=tickets)
 
     after = state_store.update(path, apply)
-    tickets = after.tickets.values()
-    if tickets and all(t.stage is Stage.DONE for t in tickets):
-        events.append(Event(EventKind.ALL_MERGED))
-    idle = all(schedule.is_idle(t) for t in tickets)
+    idle = all(schedule.is_idle(t) for t in after.tickets.values())
     return TickResult(events=tuple(events), idle=idle)
 
 
@@ -217,9 +278,10 @@ def cmd_watch(args: argparse.Namespace) -> int:
     try:
         with stop_on_signals():
             while True:
-                result = run_tick(path, utc_now(), pollers, merge_watch=args.merge_watch)
+                result = run_tick(
+                    path, utc_now(), pollers, emit=print_events, merge_watch=args.merge_watch
+                )
                 if result.events:
-                    print("\n".join(event.render() for event in result.events), flush=True)
                     return EXIT_EVENT
                 if result.idle:
                     print(EventKind.IDLE, flush=True)

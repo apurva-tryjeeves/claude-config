@@ -299,6 +299,8 @@ def decide(
     next_github = _next_github(ticket, ci_timing, merge_watch)
     linear_due = next_linear is not None and next_linear <= now
     github_due = next_github is not None and next_github <= now
+    linear_held = _held(ticket.last_linear_error_at, now)
+    github_held = _held(ticket.last_github_error_at, now)
     deadline = pending_deadline(ticket, ci_timing)
     if deadline is not None and ticket.queued_since is None and now >= deadline.at:
         last = ticket.last_linear_at if deadline.source is Source.LINEAR else ticket.last_github_at
@@ -313,6 +315,8 @@ def decide(
             linear_due = True
         else:
             github_due = True
+    linear_due = linear_due and not linear_held
+    github_due = github_due and not github_held
     ticket = replace(
         ticket,
         next_linear_at=next_linear,
@@ -323,6 +327,17 @@ def decide(
     return Decision(
         ticket=ticket, linear_due=linear_due, github_due=github_due, events=tuple(events)
     )
+
+
+def _held(failed_at: datetime | None, now: datetime) -> bool:
+    return failed_at is not None and now < failed_at + policy.POLL_ERROR_RETRY
+
+
+def record_poll_error(ticket: TicketState, source: Source, now: datetime) -> TicketState:
+    """Note a failed read, so its retry waits POLL_ERROR_RETRY."""
+    if source is Source.LINEAR:
+        return replace(ticket, last_linear_error_at=now)
+    return replace(ticket, last_github_error_at=now)
 
 
 def with_ticket_id(events: tuple[Event, ...], ticket_id: str) -> tuple[Event, ...]:
@@ -355,6 +370,7 @@ def apply_linear(
     ticket: TicketState, observation: LinearObservation, now: datetime
 ) -> tuple[TicketState, tuple[Event, ...]]:
     """Fold one Linear read into the ticket; returns the STATUS event when one waits on you."""
+    ticket = replace(ticket, last_linear_error_at=None)
     if observation.status is None and observation.timeline is None:
         return replace(ticket, last_linear_at=now), ()
     stage = derive_stage(ticket, observation)
@@ -381,6 +397,7 @@ def apply_github(
     ticket: TicketState, pr: GithubObservation | None, now: datetime
 ) -> tuple[TicketState, tuple[Event, ...]]:
     """Fold one GitHub read into the ticket: a new head restarts the CI clock."""
+    ticket = replace(ticket, last_github_error_at=None)
     if pr is None:
         return replace(ticket, last_github_at=now), ()
     ticket = replace(ticket, pr_number=pr.number)

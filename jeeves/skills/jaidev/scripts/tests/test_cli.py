@@ -13,6 +13,7 @@ import tempfile
 import time
 import unittest
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from jaidev_watch.ci_timing import load
 from jaidev_watch.linear_poll import LinearPollError
 from jaidev_watch.models import (
     CiTiming,
+    Event,
     GithubObservation,
     LinearObservation,
     Stage,
@@ -143,7 +145,9 @@ class TickTest(unittest.TestCase):
             [e.render() for e in result.events],
             ["LINEAR POLL ERROR no JSON array in reply: 'sorry'"],
         )
-        self.assertEqual(self.path.read_text(), before)
+        after = json.loads(self.path.read_text())["tickets"]["ACC-1"]
+        self.assertEqual(after.pop("lastLinearErrorAt"), "2026-11-06T03:00:30Z")
+        self.assertEqual(after, json.loads(before)["tickets"]["ACC-1"])
         self.assertEqual(len(fake.linear_calls), 1)
 
     def test_one_haiku_call_for_every_due_ticket(self) -> None:
@@ -197,6 +201,71 @@ class TickTest(unittest.TestCase):
         fake.lowercase = True
         cli.run_tick(self.path, start + timedelta(seconds=30), fake.pollers())
         self.assertIs(state_store.load(self.path).tickets["ACC-1"].stage, Stage.PLANNING)
+
+    def test_events_print_before_the_state_commits(self) -> None:
+        start = parse_time("2026-11-06T03:00:00Z")
+        deadline = start + timedelta(minutes=1)
+        self.write(
+            {
+                "ACC-1": TicketState(
+                    repo_dir=REPO,
+                    stage=Stage.APPROVED,
+                    stage_since=start,
+                    approved_at=start,
+                    last_linear_at=deadline,
+                )
+            }
+        )
+        before = self.path.read_text()
+
+        def broken_pipe(events: Sequence[Event]) -> None:
+            raise BrokenPipeError
+
+        with self.assertRaises(BrokenPipeError):
+            cli.run_tick(self.path, deadline, FakePollers().pollers(), emit=broken_pipe)
+        self.assertEqual(self.path.read_text(), before)
+        printed: list[str] = []
+        cli.run_tick(
+            self.path,
+            deadline,
+            FakePollers().pollers(),
+            emit=lambda events: printed.extend(e.render() for e in events),
+        )
+        self.assertEqual(printed, ["ACC-1 NO START stage=approved due=2026-11-06T03:01:00Z"])
+
+    def test_a_failed_read_waits_two_minutes_before_the_retry(self) -> None:
+        start = parse_time("2026-11-06T03:00:00Z")
+        self.write({"ACC-1": TicketState(repo_dir=REPO, started_at=start)})
+        fake = FakePollers()
+        fake.linear_error = "boom"
+        self.ticks(start, start + timedelta(seconds=140), fake)
+        self.assertEqual(len(fake.linear_calls), 1)
+        self.ticks(start + timedelta(seconds=150), start + timedelta(seconds=150), fake)
+        self.assertEqual(len(fake.linear_calls), 2)
+
+    def test_a_read_that_crosses_a_stamp_is_dropped(self) -> None:
+        start = parse_time("2026-11-06T03:00:00Z")
+        self.write({"ACC-1": TicketState(repo_dir=REPO, started_at=start)})
+        stamp = start + timedelta(seconds=31)
+        fake = FakePollers(status="Analyzing...", timeline="Started by A")
+        read = fake.read_linear
+
+        def read_while_stamping(ids: Sequence[str]) -> Sequence[LinearObservation]:
+            state_store.update(
+                self.path,
+                lambda wave: replace(
+                    wave,
+                    tickets={"ACC-1": replace(wave.tickets["ACC-1"], feedback_at=stamp)},
+                ),
+            )
+            return read(ids)
+
+        fake.read_linear = read_while_stamping  # type: ignore[method-assign]
+        cli.run_tick(self.path, start + timedelta(seconds=30), fake.pollers())
+        ticket = state_store.load(self.path).tickets["ACC-1"]
+        self.assertIs(ticket.stage, Stage.PLAN_FEEDBACK)
+        self.assertIsNone(ticket.last_status)
+        self.assertIsNone(ticket.last_linear_at)
 
     def test_wave2_prints_all_merged(self) -> None:
         shutil.copy(WAVE2, self.path)
