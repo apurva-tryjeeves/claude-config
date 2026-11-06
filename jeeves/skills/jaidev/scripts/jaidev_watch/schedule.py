@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
@@ -58,6 +59,14 @@ CONTINUING: Final = frozenset(
 )
 
 
+# A new run's first status comment shows one of these, or a "Started by" entry;
+# anything else on the first read after startedAt is the previous run's comment.
+NEW_RUN_PREFIXES: Final = ("Queued", "Analyzing", "Planning", "Gathering Info")
+STARTED_ENTRY: Final = "Started by"
+_TIMESTAMP: Final = re.compile(r"^\s*\d{4}-\d{2}-\d{2}[T ][0-9:.]+Z?\s*[\u2014\u2013-]\s*")
+_COST: Final = re.compile(r"\(\$\d+(?:\.\d+)?\)")
+
+
 @dataclass(frozen=True, slots=True)
 class Deadline:
     """The pending deadline of a ticket's current stage."""
@@ -79,9 +88,29 @@ def is_paused(observation: LinearObservation) -> bool:
     )
 
 
+def _plain(text: str) -> str:
+    return " ".join(text.split()).lower()
+
+
+def timeline_kind(timeline: str | None) -> str:
+    """The timeline entry without its timestamp, costs, case and extra whitespace."""
+    return _plain(_COST.sub("", _TIMESTAMP.sub("", timeline or "")))
+
+
 def _changed(ticket: TicketState, observation: LinearObservation) -> bool:
-    current = (status_key_of(observation.status), observation.timeline)
-    return current != (ticket.last_status, ticket.last_timeline)
+    now_seen = (_plain(status_key_of(observation.status)), timeline_kind(observation.timeline))
+    before = (_plain(ticket.last_status or ""), timeline_kind(ticket.last_timeline))
+    return now_seen != before
+
+
+def is_baseline(ticket: TicketState, observation: LinearObservation) -> bool:
+    """True for a first read after startedAt that still shows the previous run's comment."""
+    if ticket.stage is not Stage.STARTING:
+        return False
+    status_key = status_key_of(observation.status)
+    timeline = observation.timeline or ""
+    new_run = status_key.startswith(NEW_RUN_PREFIXES) or "Blocked" in status_key
+    return not (new_run or timeline.startswith(STARTED_ENTRY))
 
 
 def _stage_for_status(status_key: str, current: Stage | None) -> Stage | None:
@@ -102,7 +131,7 @@ def derive_stage(ticket: TicketState, observation: LinearObservation) -> Stage |
     current = ticket.stage
     if is_paused(observation):
         return current or Stage.STARTING
-    if not _changed(ticket, observation):
+    if not _changed(ticket, observation) or is_baseline(ticket, observation):
         return current
     timeline = observation.timeline or ""
     if timeline.startswith(PLAN_APPROVED_ENTRY):
@@ -374,7 +403,7 @@ def apply_linear(
     if observation.status is None and observation.timeline is None:
         return replace(ticket, last_linear_at=now), ()
     stage = derive_stage(ticket, observation)
-    changed = _changed(ticket, observation)
+    changed = _changed(ticket, observation) and not is_baseline(ticket, observation)
     if stage is not None and stage is not ticket.stage:
         continuing = (ticket.stage, stage) in CONTINUING and ticket.stage_since is not None
         at = ticket.stage_since if continuing and ticket.stage_since else now

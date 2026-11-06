@@ -355,3 +355,48 @@ class PauseCarryOverTest(unittest.TestCase):
         self.assertEqual(decision.ticket.next_linear_at, at(240 + 120))
         late = replace(ticket, last_github_at=at(480 + 60))
         self.assertEqual(schedule.decide(late, T0, CI).ticket.next_github_at, at(600))
+
+
+class ChangeDetectionTest(unittest.TestCase):
+    def test_reworded_reads_of_the_same_entry_are_unchanged(self) -> None:
+        cases = [
+            ("Complete ✅", "2026-11-05T13:33:41Z — Complete", obs("Complete ✅", "Complete")),
+            (
+                "Awaiting Plan Approval",
+                "Plan v1 posted ($2.10) — awaiting approval",
+                obs("awaiting plan  approval", "Plan v1 posted ($2.11) —  Awaiting approval"),
+            ),
+        ]
+        for last_status, last_timeline, observation in cases:
+            with self.subTest(timeline=observation.timeline):
+                ticket = TicketState(
+                    stage=Stage.PR_READY,
+                    stage_since=T0,
+                    last_status=last_status,
+                    last_timeline=last_timeline,
+                )
+                _, events = schedule.apply_linear(ticket, observation, at(60))
+                self.assertEqual(events, ())
+
+
+class BaselineTest(unittest.TestCase):
+    def test_an_old_status_comment_is_the_baseline_of_a_new_start(self) -> None:
+        ticket = TicketState(stage=Stage.STARTING, stage_since=T0, started_at=T0)
+        ticket, events = schedule.apply_linear(
+            ticket, obs("Awaiting Plan Approval", "Plan posted"), at(30)
+        )
+        self.assertIs(ticket.stage, Stage.STARTING)
+        self.assertEqual(events, ())
+        self.assertEqual(ticket.last_status, "Awaiting Plan Approval")
+
+    def test_a_new_run_leaves_starting(self) -> None:
+        cases = [
+            (obs("Analyzing..."), Stage.PLANNING),
+            (obs(None, "Started by A"), Stage.PLANNING),
+            (obs("Gathering Info (Waiting for Answers)", "Question posted"), Stage.QUESTIONS),
+        ]
+        for observation, expected in cases:
+            with self.subTest(status=observation.status):
+                ticket = TicketState(stage=Stage.STARTING, stage_since=T0, started_at=T0)
+                ticket, _ = schedule.apply_linear(ticket, observation, at(30))
+                self.assertIs(ticket.stage, expected)
