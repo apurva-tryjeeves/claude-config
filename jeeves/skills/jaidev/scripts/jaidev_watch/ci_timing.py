@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
 from typing import Final
 
-from jaidev_watch.ci_derive import source_table_path
 from jaidev_watch.models import CiTiming
 
 # scripts/jaidev_watch/ci_timing.py → skills/git-preferences/references/ci-check-timing.md
 DEFAULT_PATH: Final = (
     Path(__file__).resolve().parents[3] / "git-preferences" / "references" / "ci-check-timing.md"
 )
+SOURCE_ENV: Final = "JEEVES_PLUGIN_SRC"
+SOURCE_DEFAULT: Final = Path.home() / "github" / "apurva-tryjeeves" / "claude-config"
+TABLE_IN_SOURCE: Final = Path("jeeves/skills/git-preferences/references/ci-check-timing.md")
+_PIPE: Final = re.compile(r"(?<!\\)\|")
 _DURATION: Final = re.compile(r"^(?:(\d+)m(?:in)?)?(?:(\d+)s)?$")
 _COLUMNS: Final = (
     "Repo",
@@ -42,7 +46,18 @@ def parse_duration(text: str) -> timedelta:
 
 
 def _cells(line: str) -> list[str]:
-    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+    """Split a table row on unescaped pipes; `\\|` inside a cell is a literal pipe."""
+    parts = _PIPE.split(line.strip())
+    if parts and not parts[0].strip():
+        parts = parts[1:]
+    if parts and not parts[-1].strip():
+        parts = parts[:-1]
+    return [part.strip().replace("\\|", "|") for part in parts]
+
+
+def source_table_path() -> Path:
+    """The source clone's copy of the timing table."""
+    return Path(os.environ.get(SOURCE_ENV) or SOURCE_DEFAULT) / TABLE_IN_SOURCE
 
 
 def _names(cell: str) -> tuple[str, ...]:

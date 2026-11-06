@@ -135,7 +135,7 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
 | `LINEAR POLL ERROR <ticket> missing from the reply` | Restart the watcher; the ticket counts as unread, so no deadline fires from it |
 | `CI ROW ADDED <repo> …` | Tell the user the new `ci-check-timing.md` row is ready to review and push; restart the watcher |
-| `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' "Checks poller", add it, and restart the watcher |
+| `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' "Checks poller", add it, and restart the watcher. The watcher retries the derivation 2 min after a failure (`<state-file stem>.ci-hold.json`) |
 | `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
 

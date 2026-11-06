@@ -34,6 +34,7 @@ from jaidev_watch.models import (
     format_time,
     parse_time,
 )
+from jaidev_watch.policy import POLL_ERROR_RETRY
 
 EXIT_EVENT: Final = 0
 EXIT_ERROR: Final = 1
@@ -72,6 +73,7 @@ class Pollers:
     read_linear: LinearReader
     read_github: GithubReader
     notices: Notices = lambda: ()
+    requeue: Callable[[Sequence[Event]], None] = lambda events: None
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,19 +95,31 @@ CI_STAGES: Final = frozenset(
 )
 
 
+@dataclass(frozen=True, slots=True)
+class RowDeriver:
+    """How CiRows derives, writes and holds a missing row."""
+
+    derive: Callable[[str], ci_derive.DerivedRow]
+    write: Callable[[ci_derive.DerivedRow], bool]
+    hold: Path | None = None
+    now: Callable[[], datetime] = utc_now
+
+
 class CiRows:
     """Each ticket's CI row by repo; a missing row is derived once, the git-preferences way."""
 
     def __init__(
         self,
         timings: Mapping[str, CiTiming],
-        *,
-        derive: Callable[[str], ci_derive.DerivedRow] | None = None,
-        write: Callable[[ci_derive.DerivedRow], bool] | None = None,
+        deriver: RowDeriver | None = None,
         resolve: Callable[[str | None], str] = ci_derive.resolve_repo,
     ) -> None:
         self._timings = dict(timings)
-        self._derive, self._write, self._resolve = derive, write, resolve
+        self._resolve = resolve
+        self._derive = deriver.derive if deriver else None
+        self._write = deriver.write if deriver else None
+        self._hold = deriver.hold if deriver else None
+        self._now = deriver.now if deriver else utc_now
         self._repos: dict[str, str] = {}
         self._missing: set[str] = set()
         self._notices: list[Event] = []
@@ -122,24 +136,61 @@ class CiRows:
         found = self._timings.get(repo)
         if found is not None or self._derive is None:
             return found
-        if ticket.stage not in CI_STAGES or repo in self._missing:
+        if ticket.stage not in CI_STAGES or repo in self._missing or self._held(repo):
             return None
         try:
             row = self._derive(repo)
         except ci_derive.CiDeriveError as error:
             self._missing.add(repo)
+            self._record_failure(repo)
             self._notices.append(Event(EventKind.CI_ROW_MISSING, detail=f"{repo} {error}"))
             return None
-        written = self._write(row) if self._write else False
         self._timings[repo] = row.timing
-        detail = repo if written else f"{repo} (source clone absent) {ci_derive.format_row(row)}"
-        self._notices.append(Event(EventKind.CI_ROW_ADDED, detail=detail))
+        self._notices.append(Event(EventKind.CI_ROW_ADDED, detail=self._write_detail(row)))
         return row.timing
+
+    def _write_detail(self, row: ci_derive.DerivedRow) -> str:
+        repo, line = row.timing.repo, ci_derive.format_row(row)
+        try:
+            written = self._write(row) if self._write else False
+        except OSError as error:
+            return f"{repo} (not written: {error.strerror or error}) {line}"
+        return repo if written else f"{repo} (source clone absent) {line}"
+
+    def _failures(self) -> dict[str, str]:
+        if self._hold is None:
+            return {}
+        try:
+            data = json.loads(self._hold.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+
+    def _held(self, repo: str) -> bool:
+        """True within POLL_ERROR_RETRY of a failed derivation, across watch runs."""
+        failed = self._failures().get(repo)
+        try:
+            return failed is not None and self._now() < parse_time(failed) + POLL_ERROR_RETRY
+        except ValueError:
+            return False
+
+    def _record_failure(self, repo: str) -> None:
+        if self._hold is None:
+            return
+        failures = {**self._failures(), repo: format_time(self._now())}
+        try:
+            state_store.write_text_atomic(self._hold, json.dumps(failures) + "\n")
+        except OSError as error:
+            log.warning("cannot record the CI row failure in %s: %s", self._hold, error)
 
     def notices(self) -> list[Event]:
         """The row events since the last call."""
         out, self._notices = self._notices, []
         return out
+
+    def requeue(self, events: Sequence[Event]) -> None:
+        """Put back row events whose print failed."""
+        self._notices = [*events, *self._notices]
 
 
 def _settles_on(timing: CiTiming | None) -> Sequence[str] | None:
@@ -275,11 +326,16 @@ def run_tick(
             decision = schedule.decide(ticket, now, timing, merge_watch=merge_watch)
             events.extend(schedule.with_ticket_id(decision.events, ticket_id))
             tickets[ticket_id] = decision.ticket
-        events.extend(pollers.notices())
+        notices = list(pollers.notices())
+        events.extend(notices)
         if tickets and all(t.stage is Stage.DONE for t in tickets.values()):
             events.append(Event(EventKind.ALL_MERGED))
         if events:
-            emit(tuple(events))
+            try:
+                emit(tuple(events))
+            except BaseException:
+                pollers.requeue(notices)
+                raise
         return replace(fresh, tickets=tickets)
 
     after = state_store.update(path, apply)
@@ -304,11 +360,12 @@ def stop_on_signals() -> Iterator[None]:
 
 def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming]) -> Pollers:
     """Pollers that run claude, gh and git, and derive missing CI rows."""
-    rows = CiRows(
-        timings,
+    deriver = RowDeriver(
         derive=ci_derive.derive_row,
-        write=lambda row: ci_derive.write_row(row, ci_derive.source_table_path()),
+        write=lambda row: ci_derive.write_row(row, ci_timing.source_table_path()),
+        hold=path.with_suffix(".ci-hold.json"),
     )
+    rows = CiRows(timings, deriver)
     usage_log = path.with_suffix(".usage.log")
 
     def read_linear(ticket_ids: Sequence[str]) -> Sequence[LinearObservation]:
@@ -319,7 +376,7 @@ def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming]) -> Poll
     ) -> GithubObservation | None:
         return github_poll.read_pr(ticket_id, repo_dir, settles_on)
 
-    return Pollers(rows.for_ticket, read_linear, read_github, rows.notices)
+    return Pollers(rows.for_ticket, read_linear, read_github, rows.notices, rows.requeue)
 
 
 def cmd_watch(args: argparse.Namespace) -> int:

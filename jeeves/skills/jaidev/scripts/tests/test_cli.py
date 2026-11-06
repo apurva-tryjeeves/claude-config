@@ -281,7 +281,7 @@ class CiRowsTest(unittest.TestCase):
         self.derived: list[str] = []
         self.written: list[str] = []
 
-    def rows(self, fail: bool) -> cli.CiRows:
+    def rows(self, fail: bool, write_error: bool = False, hold: Path | None = None) -> cli.CiRows:
         def derive(repo: str) -> DerivedRow:
             self.derived.append(repo)
             if fail:
@@ -291,10 +291,65 @@ class CiRowsTest(unittest.TestCase):
             )
 
         def write(row: DerivedRow) -> bool:
+            if write_error:
+                raise PermissionError("read-only clone")
             self.written.append(row.timing.repo)
             return True
 
-        return cli.CiRows({}, derive=derive, write=write, resolve=lambda d: "new-repo")
+        deriver = cli.RowDeriver(derive, write, hold, lambda: self.now)
+        return cli.CiRows({}, deriver, resolve=lambda d: "new-repo")
+
+    now = parse_time("2026-11-06T03:00:00Z")
+
+    def test_an_unwritable_clone_reports_the_row_unwritten(self) -> None:
+        rows = self.rows(fail=False, write_error=True)
+        self.assertIsNotNone(rows.for_ticket(TicketState(repo_dir="/x", stage=Stage.PR_CI)))
+        [notice] = rows.notices()
+        self.assertTrue(
+            notice.render().startswith("CI ROW ADDED new-repo (not written: read-only clone)")
+        )
+
+    def test_a_failed_repo_is_held_across_watch_runs(self) -> None:
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder)
+        hold = folder / "s.ci-hold.json"
+        ticket = TicketState(repo_dir="/x", stage=Stage.PR_CI)
+        self.rows(fail=True, hold=hold).for_ticket(ticket)
+        self.now = parse_time("2026-11-06T03:01:00Z")
+        self.rows(fail=True, hold=hold).for_ticket(ticket)
+        self.assertEqual(self.derived, ["new-repo"])
+        self.now = parse_time("2026-11-06T03:02:00Z")
+        self.rows(fail=True, hold=hold).for_ticket(ticket)
+        self.assertEqual(self.derived, ["new-repo", "new-repo"])
+
+    def test_notices_return_when_the_print_fails(self) -> None:
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder)
+        path = folder / "s.json"
+        state_store.save(
+            path,
+            WaveState(
+                tickets={
+                    "ACC-1": TicketState(repo_dir="/x", stage=Stage.PR_CI, stage_since=self.now)
+                }
+            ),
+        )
+        rows = self.rows(fail=True)
+        fake = FakePollers()
+        pollers = cli.Pollers(
+            rows.for_ticket, fake.read_linear, fake.read_github, rows.notices, rows.requeue
+        )
+
+        def broken(events: Sequence[Event]) -> None:
+            raise BrokenPipeError
+
+        with self.assertRaises(BrokenPipeError):
+            cli.run_tick(path, self.now, pollers, emit=broken)
+        printed: list[str] = []
+        cli.run_tick(
+            path, self.now, pollers, emit=lambda ev: printed.extend(e.render() for e in ev)
+        )
+        self.assertIn("CI ROW MISSING new-repo no successful PR runs", printed)
 
     def test_a_missing_row_is_derived_once_and_announced(self) -> None:
         rows = self.rows(fail=False)

@@ -195,7 +195,14 @@ def lock_path(path: Path) -> Path:
 @contextmanager
 def locked(path: Path) -> Iterator[None]:
     """Hold the exclusive lock that every reader-writer of this state file takes."""
-    with lock_path(path).open("a") as handle:
+    with lock_file(lock_path(path)):
+        yield
+
+
+@contextmanager
+def lock_file(lock: Path) -> Iterator[None]:
+    """Hold an exclusive `fcntl.flock` on this lock file."""
+    with lock.open("a") as handle:
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
             yield
@@ -218,8 +225,12 @@ def load(path: Path) -> WaveState:
 
 
 def save(path: Path, wave: WaveState) -> None:
-    """Write the file atomically: a temp file in the same directory, then os.replace."""
-    text = json.dumps(wave_to_json(wave), indent=2, ensure_ascii=False) + "\n"
+    """Write the state file atomically."""
+    write_text_atomic(path, json.dumps(wave_to_json(wave), indent=2, ensure_ascii=False) + "\n")
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    """Write a temp file in the same directory, then os.replace, so readers see old or new."""
     descriptor, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     temp = Path(temp_name)
     try:

@@ -8,17 +8,19 @@ into the plugin's source clone, uncommitted.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
-import os
 import re
 import subprocess
+import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Final
 
+from jaidev_watch import state_store
 from jaidev_watch.models import CiTiming, parse_time
 
 ORG: Final = "JeevesInc"
@@ -28,9 +30,7 @@ MIN_FIRST_CHECK: Final = timedelta(minutes=1)
 MIN_INTERVAL: Final = timedelta(minutes=1)
 MAX_INTERVAL: Final = timedelta(minutes=3)
 TIMEOUT_SECONDS: Final = 60
-SOURCE_ENV: Final = "JEEVES_PLUGIN_SRC"
-SOURCE_DEFAULT: Final = Path.home() / "github" / "apurva-tryjeeves" / "claude-config"
-TABLE_IN_SOURCE: Final = Path("jeeves/skills/git-preferences/references/ci-check-timing.md")
+MERGED_PRS: Final = 5
 _REMOTE: Final = re.compile(r"[/:]([^/:]+?)(?:\.git)?/?$")
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
@@ -47,11 +47,6 @@ class DerivedRow:
     timing: CiTiming
     workflow: str
     sample_size: int
-
-
-def source_table_path() -> Path:
-    """The source clone's copy of the timing table."""
-    return Path(os.environ.get(SOURCE_ENV) or SOURCE_DEFAULT) / TABLE_IN_SOURCE
 
 
 def repo_from_remote(url: str) -> str | None:
@@ -118,7 +113,12 @@ def _whole_minutes(value: timedelta) -> timedelta:
 def derive_timing(
     repo: str, check_name: str, settles_on: tuple[str, ...], durations: Sequence[timedelta]
 ) -> CiTiming:
-    """First check a little under the fastest run; interval from the spread."""
+    """First check a little under the fastest run; interval from the spread.
+
+    First check: the fastest run's whole minutes, one less when it is an exact
+    minute, at least 1 min (2m12s → 2min, 33m00s → 32min). Interval: half the
+    spread between fastest and slowest, rounded up, from 1 to 3 min.
+    """
     if not durations:
         raise CiDeriveError("no successful PR runs")
     fastest, slowest = min(durations), max(durations)
@@ -139,6 +139,10 @@ def derive_timing(
     )
 
 
+def _escape(text: str) -> str:
+    return text.replace("|", "\\|")
+
+
 def _span(value: timedelta) -> str:
     seconds = round(value.total_seconds())
     return f"{seconds // 60}m{seconds % 60:02d}s"
@@ -147,11 +151,11 @@ def _span(value: timedelta) -> str:
 def format_row(row: DerivedRow) -> str:
     """The markdown table row, in the table's column order."""
     t = row.timing
-    settles = ", ".join(f"`{name}`" for name in t.settles_on)
+    settles = ", ".join(f"`{_escape(name)}`" for name in t.settles_on)
     cells = [
-        t.repo,
-        row.workflow,
-        f"`{t.check_name}`",
+        _escape(t.repo),
+        _escape(row.workflow),
+        f"`{_escape(t.check_name)}`",
         settles,
         _span(t.minimum),
         _span(t.maximum),
@@ -172,6 +176,8 @@ def insert_row(text: str, row: str) -> str:
     end = header
     while end + 1 < len(lines) and lines[end + 1].startswith("|"):
         end += 1
+    if not lines[end].endswith("\n"):
+        lines[end] += "\n"
     lines.insert(end + 1, row + "\n")
     return "".join(lines)
 
@@ -209,6 +215,17 @@ def resolve_repo(repo_dir: str | None, runner: Runner = subprocess.run) -> str:
     return name or folder.resolve().name
 
 
+def _names_from_prs(prs: object, workflow_name: str) -> tuple[str, tuple[str, ...]]:
+    """Check names from the newest of the last merged PRs that has timed checks."""
+    for pr in prs if isinstance(prs, list) else []:
+        rollup = pr.get("statusCheckRollup") if isinstance(pr, dict) else None
+        try:
+            return rollup_names(rollup, workflow_name)
+        except CiDeriveError:
+            continue
+    raise CiDeriveError(f"none of the last {MERGED_PRS} merged PRs has timed checks")
+
+
 def derive_row(repo: str, runner: Runner = subprocess.run) -> DerivedRow:
     """Time the repo's PR-check workflows with `gh` and build its row."""
     slug = f"{ORG}/{repo}"
@@ -238,21 +255,35 @@ def derive_row(repo: str, runner: Runner = subprocess.run) -> DerivedRow:
         raise CiDeriveError("no successful PR runs")
     prs = _run_json(
         [
-            *("gh", "pr", "list", "--repo", slug),
-            *("--state", "merged", "--limit", "1", "--json", "statusCheckRollup"),
+            *("gh", "pr", "list", "--repo", slug, "--state", "merged"),
+            *("--limit", str(MERGED_PRS), "--json", "statusCheckRollup"),
         ],
         runner,
     )
-    rollup = prs[0].get("statusCheckRollup") if isinstance(prs, list) and prs else None
-    check_name, settles_on = rollup_names(rollup, names[pole])
+    check_name, settles_on = _names_from_prs(prs, names[pole])
     durations = per_workflow[pole]
     timing = derive_timing(repo, check_name, settles_on, durations)
     return DerivedRow(timing=timing, workflow=pole, sample_size=len(durations))
 
 
+def _has_row(text: str, repo: str) -> bool:
+    return any(line.startswith(f"| {_escape(repo)} |") for line in text.splitlines())
+
+
+def _table_lock(path: Path) -> Path:
+    digest = hashlib.sha256(str(path.resolve()).encode()).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / f"jaidev-ci-table-{digest}.lock"
+
+
 def write_row(row: DerivedRow, path: Path) -> bool:
-    """Add the row to the source clone's table, uncommitted; False when the clone is absent."""
+    """Add the row to the table once, under a lock, atomically; False when the table is absent.
+
+    The lock file sits in the system temp directory, so the clone gains no file.
+    """
     if not path.exists():
         return False
-    path.write_text(insert_row(path.read_text(encoding="utf-8"), format_row(row)), "utf-8")
+    with state_store.lock_file(_table_lock(path)):
+        text = path.read_text(encoding="utf-8")
+        if not _has_row(text, row.timing.repo):
+            state_store.write_text_atomic(path, insert_row(text, format_row(row)))
     return True

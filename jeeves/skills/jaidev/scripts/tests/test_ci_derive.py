@@ -80,6 +80,44 @@ class PureTest(unittest.TestCase):
         )
 
 
+class TableWriteTest(unittest.TestCase):
+    HEADER = (
+        "| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean "
+        "| Sample size | First check | Interval |\n|---|---|---|---|---|---|---|---|---|---|\n"
+        "| a | u.yml | `x` | `y` | 1m00s | 2m00s | 1m30s | 3 | 1min | 1min |"
+    )
+
+    def setUp(self) -> None:
+        self.folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.folder)
+        timing = ci_derive.derive_timing("b", "test / A|B", ("s|t",), [s(180), s(300)])
+        self.row = DerivedRow(timing=timing, workflow="u|v.yml", sample_size=2)
+
+    def test_pipes_in_names_survive_the_table(self) -> None:
+        text = ci_derive.insert_row(self.HEADER, ci_derive.format_row(self.row))
+        parsed = ci_timing.parse_table(text)
+        self.assertEqual(set(parsed), {"a", "b"})
+        self.assertEqual((parsed["b"].check_name, parsed["b"].settles_on), ("test / A|B", ("s|t",)))
+
+    def test_insert_after_a_last_line_without_newline(self) -> None:
+        text = ci_derive.insert_row(self.HEADER, "| b | row |")
+        self.assertTrue(text.endswith("1min |\n| b | row |\n"))
+
+    def test_write_row_adds_a_repo_once(self) -> None:
+        table = self.folder / "ci-check-timing.md"
+        table.write_text(self.HEADER + "\n")
+        self.assertTrue(ci_derive.write_row(self.row, table))
+        self.assertTrue(ci_derive.write_row(self.row, table))
+        self.assertEqual(table.read_text().count("| b |"), 1)
+        self.assertEqual([p.name for p in self.folder.iterdir() if p.name.startswith(".")], [])
+
+    def test_first_check_matches_every_existing_row(self) -> None:
+        for repo, row in ci_timing.load().items():
+            with self.subTest(repo=repo):
+                derived = ci_derive.derive_timing(repo, "c", ("c",), [row.minimum, row.maximum])
+                self.assertEqual(derived.first_check, row.first_check)
+
+
 class DeriveRowTest(unittest.TestCase):
     def fake_gh(self, runs: list[dict[str, str]]) -> Any:  # noqa: ANN401
         replies = {
@@ -87,7 +125,7 @@ class DeriveRowTest(unittest.TestCase):
                 {"name": "Unit Test", "path": ".github/workflows/unit-test.yml", "state": "active"}
             ],
             "run": runs,
-            "pr": [{"statusCheckRollup": ROLLUP}],
+            "pr": [{"statusCheckRollup": []}, {"statusCheckRollup": ROLLUP}],
         }
 
         def runner(args: list[str], **_: object) -> subprocess.CompletedProcess[str]:
