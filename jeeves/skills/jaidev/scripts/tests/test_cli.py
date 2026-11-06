@@ -40,12 +40,18 @@ class FakePollers:
         self.linear_calls: list[list[str]] = []
         self.github_calls: list[str] = []
         self.linear_error: str | None = None
+        self.omit: set[str] = set()
+        self.lowercase = False
 
     def read_linear(self, ticket_ids: Sequence[str]) -> Sequence[LinearObservation]:
         self.linear_calls.append(list(ticket_ids))
         if self.linear_error:
             raise LinearPollError(self.linear_error)
-        return [LinearObservation(t, self.status, self.timeline) for t in ticket_ids]
+        return [
+            LinearObservation(t.lower() if self.lowercase else t, self.status, self.timeline)
+            for t in ticket_ids
+            if t not in self.omit
+        ]
 
     def read_github(
         self, ticket_id: str, repo_dir: Path, settles_on: Sequence[str]
@@ -166,6 +172,27 @@ class TickTest(unittest.TestCase):
                 'TIMELINE "Plan v1 posted ($2.10) — awaiting approval"'
             ],
         )
+
+    def test_an_omitted_row_is_no_read_and_confirms_no_deadline(self) -> None:
+        start = parse_time("2026-11-06T03:00:00Z")
+        self.write({"ACC-1": TicketState(repo_dir=REPO, started_at=start)})
+        fake = FakePollers(status="Queued", timeline="Started by A")
+        fake.omit = {"ACC-1"}
+        printed = self.ticks(start, start + timedelta(minutes=2), fake)
+        lines = [line for _, batch in printed for line in batch]
+        self.assertNotIn("NO START", " ".join(lines))
+        self.assertIn("LINEAR POLL ERROR ACC-1 missing from the reply", lines)
+        ticket = state_store.load(self.path).tickets["ACC-1"]
+        self.assertIsNone(ticket.last_linear_at)
+        self.assertIsNone(ticket.queued_since)
+
+    def test_reply_ids_match_case_insensitively(self) -> None:
+        start = parse_time("2026-11-06T03:00:00Z")
+        self.write({"ACC-1": TicketState(repo_dir=REPO, started_at=start)})
+        fake = FakePollers(status="Analyzing...", timeline="Started by A")
+        fake.lowercase = True
+        cli.run_tick(self.path, start + timedelta(seconds=30), fake.pollers())
+        self.assertIs(state_store.load(self.path).tickets["ACC-1"].stage, Stage.PLANNING)
 
     def test_wave2_prints_all_merged(self) -> None:
         shutil.copy(WAVE2, self.path)

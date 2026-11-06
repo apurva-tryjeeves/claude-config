@@ -135,11 +135,15 @@ def run_tick(
     linear_obs: dict[str, LinearObservation] = {}
     if linear_ids:
         try:
-            replies = {obs.ticket: obs for obs in read_linear(linear_ids)}
+            replies = {obs.ticket.upper(): obs for obs in read_linear(linear_ids)}
             for ticket_id in linear_ids:
-                linear_obs[ticket_id] = replies.get(
-                    ticket_id, LinearObservation(ticket_id, None, None)
-                )
+                found_row = replies.get(ticket_id.upper())
+                if found_row is None:
+                    events.append(
+                        Event(EventKind.LINEAR_POLL_ERROR, ticket_id, "missing from the reply")
+                    )
+                    continue
+                linear_obs[ticket_id] = replace(found_row, ticket=ticket_id)
         except linear_poll.LinearPollError as error:
             events.append(Event(EventKind.LINEAR_POLL_ERROR, detail=_first_line(error)))
     github_obs: dict[str, GithubObservation | None] = {}
