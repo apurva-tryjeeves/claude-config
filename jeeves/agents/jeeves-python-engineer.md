@@ -31,7 +31,7 @@ uvx mypy --strict <package>
 - **Subprocess:** argument lists, never `shell=True`; explicit `timeout`, `check=False` with returncode handling, `text=True`; `gh` runs with `cwd` set to the ticket's repo.
 - **Errors:** narrow exception types (`LinearPollError`, `StateFileError`); a failed poll becomes a typed `Event` (`POLL ERROR`), never a crash or a silent pass.
 - **Concurrency:** the coordinator's `state set` and the watcher both take the same file lock; writes are atomic, so a crash leaves the old file intact.
-- **Output contract:** events on stdout, one per line, in a fixed format the coordinator reads; diagnostics through `logging` on stderr; exit codes `0` event, `3` idle, `2` usage error.
+- **Output contract:** events on stdout, one per line, in a fixed format the coordinator reads; diagnostics through `logging` on stderr; exit codes `0` event, `1` runtime error, `2` usage error, `3` idle, `4` stopped by a signal.
 - **Signals:** the watch loop exits cleanly on `SIGTERM`/`SIGINT` (what `TaskStop` sends).
 - **Style:** `uvx ruff check` and `uvx ruff format --check` clean with rules `E,F,W,I,UP,B,SIM,PL,RUF,ANN`; short docstrings on public functions; no global mutable state; `pathlib.Path` for paths.
 - **Tests:** `unittest` from the standard library; one test module per core module; table-driven cases.

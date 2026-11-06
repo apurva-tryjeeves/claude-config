@@ -68,6 +68,9 @@ python3 -m jaidev_watch watch <state-file>
 - Start `watch` in the background once the start comments are posted, and again after handling each exit.
 - It ticks every 30 s and exits on the first tick with events, with exit code 0.
 - It prints `IDLE` and exits with code 3 when no ticket has a check or a deadline left; every ticket then waits on you.
+- It exits with code 4 on `TaskStop` (SIGTERM) or Ctrl-C, and prints nothing.
+- It prints each tick's events before it saves the state, so an interrupted print repeats on the next run.
+- `state init` on an existing ticket exits 2; add `--force` to replace it.
 - One Linear read is one headless `claude -p --model haiku` call for every ticket due on that tick, $0.0057 and 7 to 10 s each (wave 2 usage log, 5 Nov 2026); its cost goes to `<state-file stem>.usage.log`.
 - GitHub reads (`gh pr list`, from the ticket's `repoDir`) cost nothing.
 - `explain <state-file>` prints each ticket's stage, next checks and deadline; `due <state-file>` prints the checks due now. Both poll nothing.
@@ -105,10 +108,14 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `pr-revising` | off | every 1 min until a new head | `FIX LATE` at 2 min +1 min per review comment, capped at 10 min |
 
 - PR due after `plan:approved`: 4 min for 1 or 2 points, 6 min for 3, 8 min for 5 or more.
-- CI cadence comes from `git-preferences/references/ci-check-timing.md`; a new head restarts the CI clock. Add the repo's row before its first PR (that skill's "Checks poller" derives it).
+- CI cadence comes from `git-preferences/references/ci-check-timing.md` (the source clone's copy first); a new head restarts the CI clock. The repo is the one `git remote get-url origin` names in the ticket's `repoDir`.
+- A repo without a row gets one derived the git-preferences way when its first ticket reaches a CI stage; the watcher writes it into the source clone, uncommitted, and prints `CI ROW ADDED <repo>`.
 - CI counts as settled once every check completed and every `Settles on` check is present.
 - While Jaidev's timeline shows "Queued" or "API provider overloaded — retrying", every deadline pauses.
-- A deadline fires after one last read at the deadline, once per stage; after it, the ticket's Linear reads stop until your next stamp.
+- A deadline fires after one last read at the deadline, once per stage.
+- After a Linear deadline (`NO START`, `PLAN LATE`, `NO ACK`), the ticket idles: no more Linear reads until you act on the event and stamp again. GitHub reads go on after `PR LATE`, `CI LATE` and `FIX LATE`.
+- In `starting`, a first read that shows the previous run's status comment (anything but Queued, Analyzing, Planning, Gathering Info, Blocked or a "Started by" entry) is kept as the baseline; the stage moves on the next change.
+- A failed read waits 2 min before its retry.
 - The numbers live in `scripts/jaidev_watch/policy.py`. Move a stage to measured values once `jaidev-run-timings.md` holds 3 runs of it.
 
 #### Event lines
@@ -126,6 +133,9 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `<ticket> PLAN LATE …`, `PR LATE …`, `FIX LATE …` | Read the status comment with `limit: 1` and tell the user what it shows |
 | `<ticket> CI LATE …` | Read the PR's checks with `gh pr view`; tell the user which check is stuck |
 | `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
+| `LINEAR POLL ERROR <ticket> missing from the reply` | Restart the watcher; the ticket counts as unread, so no deadline fires from it |
+| `CI ROW ADDED <repo> …` | Tell the user the new `ci-check-timing.md` row is ready to review and push; restart the watcher |
+| `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' "Checks poller", add it, and restart the watcher |
 | `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
 
