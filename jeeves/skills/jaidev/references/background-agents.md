@@ -6,11 +6,11 @@ keeps the user's approvals, and the agents do the ticket work.
 
 | Piece | Rule |
 |---|---|
-| Agents | One background agent per ticket, started with the shared brief and an explicit tier: `model: sonnet`, `effort: medium` for both Phase 1 (prepare) and Phase 2 (run) |
+| Agents | One `jeeves:jaidev-ticket` agent per ticket for the ticket work, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round. The agent type sets model sonnet, effort medium |
 | Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
-| Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only `jeeves:typescript-naming` besides it |
+| Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only the skills their agent type names besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
-| Phase 2: run | The coordinator sends "go" once the base is ready; the agent posts the names comment and the briefing, answers questions, reviews the plan and the PR |
+| Phase 2: run | The coordinator sends "go" once the base is ready; the ticket agent posts the names comment and the briefing, answers questions and reviews the plan; each PR head goes to a fresh `jeeves:jaidev-pr-reviewer`, which writes the draft review to the scratchpad |
 | State file | A JSON file in the scratchpad, one entry per ticket, created with `state init` (see "Poll events") |
 | Events | Wake agents and update the state file as "Poll events" describes |
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |

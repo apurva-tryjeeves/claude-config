@@ -12,7 +12,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 - Design doc: {{DESIGN_DOC_URL, e.g. the Notion plan; delete this line when there is none}}. It is the source for names, signatures and behaviour.
 - Code to read first: {{FILES_AND_TESTS}}. Golden tests pin today's behaviour; a ticket that changes behaviour updates them and the PR calls the change out.
 - Linear: use the mcp__claude_ai_Linear__* tools, or mcp__linear__* when that server is connected (load them with ToolSearch). Read the ticket, its comments and its relations. List comments with `limit: 1` (the status comment's timeline) and `limit: 2` only to read a new plan; a full list costs 5k to 25k tokens.
-- This brief holds every rule you need. Load only the jeeves:typescript-naming skill besides it.
+- This brief holds every rule you need. Load only the skills your agent type names besides it.
 - Treat {{MAIN_CHECKOUT}} and every other worktree as read-only. Read code with:
 
   ```bash

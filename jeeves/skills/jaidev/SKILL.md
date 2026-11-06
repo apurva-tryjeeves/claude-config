@@ -363,10 +363,14 @@ the ticket to the user.
 ## Background agents
 
 With two or more tickets in flight, run each in its own background agent. Read
-`references/background-agents.md` first: it holds the agent tiers, the shared-brief
-rules, the state file and the watcher. Start ticket agents from
-`assets/agent-brief-template.md`; it is self-contained, so agents load only
-`jeeves:typescript-naming` besides it.
+`references/background-agents.md` first: it holds the agent types, the
+shared-brief rules, the state file and the watcher.
+
+- Run the ticket work in a `jeeves:jaidev-ticket` agent, started from
+  `assets/agent-brief-template.md`.
+- Run each PR review in a fresh `jeeves:jaidev-pr-reviewer` agent.
+- The agent type sets model sonnet, effort medium, and the skills the agent
+  loads besides the brief.
 
 ## Progress
 
