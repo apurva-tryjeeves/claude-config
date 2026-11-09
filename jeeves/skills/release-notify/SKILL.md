@@ -1,20 +1,20 @@
 ---
 name: release-notify
-description: Draft and post Slack status updates (branch cut-off, deployment in progress, deployment complete) for a Jeeves release, using a Notion release page as the source of truth for the service list. Trigger when a release captain wants to draft or post a release-status Slack message, or points at a Notion release page under Engineering > Releases.
+description: Draft Slack status updates (branch cut-off, deployment in progress, deployment complete) for a Jeeves release as Slack drafts the release captain sends, using a Notion release page as the source of truth for the service list. Trigger when a release captain wants to draft or post a release-status Slack message, or points at a Notion release page under Engineering > Releases.
 ---
 
 # Jeeves Release Notify
 
 | Slack target | Resolve with | Used for |
 |---|---|---|
-| Release captain's DM | `slack_read_user_profile` with no `user_id` — returns the current user's ID | Previewing a finalized draft's look and feel via DM before it goes public |
-| `#deployments` | `$JEEVES_RELEASE_CHANNEL_ID` when set, else `C03E2MRJ8JG` (`#deployments`); read the channel's name from its ID with `slack_read_channel` before naming it to the user | Default posting target for the real release updates |
+| Release captain's DM | `slack_read_user_profile` with no `user_id` — returns the current user's ID | Holding a preview draft the release captain sends to themself to check the rendered look |
+| `#deployments` | `$JEEVES_RELEASE_CHANNEL_ID` when set, else `C03E2MRJ8JG` (`#deployments`); read the channel's name from its ID with `slack_read_channel` before naming it to the user | Default channel for the real release-update drafts |
 
 Draft Slack updates for the three release-process milestones a Jeeves release
 captain announces: branch cut-off complete, deployment in progress, and
-deployment complete. Always show every draft in chat for review before
-posting — sending a message to Slack needs the release captain's explicit
-go-ahead each time, the same as any other send-on-someone's-behalf action.
+deployment complete. Show every draft in chat for review, then save it as a
+Slack draft with `slack_send_message_draft`; the release captain sends it
+from **Drafts & Sent** in Slack.
 
 ## Gather the release page
 
@@ -88,8 +88,8 @@ when the release clearly has other stages too.
 🔗 *Release page:* <bare Notion URL, no angle brackets or pipe syntax>
 
 Every message opens with a channel-wide mention on its own line — `@here` in a
-draft meant for pasting, `<!here>` in text sent through `slack_send_message`
-(the API only pings on `<!here>`) — then the header, using the
+draft meant for pasting, `<!here>` in a draft saved through
+`slack_send_message_draft` (the API only pings on `<!here>`) — then the header, using the
 header text for this release's type (weekly vs hotfix, from the page title
 check above):
 
@@ -140,21 +140,27 @@ with the normalized service list and any shorthand you had to guess at (see
 above), so the release captain can catch problems before anything is sent.
 
 Once the release captain says a draft is final, ask with `AskUserQuestion`:
-"Want me to send this to your DM for preview first, or straight to
+"Want a preview draft in your DM first, or the draft straight in
 #deployments?" — swap in the target channel's real name, read from its ID
 (default `#deployments`, see the table at the top), so the question names the
 channel the message will land in; other release captains use different channels, and even this user may
 want a different one for a particular release.
 
-For a DM preview, send that exact text with `slack_send_message` to
-the release captain's own user ID (see the table at the top) so they can check
-the real rendered look and feel — emoji, bold, inline code, and the link —
-before it goes anywhere public. After the preview lands, ask whether it's
-good to go or needs another pass, then post to the real channel as its own
-separate `slack_send_message` step once they say to go ahead.
+For a DM preview, save that exact text with `slack_send_message_draft` in
+the release captain's own DM (see the table at the top). The captain sends it
+to themself to check the real rendered look and feel — emoji, bold, inline
+code, and the link. Once they confirm it's good to go, save the same text as a
+draft in the real channel as its own separate `slack_send_message_draft` step.
 
-For a direct send, post with `slack_send_message` straight to the confirmed
-channel.
+For a direct draft, save it with `slack_send_message_draft` straight in the
+confirmed channel.
+
+Slack holds one draft per channel. When the tool returns
+`attached_draft_exists`, ask the release captain to send or delete the
+existing draft in that channel, then save the new one.
+
+After each draft is saved, tell the release captain to send it from
+**Drafts & Sent** in Slack.
 
 Use a bare URL for the release-page link — it renders correctly whether the
 message is posted through the Slack API or pasted straight into Slack's
