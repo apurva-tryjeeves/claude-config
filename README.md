@@ -13,7 +13,7 @@ and SonarCloud conventions.
 | AWS SSO access to Jeeves Dev and Production | `aws-secrets`, `opensearch`, `mysql`, `jenkins` |
 | `gh` (logged in to GitHub), `jq`, `uv`, Node.js | CLIs and MCP servers below |
 | `mysql-client@8.4` | `jsql` |
-| claude.ai Slack connector | `release-notify`, `daily-briefing` agent |
+| claude.ai Slack connector | `release-notify` |
 
 ```bash
 brew install gh jq uv node mysql-client@8.4
@@ -87,9 +87,9 @@ under exactly this name:
 | Server | Used by |
 |---|---|
 | `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` agent |
-| `linear` | `linear`, `feature-plan`, `jaidev`, `daily-briefing` agent |
-| `notion` | `notion-templates`, `release-notify`, `hotfix-captain` and `daily-briefing` agents |
-| `github` | `feature-plan`, `daily-briefing` agent |
+| `linear` | `linear`, `feature-plan`, `jaidev` |
+| `notion` | `notion-templates`, `release-notify`, `hotfix-captain` agent |
+| `github` | `feature-plan` |
 
 ```bash
 claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp
