@@ -101,7 +101,7 @@ be asked. A duplicated `(template)` page keeps the formatting it already has.
 | Top of page | A `gray_bg` `<callout>` with a one-line purpose, then `<table_of_contents/>` |
 | Section headings | One leading emoji per `##` / `###` that names the content (`## 🧪 Safety net`); numbered headings keep the number first (`## 1. 📋 TL;DR`) |
 | Warning or priority groups | A sub-heading carrying a signal icon — `### 🚨 Money safety`, `### 🔑 Decides order of work` |
-| Long code, before/after sketches | A `<details><summary>…</summary>` toggle, children tab-indented |
+| Long code, before/after sketches | A `<toggle heading="h3">` block: the title on the line after the opening tag, a blank line, then the children unindented, code in fenced blocks, and `</toggle>` right after the last child |
 | Diagrams | A `mermaid` code block |
 | Repeating columns | `<table header-row="true">` |
 | Questions and follow-ups | `- [ ]` checkboxes |
@@ -122,6 +122,12 @@ Write through the Notion MCP with these behaviours in mind:
   `balance - ${x}`").
 - Keep a `<page url="…">` tag for every child page in a `replace_content`
   body — a child left out is deleted.
+- Write each sub-section as a `### <emoji> …` header: the doc-format-gate
+  hook rejects a bold-only line such as `**Pagination**` standing in for a
+  header, and any `##`/`###` header without a leading emoji.
+- Send a page over about 20k characters as a short `notion-create-pages`
+  body (callout, table of contents, first sections), then append each later
+  `##` section with `insert_content` at `position: end`.
 - A `notion-fetch` result over about 50k characters is saved to a file; verify
   edits by parsing that file (`json.loads(...)['text']`) rather than reading it
   inline.
