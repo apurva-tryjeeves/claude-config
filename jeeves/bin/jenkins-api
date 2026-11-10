@@ -9,12 +9,17 @@
 #   jenkins-api status deploy-DEVELOP-environment
 #   jenkins-api builds wallet-service/development 10
 #   jenkins-api log deploy-DEVELOP-environment 44088
+#   jenkins-api wait deploy-DEVELOP-environment 44088 25
 #   jenkins-api queue
 #
 # Subcommands
 #   status <job> [build]   result/duration/timestamp for a build (default: lastBuild)
 #   builds <job> [n]       the newest n builds (default 10)
 #   log    <job> <build>   the build's console text
+#   wait   <job> <build> [timeout-min] [interval-sec]
+#                          block until the build finishes (default 20 min, 60 s),
+#                          then print its result and the last 40 log lines;
+#                          exits 0 on SUCCESS, 1 on any other result, 2 on timeout
 #   queue                  what is waiting to run, and why
 #   queued <queue-id>      the build number a trigger's queue item became
 #   crumb                  a CSRF crumb, ready to pass as -H on a POST
@@ -90,7 +95,7 @@ api() {
 }
 
 usage() {
-  sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -116,6 +121,40 @@ case "$cmd" in
     [ $# -ge 2 ] || { echo "jenkins-api log <job> <build>" >&2; exit 1; }
     path=$(job_path "$1")
     api "$path/$2/consoleText"
+    ;;
+  wait)
+    # Polls inside this one process, so a caller running it in the background
+    # is woken once, when the build finishes, rather than once per check.
+    [ $# -ge 2 ] || { echo "jenkins-api wait <job> <build> [timeout-min] [interval-sec]" >&2; exit 1; }
+    path=$(job_path "$1")
+    build="$2"
+    timeout_min="${3:-20}"
+    interval="${4:-60}"
+    tree=$(encode_tree 'tree=number,result,building,duration')
+    if [ -n "${JENKINS_API_DRYRUN:-}" ]; then api "$path/$build/api/json?$tree"; exit 0; fi
+    deadline=$(( $(date +%s) + timeout_min * 60 ))
+    while :; do
+      if state=$(api "$path/$build/api/json?$tree" 2>/dev/null); then
+        line=$(printf '%s' "$state" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+if d.get("building"):
+    print("BUILDING")
+else:
+    print("%s %ss" % (d.get("result"), round((d.get("duration") or 0) / 1000)))
+')
+        if [ "$line" != "BUILDING" ]; then
+          echo "#$build $line"
+          api "$path/$build/consoleText" | tail -40
+          case "$line" in SUCCESS*) exit 0 ;; *) exit 1 ;; esac
+        fi
+      fi
+      if [ "$(date +%s)" -ge "$deadline" ]; then
+        echo "#$build still building after ${timeout_min} min" >&2
+        exit 2
+      fi
+      sleep "$interval"
+    done
     ;;
   queue)
     tree=$(encode_tree 'tree=items[why,blocked,stuck,task[name]]')
