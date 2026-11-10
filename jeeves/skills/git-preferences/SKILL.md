@@ -24,6 +24,9 @@ Personal git and PR preferences. This is a living list — add new guidance here
 
 When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with sub-issues `ACC-1557`, `ACC-1561`, …), collect them on one integration branch named after the parent, and ship that branch to the default branch as one PR. A ticket without such a parent branches off the default branch as above.
 
+- Give each phase of a design doc one parent ticket and one PR; keep the doc's step numbers (4.1–4.4) as sections of that PR, not as tickets.
+- Make work that ships on its own timeline a standalone ticket with blocked-by relations: another repo, a DevOps change, or a removal behind a release gate.
+
 | Branch | Created from | PR base | Merge |
 |---|---|---|---|
 | `feat/<PARENT>` (e.g. `feat/ACC-1555`) | the default branch | the default branch, once every sub-issue is in | Squash |
