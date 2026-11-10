@@ -239,5 +239,5 @@ allocated develop environments (see At a glance).
 
 ## 6. Timings and costs
 
-Kept outside the plugin, in `~/.claude/memory/jaidev-run-timings.md`. Read it
+Kept outside the plugin, in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`. Read it
 to estimate a run and add the new run's row to its cost table when it closes out.

@@ -103,7 +103,7 @@ environment.
 6. **Confirm before triggering.** State the exact `ENVIRONMENT` and each
    enabled service's branch and mode, and get explicit go-ahead — this is a
    shared dev environment other people may be using. Mention the expected
-   duration from `~/.claude/memory/jenkins-deploy-timings.md` for the service(s)
+   duration from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` for the service(s)
    being deployed, if a row exists there.
 7. **Trigger.** Same-slot builds run concurrently (see "Concurrency model"),
    so check whether anything is already working on *your* slot. When a build
@@ -210,7 +210,7 @@ for one day (`logRotator(daysToKeepStr: '1')`), so a service's earlier samples
 age out of the API while its row keeps them — merge a fresh sample into the
 existing row (widen min/max, add to the sample size) rather than replacing it.
 A service with no row yet gets one the first time a clean single-service build
-appears for it. Record rows in `~/.claude/memory/jenkins-deploy-timings.md`
+appears for it. Record rows in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
 in the same turn.
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
