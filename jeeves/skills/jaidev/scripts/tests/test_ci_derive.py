@@ -140,6 +140,30 @@ class DeriveRowTest(unittest.TestCase):
         self.assertEqual((row.workflow, row.sample_size), ("unit-test.yml", 2))
         self.assertEqual(row.timing.maximum, s(294))
 
+    def test_skips_dynamic_workflows(self) -> None:
+        dynamic = "dynamic/dependabot/dependabot-updates"
+        listed = [
+            {"name": "Dependabot Updates", "path": dynamic, "state": "active"},
+            {"name": "Unit Test", "path": ".github/workflows/unit-test.yml", "state": "active"},
+        ]
+        timed: list[str] = []
+
+        def runner(args: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+            if args[1] == "run":
+                timed.append(args[args.index("--workflow") + 1])
+                if timed[-1] != "unit-test.yml":
+                    return subprocess.CompletedProcess(args, 1, "", "could not find any workflows")
+            replies = {
+                "workflow": listed,
+                "run": [run("01:00:00", "01:02:12")],
+                "pr": [{"statusCheckRollup": ROLLUP}],
+            }
+            return subprocess.CompletedProcess(args, 0, json.dumps(replies[args[1]]), "")
+
+        row = ci_derive.derive_row("ap-x", runner)
+        self.assertEqual(timed, ["unit-test.yml"])
+        self.assertEqual((row.workflow, row.sample_size), ("unit-test.yml", 1))
+
     def test_no_runs_raise(self) -> None:
         with self.assertRaisesRegex(CiDeriveError, "no successful PR runs"):
             ci_derive.derive_row("ap-x", self.fake_gh([]))

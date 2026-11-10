@@ -31,6 +31,7 @@ MIN_INTERVAL: Final = timedelta(minutes=1)
 MAX_INTERVAL: Final = timedelta(minutes=3)
 TIMEOUT_SECONDS: Final = 60
 MERGED_PRS: Final = 5
+WORKFLOW_DIR: Final = ".github/workflows/"
 _REMOTE: Final = re.compile(r"[/:]([^/:]+?)(?:\.git)?/?$")
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
@@ -237,9 +238,10 @@ def derive_row(repo: str, runner: Runner = subprocess.run) -> DerivedRow:
     for workflow in workflows if isinstance(workflows, list) else []:
         if not isinstance(workflow, dict) or workflow.get("state") != "active":
             continue
-        file = Path(str(workflow.get("path") or "")).name
-        if not file:
+        path = str(workflow.get("path") or "")
+        if not path.startswith(WORKFLOW_DIR):
             continue
+        file = Path(path).name
         runs = _run_json(
             [
                 *("gh", "run", "list", "--repo", slug, "--workflow", file),
