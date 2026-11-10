@@ -72,6 +72,7 @@ python3 -m jaidev_watch watch <state-file>
 - It prints each tick's events before it saves the state, so an interrupted print repeats on the next run.
 - `state init` on an existing ticket exits 2; add `--force` to replace it.
 - One Linear read is one headless `claude -p --model haiku` call for every ticket due on that tick, $0.0057 and 7 to 10 s each (wave 2 usage log, 5 Nov 2026); its cost goes to `<state-file stem>.usage.log`.
+- The Haiku call runs from `scripts/`, where the claude.ai Linear connector is set up, so run `watch` with its default `--tool` (`mcp__claude_ai_Linear__list_comments`) even when the session itself uses `mcp__linear__*`. A `LINEAR POLL ERROR` that says the call was refused means `--tool` names a server `scripts/` lacks (ACC-1642, 10 Nov 2026).
 - GitHub reads (`gh pr list`, from the ticket's `repoDir`) cost nothing.
 - `explain <state-file>` prints each ticket's stage, next checks and deadline; `due <state-file>` prints the checks due now. Both poll nothing.
 - `--merge-watch` adds a 15-min GitHub check for merges made in the GitHub UI.
