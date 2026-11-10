@@ -38,6 +38,7 @@ security find-certificate -c "tryjeeves" -p /Library/Keychains/System.keychain >
 | `jenkins-api status <job> [build]` | result, duration, timestamp (default `lastBuild`) |
 | `jenkins-api builds <job> [n]` | the newest n builds (default 10) |
 | `jenkins-api log <job> <build>` | the build's console text |
+| `jenkins-api wait <job> <build> [timeout-min] [interval-sec]` | blocks until the build finishes (default 20 min, checking every 60 s), then prints its result and the last 40 log lines; exits 0 on `SUCCESS`, 1 on any other result, 2 on timeout |
 | `jenkins-api queue` | what is waiting, and why |
 | `jenkins-api queued <queue-id>` | the build number a trigger's queue item became (takes the id or the whole `Location` URL) |
 | `jenkins-api url <job> [build]` | the browser URL, making no request |
@@ -84,6 +85,14 @@ jenkins-api queued "$(sed -n 's/^location: //Ip' /tmp/trigger-headers.txt)"
 ```
 
 Pass that number to every later `status` and `log` call.
+
+To report when a build finishes, run `wait` once with `run_in_background`. It
+polls inside one process, so the session is woken a single time, when the build
+ends:
+
+```bash
+jenkins-api wait deploy-DEVELOP-environment <build> 25
+```
 
 ## Read a console log
 
