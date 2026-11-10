@@ -361,7 +361,7 @@ the ticket to the user.
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
-- Add the run's row to the cost table in `~/.claude/memory/jaidev-run-timings.md`, and widen a typical range or edit a pattern when the run falls outside it.
+- Add the run's row to the cost table in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`, and widen a typical range or edit a pattern when the run falls outside it.
 - Update the progress and return to step 1.
 
 ## Background agents
