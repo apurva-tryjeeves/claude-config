@@ -107,6 +107,7 @@ separate flow.
 | `name` | varchar(255) | display name — search with `LIKE '%term%'` |
 | `status` | enum | `declined`, `in-active`, `active`, `pending`, `deleted`, `onboarding`, `kyb-kyc-verification` |
 | `isTest` | tinyint(1) | |
+| `hasSelfFundedFeatureEnabled` | tinyint(1) | the "cream" flag — `1` lands web login on the new app (`/client/web/dashboard`), `0` on the old one (`/client/dashboard`) |
 | `createdAt` / `updatedAt` / `deletedAt` | datetime(3) | |
 
 Find a company by name:
@@ -160,6 +161,39 @@ WHERE companyId = <companyId>
   AND deletedAt IS NULL
   AND settingValue = "on"
 ORDER BY settingKey
+```
+
+Accounting flag keys (seen on dev-07 and dev-16): `ACCOUNTING_2_QBO`,
+`ACCOUNTING_2_XERO`, `ACCOUNTING_INTEGRATION`, `ACCOUNTING_NETSUITE_BANK_FEEDS`,
+`ACCOUNTING_NETSUITE_EXPENSES`, `ACCOUNTING_QBO_BANK_FEEDS`,
+`ACCOUNTING_XERO_BANK_FEEDS` (`on`/`off`), `ENABLE_ACCOUNTING_AGENT` (`off`),
+`ENABLE_ACCOUNTING_GL_CODE_AGENT` (holds `No`).
+
+`ACCOUNTING_INTEGRATION` is the Accounting 1.0 flag:
+
+- **New accounting page:** the flag `off` plus the `ACCOUNTING2` tag in `company_tags`.
+- **Old accounting page:** the flag `on` (lumen-engine `migrate-to-old-accounting-page.js`; `migrate-to-new-accounting-page.js` reverses it).
+- **Bulk enable:** turn the other accounting flags on and leave this one out.
+
+## `company_tags`
+
+Tags that switch a company into a product track — e.g. `ACCOUNTING2` marks a
+company as on Accounting 2.0. No `deletedAt`; removing a tag deletes the row.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | int unsigned, PK, auto_increment | |
+| `companyId` | int unsigned | FK to `companies.id` |
+| `tag` | varchar(255) | e.g. `ACCOUNTING2` |
+| `extra` | json | nullable; `NULL` on every `ACCOUNTING2` row seen |
+| `createdAt` / `updatedAt` | datetime | NOT NULL, no default — set both on insert |
+
+Accounting tags per company:
+
+```sql
+SELECT companyId, tag, CAST(extra AS CHAR) AS extra
+FROM company_tags
+WHERE tag LIKE "%accounting%"
 ```
 
 ## Prod connection note

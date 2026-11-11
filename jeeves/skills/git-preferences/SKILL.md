@@ -115,16 +115,20 @@ Jeeves repos squash-merge, so the PR title becomes the commit subject on the bas
 
 | Part | Allowed |
 |---|---|
-| Type | `fix`, `feat`, `chore`, `docs`, `refactor`, `perf`, `test` (optional scope, e.g. `feat(ACC):`) |
+| Type | `fix`, `feat`, `chore`, `docs`, `refactor`, `perf`, `test` (the check also accepts a scope, e.g. `feat(ACC):`) |
 | Subject | starts with the bracketed ticket id `[ABC-123]` (2–6 capitals, a dash, digits), then the description |
 
-1. Push the branch, then open the PR against the default branch (or the parent branch for a sub-ticket), with the title in the commit format and a body file:
+Write the title without a scope, so every PR title reads the same (`references/pr-description.md` → "Title").
+
+1. Offer three or four meaningful titles per "Write the outcome" in `references/pr-description.md`, each with its character count, and use the one the user picks.
+2. Show the whole description as raw markdown in a ` ````markdown ` fence, with the chosen title above it, and post only after the user approves it. Apply the same review to `gh pr edit --title` and `--body-file` on an existing PR.
+3. Push the branch, then open the PR against the default branch (or the parent branch for a sub-ticket), with the approved title and body file:
    ```bash
    gh pr create --repo JeevesInc/<repo> --base <default-branch> --head <branch> \
-     --title "<type>: [<TICKET>] - <description>" --body-file <body.md>
+     --title "<type>: [<TICKET>] - <outcome>" --body-file <body.md>
    ```
-2. Add a `## 🔗 Related PRs` section when the change spans repos (below).
-3. Offer the pollers (see **PR Post-Create Polling**).
+4. Add a `## 🔗 Related PRs` section when the change spans repos (below).
+5. Offer the pollers (see **PR Post-Create Polling**).
 
 ### PR body format
 
@@ -136,7 +140,8 @@ Write the PR title and the description's sections to the structure in `reference
 - Bold each bullet's lead term.
 - Put names, paths and commands in `code`.
 - Use a table for anything with repeating columns.
-- Wrap long logs in `<details>`.
+- Wrap long logs in `<details>`, and fence logs, command output and code with a language tag (`text`, `bash`, `sql`).
+- Put a merge or deploy gate in a GitHub alert (`> [!IMPORTANT]` or `> [!WARNING]`) at the top of `## 🚦 Rollout`, followed by its checklist.
 - Describe the change itself. Keep rebase and cherry-pick mechanics, stacking banners and commit SHAs in the branch graph.
 - Point to PRs in other repos only through `## 🔗 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.
 - Cherry-pick with plain `git cherry-pick` (no `-x`) for commits that land in a PR.
