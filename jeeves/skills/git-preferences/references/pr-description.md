@@ -1,21 +1,42 @@
 # PR description
 
 Write the PR title and body to this structure. It follows accounting-service
-PR #584 (`feat(ACC): [ACC-1587] - …`), the reference for a parent-ticket PR.
+PR #584 (ACC-1587), the reference for a parent-ticket PR.
 `SKILL.md` ("PR body format") holds the style rules: emoji headers, bold lead
 terms, code formatting, tables.
 
 ## Title
 
 ```text
-<type>(<SCOPE>): [<TICKET>] - <imperative outcome>
+<type>: [<TICKET>] - <imperative outcome>
 ```
 
 - **Type:** `feat`, `fix`, `chore`, `docs`, `refactor`, `perf` or `test`.
-- **Scope:** the team key, e.g. `(ACC)`. Optional.
+- **Scope:** write the title without one, so every PR title reads the same.
 - **Ticket:** the PR's own ticket; a parent-ticket PR uses the parent id.
 - **Outcome:** a sentence-case verb phrase saying what the change achieves.
   Join two outcomes with "and".
+
+### Write the outcome
+
+The title becomes the squash commit subject on the base branch, so write the
+outcome as the line a reader of `git log` needs:
+
+- **Lead with the behaviour change:** what the system does differently after
+  the merge (`Import ERP bills through provider ports`), rather than the
+  mechanism or file touched.
+- **Keep it to one idea in about 60 characters:** move routes, class names,
+  conditions ("once …") and caller paths into the body.
+- **Use the domain's words:** the names a reviewer knows from the ticket and
+  the product (bills import, dead-letter page, provider).
+- **Offer three or four meaningful options:** each a different angle on the
+  change (the behaviour, the end state, the user-facing surface), with its
+  character count and the recommended one first. Before `gh pr create`, or
+  when tidying open PRs, show the current title and the options for one PR at
+  a time, and apply the one the user picks.
+- **Share one verb across sibling PRs:** an API and its page read as one
+  feature in `git log` (`Add an admin API to triage accounting dead letters`,
+  `Show and triage accounting dead letters in the CMS`).
 
 ## Pick the shape
 
@@ -42,9 +63,13 @@ terms, code formatting, tables.
 3. `## 🔍 Code review` (parent PR)
    - One intro line, then `### 🧱 Design`, `### ⚠️ Behaviour changes made in
      review` and `### 🧹 Hygiene`, 3–5 bold-lead bullets each.
-4. `## 🚦 Rollout` (parent PR, or any PR that needs deploy steps)
-   - `### 📋 Before deploy`: `- [ ]` items that must hold first (queues,
-     secrets, migrations, flags).
+4. `## 🚦 Rollout` (parent PR, or any PR that needs deploy steps or waits on
+   another PR)
+   - A gated PR opens the section with a `> [!IMPORTANT]` or `> [!WARNING]`
+     alert naming the gate and what breaks if it ships early.
+   - `### 📋 Before merge` (gated PR) or `### 📋 Before deploy`: `- [ ]`
+     items that must hold first (sibling PR live, queues, secrets, build env,
+     migrations, flags); tick an item once it is confirmed.
    - `### 🚀 On deploy`, `### 👀 First 48 hours` (what to watch and where)
      and `### ↩️ Rollback`.
 5. `## 🔗 Related PRs` (when sibling PRs exist)
