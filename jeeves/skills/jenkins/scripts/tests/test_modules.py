@@ -32,7 +32,7 @@ class TestDefaults(unittest.TestCase):
     def test_default_branch(self) -> None:
         for name, expected in [
             ("api", "development"),
-            ("gemini", "main"),
+            ("apex", "development"),
             ("aiweb", "main"),
             ("simulationserver", "main"),
         ]:
@@ -85,7 +85,7 @@ class TestRoundTrip(unittest.TestCase):
     def test_disabled_services_keep_default_branch(self) -> None:
         triples = modules.build([])
         self.assertEqual(
-            triples[modules.NAMES.index("gemini")].fields(), ("false", "main", "latest")
+            triples[modules.NAMES.index("aiweb")].fields(), ("false", "main", "latest")
         )
         self.assertEqual(triples[0].fields(), ("false", "development", "latest"))
 
@@ -94,10 +94,60 @@ class TestRoundTrip(unittest.TestCase):
             modules.parse("a,b,c,d")
         self.assertIn("holds 4 fields (1.33 triples)", str(ctx.exception))
 
+    def test_parse_drops_trailing_form_triples(self) -> None:
+        triples = modules.build([modules.parse_set("apex=feat/X")])
+        packed = modules.render(triples) + "false,main,latest,false,main,rebuild,"
+        self.assertEqual(modules.parse(packed), triples)
+
     def test_summarize(self) -> None:
         self.assertEqual(modules.summarize(modules.build([])), "  (no service enabled)")
         line = modules.summarize(modules.build([modules.parse_set("api=a")]))
         self.assertEqual(line, "  position  1 api                    branch a mode rebuild")
+
+
+def groovy_for(names: list[str]) -> str:
+    """A minimal jeevesPlatformInfo.groovy holding these modules plus two skipped ones."""
+    entries = [
+        f"  '{n}': [\n    'giturl':'git@github.com:JeevesInc/{n}-repo',\n  ]," for n in names
+    ]
+    entries.insert(1, "  'nogit': [\n    'giturl':'',\n  ],")
+    entries.append(
+        "  'calm': [\n    'giturl':'git@github.com:JeevesInc/CALM',\n"
+        "    'standaloneHelmRelease': [\n      'file': 'x.yml',\n    ]\n  ],"
+    )
+    return "def modules = [\n" + "\n".join(entries) + "\n]\n"
+
+
+class TestCheckLibrary(unittest.TestCase):
+    def test_library_services_filters_like_the_pipeline(self) -> None:
+        services = modules.library_services(groovy_for(["api", "web"]))
+        self.assertEqual(
+            services, [modules.Service("api", "api-repo"), modules.Service("web", "web-repo")]
+        )
+
+    def test_in_sync(self) -> None:
+        self.assertEqual(
+            modules.check_library(groovy_for(list(modules.NAMES))),
+            "SERVICES matches jenkins-library (45 services)",
+        )
+
+    def test_drift_lists_changes_and_replacement(self) -> None:
+        names = [n for n in modules.NAMES if n != "apex"] + ["newsvc"]
+        with self.assertRaises(modules.ModulesError) as ctx:
+            modules.check_library(groovy_for(names))
+        text = str(ctx.exception)
+        self.assertIn("added there: newsvc", text)
+        self.assertIn("removed there: apex", text)
+        self.assertIn('    Service("newsvc", "newsvc-repo"),', text)
+
+    def test_missing_map(self) -> None:
+        with self.assertRaises(modules.ModulesError):
+            modules.library_services("def other = []")
+
+    def test_cli_check_stdin(self) -> None:
+        code, out, _ = run_cli("--check", "-", stdin=groovy_for(list(modules.NAMES)))
+        self.assertEqual(code, 0)
+        self.assertIn("matches jenkins-library", out)
 
 
 class TestCli(unittest.TestCase):
@@ -135,7 +185,7 @@ class TestCli(unittest.TestCase):
     def test_no_arguments_is_usage_error(self) -> None:
         code, _, err = run_cli()
         self.assertEqual(code, 2)
-        self.assertIn("choose --set, --decode, or --list", err)
+        self.assertIn("choose --set, --decode, --list, or --check", err)
 
 
 if __name__ == "__main__":

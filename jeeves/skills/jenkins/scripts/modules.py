@@ -17,6 +17,10 @@ leaves disabled services untouched in the environment.
     python3 scripts/modules.py --decode "$MODULES"
     python3 scripts/modules.py --list
 
+    # compare SERVICES with jenkins-library's module list
+    git -C <jenkins-library> show origin/master:vars/jeevesPlatformInfo.groovy \
+      | python3 scripts/modules.py --check -
+
 The built string goes to stdout and a summary to stderr, so
 `MODULES=$(python3 scripts/modules.py ...)` captures the value alone.
 """
@@ -25,10 +29,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Final
 
 LOG: Final = logging.getLogger("modules")
@@ -76,7 +82,7 @@ class SetRequest:
 
 # Positional order the job reads MODULES in. Source of truth: jenkins-library
 # vars/jeevesPlatformInfo.groovy, the `modules` map filtered to a non-empty
-# `giturl` and no `standaloneHelmRelease`. Update this list when that changes.
+# `giturl` and no `standaloneHelmRelease`. `--check` compares the two.
 SERVICES: Final[tuple[Service, ...]] = (
     Service("api", "backend"),
     Service("frontend", ""),
@@ -121,8 +127,8 @@ SERVICES: Final[tuple[Service, ...]] = (
     Service("merchantdatacleaner", ""),
     Service("rfiservice", ""),
     Service("stablecoinservice", "stablecoin-service"),
-    Service("gemini", "gemini"),
     Service("jeeveserpservice", "jeeves-erp-service"),
+    Service("apex", "apex"),
 )
 NAMES: Final[tuple[str, ...]] = tuple(s.name for s in SERVICES)
 FIELDS_PER_SERVICE: Final = 3
@@ -130,7 +136,7 @@ FIELDS_PER_SERVICE: Final = 3
 # Branch the form pre-fills in a disabled triple: `main` for these, `development`
 # for the rest. The pipeline builds and deploys only enabled services, so a
 # disabled triple's branch and mode are never read.
-MAIN_BRANCH: Final = frozenset({"simulationserver", "aiweb", "gemini"})
+MAIN_BRANCH: Final = frozenset({"simulationserver", "aiweb"})
 
 
 def default_branch(name: str) -> str:
@@ -142,13 +148,18 @@ def disabled_triple(name: str) -> Triple:
 
 
 def parse(modules: str) -> list[Triple]:
-    """Split a MODULES string into one triple per service."""
+    """Split a MODULES string into one triple per service.
+
+    The job's form can append triples for modules the pipeline skips (standalone
+    HelmReleases such as calm); `parseModulesForm` reads only the first
+    len(SERVICES) triples, so the extra trailing ones are dropped here too.
+    """
     fields = modules.strip().rstrip(",").split(",")
     expected = len(SERVICES) * FIELDS_PER_SERVICE
-    if len(fields) != expected:
+    if len(fields) < expected or len(fields) % FIELDS_PER_SERVICE:
         raise ModulesError(
             f"MODULES holds {len(fields)} fields ({len(fields) / 3:.2f} triples); "
-            f"the job reads {expected} ({len(SERVICES)} services x 3). "
+            f"the job reads the first {expected} ({len(SERVICES)} services x 3). "
             "Rebuild it with --set so every service keeps its position, and re-check "
             "SERVICES against jenkins-library jeevesPlatformInfo."
         )
@@ -206,6 +217,58 @@ def build(requests: Sequence[SetRequest]) -> list[Triple]:
     return triples
 
 
+_ENTRY_KEY: Final = re.compile(r"""\s*['"]?([A-Za-z0-9_-]+)['"]?\s*:\s*\[""")
+_GITURL: Final = re.compile(r"""['"]giturl['"]\s*:\s*['"]([^'"]*)['"]""")
+
+
+def library_services(groovy: str) -> list[Service]:
+    """Deployable modules of jeevesPlatformInfo.groovy, in the order the job reads them.
+
+    Mirrors jeevesUtils.parseModulesForm: keep entries of the `modules` map with a
+    non-empty `giturl` and no `standaloneHelmRelease`.
+    """
+    start = groovy.find("def modules = [")
+    if start < 0:
+        raise ModulesError("no `def modules = [` map found in the input")
+    body = groovy[start:]
+    i, depth, services = body.index("[") + 1, 1, []
+    while depth and i < len(body):
+        match = _ENTRY_KEY.match(body, i) if depth == 1 else None
+        if match:
+            j, inner = match.end(), 1
+            while inner:
+                inner += {"[": 1, "]": -1}.get(body[j], 0)
+                j += 1
+            entry = body[match.end() : j - 1]
+            giturl = _GITURL.search(entry)
+            if giturl and giturl.group(1) and "standaloneHelmRelease" not in entry:
+                repo = giturl.group(1).rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+                services.append(Service(match.group(1), repo))
+            i = j
+            continue
+        depth += {"[": 1, "]": -1}.get(body[i], 0)
+        i += 1
+    return services
+
+
+def check_library(groovy: str) -> str:
+    """'in sync' summary, or a ModulesError carrying the SERVICES lines to paste."""
+    library = library_services(groovy)
+    names = [s.name for s in library]
+    if names == list(NAMES):
+        return f"SERVICES matches jenkins-library ({len(names)} services)"
+    added = [n for n in names if n not in NAMES]
+    removed = [n for n in NAMES if n not in names]
+    lines = [
+        f"SERVICES differs from jenkins-library: {len(NAMES)} here, {len(names)} there",
+        f"  added there: {', '.join(added) or '-'}",
+        f"  removed there: {', '.join(removed) or '-'}",
+        "Replace SERVICES with:",
+        *(f'    Service("{s.name}", "{s.repo}"),' for s in library),
+    ]
+    raise ModulesError("\n".join(lines))
+
+
 def list_services() -> str:
     lines = [f"{'#':>3}  {'Service':<22} {'Default':<12} Repo"]
     lines.extend(
@@ -233,12 +296,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="print what a MODULES string resolves to; '-' reads stdin",
     )
     p.add_argument("--list", action="store_true", help="print the positional service order")
+    p.add_argument(
+        "--check",
+        metavar="GROOVY",
+        help="compare SERVICES with a jeevesPlatformInfo.groovy file; '-' reads stdin",
+    )
     return p
 
 
 def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     if args.list:
         print(list_services())
+        return
+
+    if args.check is not None:
+        groovy = sys.stdin.read() if args.check == "-" else Path(args.check).read_text()
+        print(check_library(groovy))
         return
 
     if args.decode is not None:
@@ -249,7 +322,7 @@ def run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
         return
 
     if not args.set:
-        parser.error("choose --set, --decode, or --list")
+        parser.error("choose --set, --decode, --list, or --check")
 
     triples = build([parse_set(item) for item in args.set])
     modules = render(triples)
