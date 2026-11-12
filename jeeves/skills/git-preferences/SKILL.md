@@ -146,6 +146,28 @@ Write the PR title and the description's sections to the structure in `reference
 - Point to PRs in other repos only through `## 🔗 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.
 - Cherry-pick with plain `git cherry-pick` (no `-x`) for commits that land in a PR.
 
+## Sync a feature branch onto the default branch
+
+Show the plan first: per repo, the current branch, how far local `<default>` is behind origin,
+the feature branch's own commit count, the default-branch commits it will pick up, and the
+commands. Run nothing until the user approves it.
+
+```bash
+cd ~/github/JeevesInc/<repo>
+git switch <default-branch>
+git pull --ff-only origin <default-branch>
+git switch <feature>            # git switch -c <feature> --track origin/<feature> when it isn't local
+git rebase <default-branch>
+git push --force-with-lease origin <feature>
+```
+
+- Start only from a clean working tree; report a dirty one and skip that repo.
+- On a rebase conflict, stop, list the conflicted files, and wait for the user.
+- Force-push only with `--force-with-lease`, and only after the user approves the plan.
+- Report a table: PR link, new head, commits replayed, behind-default count (0 after a clean run).
+- After the push, note that dev environments still run the old head until redeployed, and that an
+  approval given before the new commits may need a fresh review.
+
 ## Cross-Repo Related PRs
 
 When a change spans PRs in different repos, link each PR to the others in its description. Add a `## 🔗 Related PRs` table listing every sibling PR as a full link, what it covers, and its state:
@@ -201,7 +223,12 @@ Watches CI/check status until it settles.
   ```
   Set `First check` a little under the fastest duration and `Interval` from the spread between fastest and slowest, then add the row (repo, long-pole workflow, check name, min/max/mean, sample size, first check, interval) per **Write back a timing row** below, and start polling once the agent reports back.
 - After checks settle, if the actual settle time differs noticeably from the remembered cadence, refine that repo's row in the same turn, per **Write back a timing row**.
-- Use `/loop`'s dynamic mode (`ScheduleWakeup`) for the recurring execution, including when asked to "run in the background" or "move to background" — it re-invokes the session each interval, so every tick is a fresh check.
+- Start the poller by invoking the `loop` skill with no interval (dynamic mode), passing the
+  poll prompt: the PR, the repo, its `First check` and `Interval` from the timing row, and the
+  `Settles on` checks. Each tick then schedules the next one with `ScheduleWakeup`. Use this for
+  "run in the background" too; a hand-written shell loop or `Monitor` replaces it only when the
+  user asks for one.
+- Several PRs: one poller per PR, each on its own repo's `First check` and `Interval`.
 - Poll with `statusCheckRollup`, which exits 0 while checks are still running:
   ```bash
   gh pr view <n> --repo JeevesInc/<repo> --json statusCheckRollup --jq '.statusCheckRollup[] | {name, status, conclusion}'
@@ -218,6 +245,9 @@ ${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/
 ```
 
 Leave the edit uncommitted and tell the user it is ready to review and push. When that directory doesn't exist, report the new row and the proposed edit instead. Read the source clone's copy of the table when it exists, else this skill's own `references/ci-check-timing.md`.
+Read the clone as it is on disk: its branch, working tree and `master` stay exactly as the user
+left them, with no `pull`, `switch`, `reset` or `stash`. The user owns its git state. To open a
+PR against claude-config itself, work in a separate `git worktree` cut from `origin/master`.
 
 ## Report findings
 
@@ -234,6 +264,11 @@ Icons, linking and value-rendering vocabulary live in the shared
   lines naming the cause; the passing ones stay off the table.
 - **While checks still run**, give elapsed against the expected settle time from
   `references/ci-check-timing.md`: `⏳ 2m10s elapsed · ~6m expected`.
+
+**PR status:**
+
+- When the approving review's `commit_id` predates the head, say so: the approval was given on
+  `<sha>` before the latest commits.
 
 **Comments poller:**
 
