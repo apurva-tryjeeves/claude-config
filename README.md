@@ -122,8 +122,9 @@ the Slack connector at claude.ai → Settings → Connectors.
 
 | What | Used by | Set it up |
 |---|---|---|
-| `~/.config/jeeves/mysql/<env>.env` (dev, preprod) | `mysql`, `trace-tx`, `provision-wallet-via-sql` | In Claude Code run `! jsql-pull-secrets` — it pulls every dev/preprod file from Secrets Manager |
+| `~/.config/jeeves/mysql/<env>.env` (dev, preprod) | `mysql`, `trace-tx`, `provision-wallet-via-sql`, `invite-dev-company-user` | In Claude Code run `! jsql-pull-secrets` — it pulls every dev/preprod file from Secrets Manager |
 | `~/.config/jeeves/mysql/prod.env` | `mysql` (prod), `trace-tx`, `prod-debug` | Create by hand from Keeper — see below |
+| Keychain item `jeeves-cms-dev` | `invite-dev-company-user` | Run `security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w` and enter the CMS super-admin password at the prompt |
 | `~/.config/jeeves/jenkins/dev.env` | `jenkins` | Create by hand — see below |
 | `SONAR_TOKEN` | `sonar-fix` | sonarcloud.io → My Account → Security → generate a token, then `export SONAR_TOKEN=…` in `~/.zshrc` |
 | `JEEVES_REPOS_DIR` (optional) | `jenkins` | Where your repo checkouts live; defaults to `~/github/JeevesInc` |

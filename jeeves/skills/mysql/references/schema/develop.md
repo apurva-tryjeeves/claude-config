@@ -125,14 +125,74 @@ WHERE name LIKE "%term%"
 | `id` | int unsigned, PK, auto_increment | |
 | `uuid` | char(36) | |
 | `companyId` | int unsigned | FK to `companies.id` |
-| `email` | varchar(255) | |
+| `email` | varchar(255) | Same value as the user's `invite_users.email`, alias included — see `invite_users` |
 | `role` | enum | `admin`, `manager`, `employee`, `bookkeeper`, `finance` |
 | `status` | enum | same set as `companies.status` |
 
 Adding a user to a company goes through the web dashboard's invite flow
 (`POST /web/user/invite-users`, in `modules/v2/web/user/`), which generates
 the UUID, sends the onboarding email, and enforces MFA + duplicate-seat
-guards — don't hand-insert a row into `users` for a real invite.
+guards. CMS admins invite through `POST /v2/admin/invite-users`. Create users
+through one of these two invite flows: the invite lands in `invite_users`, and
+the `users` row appears once the invitee accepts.
+
+## `invite_users`
+
+One row per invitation to join a company — answers "was this user invited, and
+have they accepted?".
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | int unsigned, PK, auto_increment | |
+| `companyId` | int unsigned | FK to `companies.id` |
+| `adminId` | int unsigned, nullable | CMS admin who sent the invite |
+| `email` | varchar(255) | Typed address or alias — see the bullets below |
+| `normalizedEmail` | varchar(255) | The address as typed — look the invite up by this |
+| `role` | enum | `admin`, `manager`, `employee`, `bookkeeper`, `finance`; default `admin` |
+| `status` | enum | `pending`, `active`, `in-active`, `declined`, `deleted`, `onboarding`, `kyb-kyc-verification`; a new invite is `pending` and turns `active` on acceptance |
+| `isInvitedByAdmin` | tinyint(1) | `1` for a CMS invite |
+| `createdUserId` | int unsigned, nullable | `users.id` once accepted; `NULL` while pending |
+| `createdAt` | datetime | UTC, no milliseconds |
+| `deletedAt` | datetime, nullable | Set when the invite is cancelled |
+
+How `email` is chosen (backend `modules/v2/web/user/userService.js`):
+
+- The invite keeps the typed address while no live user or invite holds it.
+- When one does, the invite gets an alias `<local>+<companyId>-<8 hex>@<domain>`, e.g. `jane+12-75179971@tryjeeves.com` (`generateUniqueEmailForNewUser`).
+- A cancelled invite that holds the typed address is renamed to an alias, and the new invite keeps the typed address (`freeUpDeletedEmailsForReuse`).
+- The `users` row created on acceptance keeps the invite's `email`; find a user by the address they typed through `invite_users.normalizedEmail` joined on `createdUserId`.
+
+```sql
+SELECT id, companyId, email, normalizedEmail, role, status, createdUserId, createdAt
+FROM invite_users
+WHERE companyId = <companyId> AND normalizedEmail = "<email>"
+ORDER BY id DESC
+```
+
+## `notification_audits`
+
+One row per notification notification-service sent (email, SMS, OTP and more) —
+answers "did this email go out, and when?".
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | int unsigned, PK, auto_increment | |
+| `emailType` | varchar(200) | Template type, e.g. `INVITE_USERS`, `MULTIFACTOR_ACTION_CODE` |
+| `toEmail` | varchar(200) | Recipient with any `+alias` removed (`jane+12-75179971@x.com` → `jane@x.com`) |
+| `awsMessageId` | varchar(200) | SES message id; set when SES accepted the mail |
+| `notificationType` | enum | `email`, `sms`, `otp`, `mobile-app`, `whatsapp`, `voice-call`, `mobile-biometric`, `passkey` |
+| `emailOpenedAt` | datetime, nullable | First open, from the tracking image |
+| `createdAt` | datetime | UTC |
+
+A mail blocked before sending (e.g. a domain outside `ALLOWED_EMAIL_DOMAINS` on a
+dev env) leaves no row.
+
+```sql
+SELECT id, toEmail, emailType, awsMessageId, createdAt
+FROM notification_audits
+WHERE toEmail = "<address without +alias>" AND emailType = "INVITE_USERS"
+ORDER BY id DESC
+```
 
 ## `company_settings`
 
