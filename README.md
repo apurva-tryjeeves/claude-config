@@ -126,7 +126,7 @@ the Slack connector at claude.ai → Settings → Connectors.
 | `~/.config/jeeves/mysql/prod.env` | `mysql` (prod), `trace-tx`, `prod-debug` | Create by hand from Keeper — see below |
 | `~/.config/jeeves/jenkins/dev.env` | `jenkins` | Create by hand — see below |
 | `SONAR_TOKEN` | `sonar-fix` | sonarcloud.io → My Account → Security → generate a token, then `export SONAR_TOKEN=…` in `~/.zshrc` |
-| `JEEVES_REPOS_DIR` (optional) | `jenkins` | Where your repo checkouts live; defaults to `~/github/JeevesInc` |
+| `JEEVES_REPOS_DIR` (optional) | `jenkins`, `sync-repos` | Where your repo checkouts live; defaults to `~/github/JeevesInc` |
 | `JEEVES_RELEASE_CHANNEL_ID` (optional) | `release-notify` | Overrides the default `#deployments` channel id |
 | `JEEVES_PLUGIN_SRC` (optional) | skills that record what they learn | Your clone of this repo; defaults to `~/github/apurva-tryjeeves/claude-config` — see Contributing |
 

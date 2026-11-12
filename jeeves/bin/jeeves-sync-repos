@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Fast-forward each JeevesInc repo's default branch from origin, leaving every checkout where it is.
+root="${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}"
+printf '%s\t%s\t%s\n' repo branch result
+for dir in "$root"/*/; do
+  repo=$(basename "$dir")
+  [ -d "$dir/.git" ] || continue                       # skips worktrees and non-repos
+  default=$(git -C "$dir" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')
+  [ -n "$default" ] || { printf '%s\t-\tno origin/HEAD\n' "$repo"; continue; }
+  current=$(git -C "$dir" branch --show-current)
+  if [ "$current" = "$default" ]; then
+    if [ -n "$(git -C "$dir" status --porcelain)" ]; then result="skipped: dirty"
+    else result=$(git -C "$dir" pull -q --ff-only origin "$default" 2>&1 && echo updated); fi
+  else
+    result=$(git -C "$dir" fetch -q origin "$default:$default" 2>&1 && echo "updated (stayed on $current)")
+  fi
+  printf '%s\t%s\t%s\n' "$repo" "$default" "${result//$'\n'/ }"
+done
