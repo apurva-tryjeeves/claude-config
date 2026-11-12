@@ -11,7 +11,6 @@ Sources, read on 2026-11-12:
 | `jenkins-pipelines` → `deploy/deploy-DEVELOP-environment.jenkins` | The stages, locks and timeouts |
 | `jenkins-library` → `vars/buildUtils.groovy` (`buildModules`), `buildService.groovy`, `buildCMS.groovy`, `dockerBuildAndPush.groovy`, `imageScan.groovy`, `resources/security/image-scan.sh` | The per-service build |
 | `jenkins-library` → `vars/jeevesUtils.groovy` (`parseModulesForm`, `checkRollout`), `flux.groovy`, `eks.groovy` | Parsing, the HelmRelease update and the rollout check |
-| Build #46681 (`develop-07`, `accounting` + `cms`, both `rebuild`) | The log lines quoted below |
 
 When a log shows a step this file leaves out, read the pipeline source above,
 then add the step here in the same turn.
@@ -34,7 +33,7 @@ first use.
 | Step | Log lines |
 |---|---|
 | Load `jenkins-library` at `master` | `Loading library jeeves@master`, then `Checking out Revision <sha> (master)` |
-| Schedule the Kubernetes deploy pod (`pod-templates/developWorkerSpot.yml`) | `Pod [Pending][Unschedulable] ...` while a spot node comes up, then `Agent ... is provisioned` |
+| Schedule the Kubernetes deploy pod (`pod-templates/developWorkerSpot.yml`) | `Pod [Pending][Unschedulable] ...`, then `Agent ... is provisioned` |
 | Check out `jenkins-pipelines` | `(Declarative: Checkout SCM)`, `Cloning repository git@github.com:JeevesInc/jenkins-pipelines` |
 
 ## 2. `prepare`
@@ -90,25 +89,21 @@ Runs when at least one service has a tag.
 | Set each enabled service's `image.tag` (and `enabled: true`) in `us-east-2/helm-releases/jeeves-<env>.yml` | `git --no-pager diff` showing `-        tag: <old>` and `+        tag: <new>` per service |
 | Commit and push to `master` | `[Jenkins] Update jeeves-<env> with deploy-DEVELOP-environment n. <build>`, then `remote: Bypassed rule violations for refs/heads/master` and `master -> master` |
 
-The diff's `-        tag:` line is the tag that service ran before this
-deploy.
+The diff's `-        tag:` line is the tag the HelmRelease file held before
+this commit.
 
 ## 5. `check rollout`
 
 | Step | Log lines |
 |---|---|
 | Make FluxCD fetch the new config commit | `flux reconcile source git flux-system`, `✔ fetched revision master@sha1:<commit>`, then two 10 s sleeps |
-| Restart the deployments of every enabled service in `latest` mode | `Modules with latest tag: [...]`, then `kubectl ... rollout restart deploy <name>` each. A rebuild lists `[]` here: its new tag in the HelmRelease rolls the pods instead |
+| Restart the deployments of every enabled service in `latest` mode | `Modules with latest tag: [...]`, then `kubectl ... rollout restart deploy <name>` each. A rebuild lists `[]` here |
 | Watch each deployment of each enabled service roll out, one at a time | `Deployment list: [<deployments>]`, `kubectl -n <env> get deploy <name>`, `kubectl --namespace <env> rollout status deploy <name> --watch`, then `deployment "<name>" successfully rolled out` |
 
 Deployments per service come from `jeevesPlatformInfo.modules[<service>].deployment`,
 for example `cms` → `cms`, and `accounting` → `accounting-api`,
 `accounting-worker`, `accounting-jobexecutor`. A listed deployment missing
 from the env logs `Deployment [<name>] not found: skip`.
-
-`Waiting for deployment "<name>" rollout to finish: 1 old replicas are pending termination...`
-is kubectl reporting that the new replicas are updated and an old one is
-still running.
 
 When a watch outlasts the 10 min timeout, the log reads, in order:
 
@@ -120,9 +115,8 @@ Timeout has been exceeded
 Finished: ABORTED
 ```
 
-The deployments after it in the list are left unchecked, and the HelmRelease
-commit from `deploy` stays in place, so FluxCD keeps applying the new tag.
-Report it as a failed rollout per SKILL.md → "Reporting results".
+The deployments after it in the list are left unchecked. Report it as a
+failed rollout per SKILL.md → "Reporting results".
 
 ## 6. Post
 
