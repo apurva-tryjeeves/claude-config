@@ -40,9 +40,11 @@ environment.
   `scripts/modules.py` holds this order. The pipeline's own source of it is
   `jenkins-library` `vars/jeevesPlatformInfo.groovy`: the `modules` map,
   filtered to entries with a non-empty `giturl` and no
-  `standaloneHelmRelease`. The script builds and reads the value, keeping
-  every service on its own position and checking the string carries one
-  triple per service:
+  `standaloneHelmRelease`; `jeevesUtils.parseModulesForm` reads only that
+  many triples. The job's form can append extra triples for skipped modules
+  (`calm`, `calmweb`), which the pipeline ignores. The script builds and
+  reads the value, keeping every service on its own position, and drops
+  those trailing triples when decoding:
 
   ```bash
   python3 scripts/modules.py --list               # position, service, local repo
@@ -114,14 +116,9 @@ environment.
    blocker:
 
    ```bash
-   jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=builds[number,building,actions[parameters[name,value]]]{0,10}" \
-   | python3 -c "
-   import json, sys
-   for b in json.load(sys.stdin)['builds']:
-       params = {p['name']: p['value'] for a in b.get('actions', []) for p in a.get('parameters', [])}
-       if b['building']:
-           print('building:', b['number'], params.get('ENVIRONMENT'))
-   "
+   TREE='builds[number,building,actions[parameters[name,value]]]{0,10}'
+   jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=${TREE}" \
+     | python3 scripts/build-params.py --building
    jenkins-api queue
    ```
 
@@ -165,7 +162,8 @@ environment.
    different service than the one you meant:
 
    ```bash
-   jenkins-api log deploy-DEVELOP-environment <number> | grep -E 'Cloning repository|Failed in branch'
+   jenkins-api log deploy-DEVELOP-environment <number> \
+     | grep -E 'Cloning repository|Failed in branch'
    ```
 
    Then interpret the outcome using "Reading a build's outcome" below rather
@@ -192,8 +190,8 @@ before triggering into a busy environment.
 | `... not found` + `Error restarting X. Not a big deal` | The service has no matching cron/side deployment in this environment — expected/benign, not a build failure signal |
 | `rollout status deploy <x>` then `exceeded its progress deadline` / `Timeout has been exceeded`, ending `Finished: ABORTED` | The newly deployed service stayed unready until the deadline — a genuine app/code issue in the deployed module, not a user abort. Report it as a failed rollout |
 | `ERROR: resolveLatestTag: expected exactly one non-latest tag alongside :latest for <repo>, found N` | Mode `latest` hit an ECR image with zero or several real tags. Retrigger that service with `:rebuild` |
-| `ArrayIndexOutOfBoundsException: Index <n> out of bounds` in `parseModulesForm` | The `MODULES` triple count no longer matches `jeevesPlatformInfo`'s module list. Re-check the order against `jenkins-library` and update `SERVICES` in the source clone |
-| `Couldn't find any revision to build` on a repo you did not target, within a minute or two of the trigger | The `MODULES` triples shifted position, so your branch landed on a neighbouring service whose repo has no such branch. The build stops at checkout, so nothing deployed. Rebuild the string with `scripts/modules.py` and retrigger |
+| `ArrayIndexOutOfBoundsException: Index <n> out of bounds` in `parseModulesForm` | The `MODULES` triple count no longer matches `jeevesPlatformInfo`'s module list. Run "Re-sync `SERVICES` with jenkins-library" below, then retrigger |
+| `Couldn't find any revision to build` on a repo you did not target, within a minute or two of the trigger | The `MODULES` triples shifted position, so your branch landed on a neighbouring service whose repo has no such branch. The build stops at checkout, so nothing deployed. Run "Re-sync `SERVICES` with jenkins-library" below, rebuild the string with `scripts/modules.py`, and retrigger |
 
 Diagnose from the console log, and from the pipeline source that
 `deploy-develop-environment-stages.md` cites when a line needs explaining.
@@ -201,6 +199,37 @@ Diagnose from the console log, and from the pipeline source that
 Every build result — success, failure and aborted — posts to the
 `#jenkins-ci-dev` Slack channel via the pipeline's `slackSend` post-action
 step.
+
+## Re-sync `SERVICES` with jenkins-library
+
+Run this when a triggered build fails with either positional signature above,
+or when `--decode` reports a field count it cannot read.
+
+1. Compare the script's `SERVICES` with `jenkins-library` master:
+
+   ```bash
+   git -C "${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}/jenkins-library" fetch -q origin
+   git -C "${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}/jenkins-library" \
+     show origin/master:vars/jeevesPlatformInfo.groovy \
+     | python3 scripts/modules.py --check -
+   ```
+
+   - `SERVICES matches jenkins-library (N services)` means the order is current;
+     look for the failure's cause in the console log instead.
+   - On a mismatch it names the modules added and removed upstream and prints
+     the full replacement `SERVICES` block.
+2. Apply the change in your clone of the plugin
+   (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/scripts/modules.py`):
+   - Replace `SERVICES` with the printed block.
+   - Set `MAIN_BRANCH` to the modules with a `developmentbranch` other than `development` (today `simulationserver`, `aiweb`).
+   - Update `tests/test_modules.py` where it names a removed module or the service count.
+3. Run the tests, then rebuild `MODULES` and retrigger:
+
+   ```bash
+   python3 -m unittest discover -s scripts/tests -q
+   ```
+
+4. Leave the change uncommitted and tell the user it is ready to review and push.
 
 ## Per-service deploy timing
 
@@ -224,21 +253,9 @@ one batched request, filter to
 that service:
 
 ```bash
-jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=builds[number,result,duration,actions[parameters[name,value]]]{0,300}" \
-| python3 -c "
-import json, sys
-sys.path.insert(0, 'scripts')
-from modules import NAMES, parse
-for b in json.load(sys.stdin)['builds']:
-    if b['result'] != 'SUCCESS' or not b['duration']:
-        continue
-    params = {p['name']: p['value'] for a in b.get('actions', []) for p in a.get('parameters', [])}
-    if not params.get('MODULES'):
-        continue
-    enabled = [NAMES[i] for i, t in enumerate(parse(params['MODULES'])) if t[0] == 'true']
-    if len(enabled) == 1:
-        print(enabled[0], b['number'], b['duration'])
-"
+TREE='builds[number,result,duration,actions[parameters[name,value]]]{0,300}'
+jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=${TREE}" \
+  | python3 scripts/build-params.py --single-service
 ```
 
 **Caveat:** these durations reflect a **single-service** build. A build

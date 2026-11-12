@@ -141,10 +141,11 @@ before working with a job:
 
 | Script | Use it for |
 | --- | --- |
-| `scripts/modules.py` | Building and decoding `deploy-DEVELOP-environment`'s packed `MODULES` parameter — `--set`, `--decode`, `--list`. It holds the service order, so every service keeps its own position, and enables only the services passed to `--set` |
+| `scripts/modules.py` | Building and decoding `deploy-DEVELOP-environment`'s packed `MODULES` parameter — `--set`, `--decode`, `--list`, and `--check` against `jenkins-library` (see the deploy reference's re-sync step). It holds the service order, so every service keeps its own position, and enables only the services passed to `--set` |
 | `scripts/build-table.py` | Rendering several builds as a markdown table with icons, durations and links |
+| `scripts/build-params.py` | Reading a `builds[...]` response with parameters on stdin: `--building` lists running builds and their `ENVIRONMENT`, `--single-service` lists `service number duration` for SUCCESS builds that enabled one service, no flag prints a tab-separated row per build |
 
-Both take a `scripts/`-relative path, so run them from this skill's own
+All take a `scripts/`-relative path, so run them from this skill's own
 directory (`cd` there first, or prefix the path).
 
 Build a packed positional parameter with its script rather than assembling the

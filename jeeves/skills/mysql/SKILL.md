@@ -255,6 +255,7 @@ For these requests, go straight to the listed table and its ready-made query:
 | Login OTP / MFA / verification code for a user | `develop_<n>` | `multifactor_action_code` | `references/schema/develop.md` → `multifactor_action_code` |
 | Company by name | `develop_<n>` | `companies` | `references/schema/develop.md` → `companies` |
 | User by email | `develop_<n>` | `users` | `references/schema/develop.md` → `users` |
+| Invites to a company — invited users, pending or accepted | `develop_<n>` | `invite_users` | `references/schema/develop.md` → `invite_users` |
 | Exchange rate | `develop_<n>` | `exchange_rates` | `references/schema/develop.md` → `exchange_rates` |
 | Feature flags enabled for a company | `develop_<n>` | `company_settings` | `references/schema/develop.md` → `company_settings` |
 | Accounting integrations / connections (QBO, Xero, NetSuite via Codat) — which companies have one, their status | `accounting_<n>` | `integration` | `references/schema/accounting.md` → `integration` |
