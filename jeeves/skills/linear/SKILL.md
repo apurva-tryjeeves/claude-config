@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Look up, create, update, and query Linear issues for JeevesInc, and draft issue/comment replies tailored to engineering, product, or customer-support audiences. Trigger when the user references a Linear ticket (e.g. WAL-1234, ACC-1234) or URL, starts work on a ticket, asks to create/update an issue, asks for their open tickets or cycle status, or asks to draft/post a reply on a ticket.
+description: Look up, create, update, and query Linear issues for JeevesInc, and draft issue/comment replies tailored to engineering, product, or customer-support audiences. Trigger when the user references a Linear ticket (e.g. WAL-1234, ACC-1234) or URL, starts work on a ticket, asks to create/update an issue, asks for their open tickets or cycle status, or asks to draft/post a reply on a ticket. Load before any Linear write (`save_issue`, `save_comment`).
 ---
 
 # Linear
@@ -105,9 +105,18 @@ Use `mcp__linear__save_issue`:
   `description` when editing part of a long description rather than replacing
   it whole.
 
-Show the title, team, and key fields back to the user before calling
-`save_issue` — creating or changing a ticket is visible to the whole team, so
-confirm it the same way you'd confirm a Slack send.
+Show the whole draft and wait for the user's explicit yes before calling
+`save_issue`, even when the request that asked for the ticket already says
+"create":
+
+- the fields: title, team, parent, project, milestone, assignee, priority,
+  estimate and relations;
+- the description as raw markdown in a ` ````markdown ` fence, so headings,
+  checkboxes and code blocks show exactly as they will post;
+- for an update, the fields changing and the `patch` text or new description.
+
+The user's reply to the shown draft ("yes", "create it", "post it") is the
+approval.
 
 ### Move a ticket to another state
 
@@ -301,8 +310,9 @@ Write any section labels in the reply (`What's happening`, `Current status`,
 same reasoning as ticket descriptions above: a real header stands out, while
 bold text renders at the same size as body text and blends in.
 
-Show the drafted reply in chat for review before posting — posting a comment
-is visible to everyone on the ticket's thread, same as any other
-send-on-someone's-behalf action. Once confirmed, post with
+Show every comment, a reply or a standalone addition to a ticket, as raw
+markdown in a ` ````markdown ` fence and wait for the user's explicit yes
+before posting, even when the first request already says "post". Once
+confirmed, post with
 `mcp__linear__save_comment` (`issueId` for a new thread, `parentId` to reply
 within an existing one).
