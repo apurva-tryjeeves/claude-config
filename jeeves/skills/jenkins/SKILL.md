@@ -16,8 +16,8 @@ Jenkins only.
 - The secrets file exports `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN`, and
   `JENKINS_CACERT`.
 - `JENKINS_CACERT` points at the internal `tryjeeves` CA that the server's
-  cert chains to. macOS trusts it and curl's default store does not, which is
-  why the CA is passed explicitly on every call.
+  cert chains to. macOS trusts it, and curl trusts it through this file, so
+  every call passes it explicitly.
 - First-time setup of the secrets file is in the marketplace README. Regenerate
   the CA file from the macOS System Keychain when it goes missing:
 
@@ -86,6 +86,11 @@ jenkins-api queued "$(sed -n 's/^location: //Ip' /tmp/trigger-headers.txt)"
 
 Pass that number to every later `status` and `log` call.
 
+Build history records what was built. To say what a `develop-NN` environment
+runs now, ask the user, or have them read the Grafana "Environments overview"
+dashboard (https://grafana.dev.tryjeeves.vpn/d/jpKChUH7z/environments-overview?orgId=1&refresh=30s)
+and paste or screenshot the row. Say "unknown" until one of them gives it.
+
 To report when a build finishes, run `wait` once with `run_in_background`. It
 polls inside one process, so the session is woken a single time, when the build
 ends:
@@ -104,6 +109,14 @@ Read the tail first — Jenkins prints the actual failure near the end even
 when the log is long or the failing step ran inside a `parallel` block. Pull
 out the failing step for the user rather than pasting the whole log back.
 
+Name a step only from the job's stages reference (see "Job-specific
+references") or from the log line itself. For a step the reference leaves out,
+read the pipeline source it cites, then add the step to the reference in the
+same turn.
+
+A `cms` build prints its whole `.env` build file into the log (`+ cat .env`).
+Quote only the line you need from it.
+
 ## Diagnose, trigger, or check an agent
 
 `references/build-ops.md` covers these heavier, less frequent operations,
@@ -121,7 +134,8 @@ before working with a job:
 
 | Job | Reference |
 | --- | --- |
-| `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (deploy flow; timings live in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`) |
+| `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (parameters, deploy flow, failure signatures; timings live in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`) |
+| `deploy-DEVELOP-environment` | `references/deploy-develop-environment-stages.md` (what each stage does and the log lines that mark it; read before saying what a deploy is doing) |
 
 ## Scripts
 
@@ -137,7 +151,7 @@ Build a packed positional parameter with its script rather than assembling the
 string by hand — position is the only thing the job reads, so the script's
 count check is what keeps a value on the service you meant.
 
-## Report findings
+## Reporting results
 
 Lead with the verdict line. Add detail below it only where that detail changes
 what the user does next.
@@ -176,12 +190,13 @@ concurrent-build race per `references/build-ops.md`):
 > Timeout has been exceeded
 > ```
 >
-> The new `api` pod never became ready — an app issue in the deployed module.
+> The new `api` pod stayed unready until the deadline — an app issue in the deployed module.
 
 **A running build** — elapsed so far, alongside the service's expected duration
-from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`:
+from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`, and the
+current stage named from the job's stages reference:
 
-> ⏳ **building** — [#44089](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/44089/) · 3m20s elapsed, `api` usually takes ~8m56s
+> ⏳ **building** — [#44089](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/44089/) · 3m20s elapsed, `api` usually takes ~8m56s · in `build` (image scan)
 
 When a deploy finishes and exactly one service was enabled, that build is a
 clean timing sample: merge it into that service's row in

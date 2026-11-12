@@ -187,7 +187,7 @@ Several skills record facts they discover back into their own files:
 | Skill | File it updates |
 |---|---|
 | `git-preferences` | `skills/git-preferences/references/ci-check-timing.md` |
-| `jenkins` | `skills/jenkins/scripts/modules.py`, `references/deploy-develop-environment.md` |
+| `jenkins` | `skills/jenkins/scripts/modules.py`, `references/deploy-develop-environment.md`, `references/deploy-develop-environment-stages.md` |
 | `mysql`, `trace-tx`, `feature-plan`, `post-deploy-verify` | `references/queries.md`, `skills/mysql/references/schema/` |
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
 | `notion-templates` | `skills/notion-templates/references/release-page.md` |

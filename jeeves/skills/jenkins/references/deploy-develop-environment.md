@@ -104,7 +104,9 @@ environment.
    enabled service's branch and mode, and get explicit go-ahead — this is a
    shared dev environment other people may be using. Mention the expected
    duration from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` for the service(s)
-   being deployed, if a row exists there.
+   being deployed, if a row exists there. To say what the slot runs now, use
+   the user's answer or the Grafana dashboard per SKILL.md → "Name the build
+   you mean"; otherwise leave it out.
 7. **Trigger.** Same-slot builds run concurrently (see "Concurrency model"),
    so check whether anything is already working on *your* slot. When a build
    is running or queued for that slot, stop and ask the user before
@@ -167,7 +169,9 @@ environment.
    ```
 
    Then interpret the outcome using "Reading a build's outcome" below rather
-   than dumping the raw log.
+   than dumping the raw log. Name the stage a running build is in from
+   `deploy-develop-environment-stages.md`, which maps each stage to the log
+   lines that mark it.
 
 ## Concurrency model
 
@@ -186,13 +190,13 @@ before triggering into a busy environment.
 | --- | --- |
 | `Pod [Pending][Unschedulable] ...` | The deploy agent is waiting on capacity; usually clears on its own within the build |
 | `... not found` + `Error restarting X. Not a big deal` | The service has no matching cron/side deployment in this environment — expected/benign, not a build failure signal |
-| `rollout status deploy <x>` then `exceeded its progress deadline` / `Timeout has been exceeded`, ending `Finished: ABORTED` | The newly deployed service never became ready — a genuine app/code issue in the deployed module, not a user abort. Report it as a failed rollout |
+| `rollout status deploy <x>` then `exceeded its progress deadline` / `Timeout has been exceeded`, ending `Finished: ABORTED` | The newly deployed service stayed unready until the deadline — a genuine app/code issue in the deployed module, not a user abort. Report it as a failed rollout |
 | `ERROR: resolveLatestTag: expected exactly one non-latest tag alongside :latest for <repo>, found N` | Mode `latest` hit an ECR image with zero or several real tags. Retrigger that service with `:rebuild` |
 | `ArrayIndexOutOfBoundsException: Index <n> out of bounds` in `parseModulesForm` | The `MODULES` triple count no longer matches `jeevesPlatformInfo`'s module list. Re-check the order against `jenkins-library` and update `SERVICES` in the source clone |
 | `Couldn't find any revision to build` on a repo you did not target, within a minute or two of the trigger | The `MODULES` triples shifted position, so your branch landed on a neighbouring service whose repo has no such branch. The build stops at checkout, so nothing deployed. Rebuild the string with `scripts/modules.py` and retrigger |
 
-Diagnose using the console log text alone — that's the source of truth
-available from this session.
+Diagnose from the console log, and from the pipeline source that
+`deploy-develop-environment-stages.md` cites when a line needs explaining.
 
 Every build result — success, failure and aborted — posts to the
 `#jenkins-ci-dev` Slack channel via the pipeline's `slackSend` post-action
