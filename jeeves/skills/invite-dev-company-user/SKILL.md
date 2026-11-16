@@ -13,6 +13,9 @@ invite is accepted.
 | --- | --- | --- | --- |
 | `develop-NN` | `https://admin-develop-NN.dev.tryjeeves.vpn/admin/login` | `https://api-develop-NN.dev.tryjeeves.com` | `develop_NN` (`jsql dev-NN/develop`) |
 
+This flow runs on `develop-NN` envs only. For preprod, qa, sandbox or prod,
+stop and tell the user this skill covers `develop-NN`.
+
 ## Inputs
 
 Collect these before calling the API:
@@ -31,8 +34,17 @@ one; the list is longer than an `AskUserQuestion` holds.
 `references/confirmed-envs.md` lists the envs where this flow has run end to
 end, with the Keychain item each one logs in with. Read it before the first
 call and use that env's item in step 3; an env with no row uses
-`jeeves-cms-dev`. After the first run on a new env, add its row in that same
-turn.
+`jeeves-cms-dev`.
+
+The file lives in your clone of the plugin — read and write
+`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/invite-dev-company-user/references/confirmed-envs.md`
+when that directory exists (it carries rows not yet released), else read this
+skill's own copy.
+
+After the first run on a new env, add its row in that same turn: edit the
+clone's copy as the clone stands, leave the change uncommitted, and tell the
+user it is ready to review and push. When that directory is absent, report
+the row to the user instead.
 
 ## CMS admin credentials
 
@@ -58,7 +70,9 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    `ALLOWED_EMAIL_DOMAINS`, a comma-separated string such as
    `@conexa.ai,@acme.com` (`notification-service`
    `src/services/email/email-service.ts`). It reads that key from two
-   secrets; print it from each:
+   secrets; print it from each. `ALLOWED_EMAIL_DOMAINS` is a non-credential
+   config key, so its value prints; every other key in these secrets follows
+   Skill `jeeves:aws-secrets` → "Reporting secrets":
 
    ```bash
    for s in /develop-NN/notification-service/notification-secrets \
@@ -79,17 +93,21 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    ```
 
    - The mail goes out when every invitee's domain is `@tryjeeves.com` or listed, and the tag query is empty.
-   - For a domain missing from the list, tell the user before inviting.
-   - The fix is to append the domain to `ALLOWED_EMAIL_DOMAINS` in `/develop-NN/notification-service/notification-secrets`, then redeploy `notification` on that env (Skill `jeeves:jenkins`, `development:latest`).
-   - Both change shared state; make them on the user's go-ahead.
-   - The External Secrets Operator copies the secret into the pod's Kubernetes Secret on a 1 h refresh (`infra-helm-charts/AGENTS.md`). Ask the user to sync it before the redeploy; a pod started earlier keeps the old value.
+   - For a domain missing from the list, tell the user before inviting and hand them these steps; the user makes each change:
+     1. Append the domain to `ALLOWED_EMAIL_DOMAINS` in `/develop-NN/notification-service/notification-secrets` (AWS Secrets Manager, profile `jeeves_dev`).
+     2. Sync the External Secrets Operator copy. It refreshes the pod's Kubernetes Secret every 1 h (`infra-helm-charts/AGENTS.md`), and a pod started before the sync keeps the old value.
+     3. Redeploy `notification` on that env with `development:latest`. When the user asks you to run the redeploy, use Skill `jeeves:jenkins` and its confirmation.
    - Confirm the new value took effect by inviting one person first: an empty `emailsNotSent` proves it.
-   - Record each env's list in `references/confirmed-envs.md` → "Mail delivery per env".
+   - Record each env's list in the clone's copy of `confirmed-envs.md` → "Mail delivery per env" (see "Confirmed envs").
 
-3. **Log in and invite in one Bash call.** The `secretToken` from login
-   expires 60 seconds after it is issued, so fetch it and use it in the same
-   command. The token and password stay in variables; only the invite
-   response prints.
+3. **Confirm, then log in and invite in one Bash call.** The invite mails
+   each address, so show the env, the company (`id` and `name` from step 1)
+   and one row per invitee with name, email and role, then wait for the
+   user's yes.
+
+   The `secretToken` from login expires 60 seconds after it is issued, so
+   fetch it and use it in the same command. The token and password stay in
+   variables; only the invite response prints.
 
    ```bash
    API="https://api-develop-NN.dev.tryjeeves.com"
@@ -118,7 +136,7 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    - Success is `"status": true` with `"msg": "Invitation mail successfully sent."`; the invite rows exist from here on.
    - **Mail sent check:** an empty `data.emailsNotSent` confirms every invite mail went out.
    - notification-service logs each send as `Sending email result: [{"status":true,...}]` with an SES `MessageId`; search `app_name.keyword` `notification-service` for that phrase (Skill `jeeves:opensearch`) to confirm a send.
-   - Each address in `emailsNotSent` still has its invite row, without a mail. Report the list; to re-send, cancel those invites (see "Cancel an invite") and rerun this step for those people.
+   - Each address in `emailsNotSent` still has its invite row, without a mail. Report the list; to re-send, cancel those invites (see "Cancel an invite") and rerun this step, confirmation included, for those people.
    - When `TOKEN` comes back `null`, check the Keychain item's email and password, then rerun the call.
 
 4. **Confirm the invite rows and their mail.** Look the invites up by `normalizedEmail`, the address as typed, listing every invited address. The join reads each invite's mail from `notification_audits`:
@@ -143,13 +161,10 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    - Success is one row per invited address, each with `status` `pending`, the role in lowercase (e.g. `manager`), `createdUserId` `NULL`, and `mail` `sent`.
    - `mail` `sent` means notification-service wrote an audit row with an SES `awsMessageId`; this is the database record of the mail sent check.
    - `notification_audits.toEmail` holds the address with any `+alias` removed, so the join matches on `normalizedEmail` and the send time (within 10 s of the invite). An alias invite's mail lands in the person's normal inbox.
-   - `email` is the address the invitee signs up with.
-   - The invite keeps the typed address while no live user or invite holds it.
-   - When one does, the invite gets an alias `<local>+<companyId>-<8 hex>@<domain>`, e.g. `jane+12-75179971@tryjeeves.com`.
-   - One person can therefore hold live invites to several companies: the typed address for the first, an alias for each later one.
-   - A cancelled invite (`deletedAt` set) that holds the typed address is renamed to an alias, and the new invite keeps the typed address.
-   - Both rules live in backend `modules/v2/web/user/userService.js`: `generateUniqueEmailForNewUser` and `freeUpDeletedEmailsForReuse`.
-   - `createdAt` is UTC; add 5 h 30 min when quoting it in IST.
+   - `email` is the address the invitee signs up with: the typed address, or an alias such as `jane+12-75179971@tryjeeves.com`.
+   - The rules that choose between the two live in Skill `jeeves:mysql` `references/schema/develop.md` → `invite_users`; read them when `email` differs from `normalizedEmail`.
+   - One person can hold live invites to several companies: the typed address for the first, an alias for each later one.
+   - `createdAt` is UTC; quote it in local time per `../../references/output-style.md` (plugin root).
 
 5. **Confirm the acceptance** once the user says the invitee has signed up.
    Acceptance does three things in the same second:
@@ -204,9 +219,10 @@ ORDER BY i.companyId, i.id
 
 ## Cancel an invite
 
-Cancel a `pending` invite to re-send its mail or to drop it. Run step 3's
-`API`, `ITEM`, `CMS_*` and `TOKEN` lines, then post each invite `id` in the same
-Bash call:
+Cancel a `pending` invite to re-send its mail or to drop it. Show the env,
+the company and one row per invite with `id`, `email` and `role`, then wait
+for the user's yes. Then run step 3's `API`, `ITEM`, `CMS_*` and `TOKEN`
+lines and post each invite `id` in the same Bash call:
 
 ```bash
 for id in <inviteId1> <inviteId2>; do
@@ -235,10 +251,10 @@ done
 
 Answer with the row from the step just run and stop:
 
-- After the invite (step 4): one markdown table with a row per invite, every value from step 4's query: `id`, `companyId`, `email`, `role`, `status`, Email (`✅ sent (audit <auditId>)` or `❌ not sent`), `createdAt` (in IST).
-- After acceptance (step 5): one markdown table of the joined row, with `uuid` in full and `createdAt` in IST.
-- After a cancel: one markdown table of `id`, `status`, `deletedAt` (in IST).
-- After a status check: one markdown table with a row per invite: `id`, `companyId`, `email`, `role`, `status`, Email (`✅ sent (audit <auditId>)` or `❌ not sent`), acceptance (`userId` or `pending`), `createdAt` (in IST).
+- After the invite (step 4): one markdown table with a row per invite, every value from step 4's query: `id`, `companyId`, `email`, `role`, `status`, Email (`✅ sent (audit <auditId>)` or `❌ not sent`), `createdAt` (in local time).
+- After acceptance (step 5): one markdown table of the joined row, with `uuid` in full and `createdAt` in local time.
+- After a cancel: one markdown table of `id`, `status`, `deletedAt` (in local time).
+- After a status check: one markdown table with a row per invite: `id`, `companyId`, `email`, `role`, `status`, Email (`✅ sent (audit <auditId>)` or `❌ not sent`), acceptance (`userId` or `pending`), `createdAt` (in local time).
 - When `email` differs from `normalizedEmail`, add one line saying the invitee signs up with the alias.
 - Add a line only for addresses in `emailsNotSent` or an invited address with no row.
 - Leave out the API response body, the token, the curl commands and next-step suggestions.
