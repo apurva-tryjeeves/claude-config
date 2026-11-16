@@ -88,11 +88,12 @@ aws --profile jeeves_dev --region us-east-2 secretsmanager get-secret-value \
   --secret-id /shared/wallet-service/wallet-secrets --query SecretString --output text | jq 'keys'
 ```
 
-Extract one key only when the task needs its value, and keep it out of the output (assign it to a variable or pipe it onward):
+Extract one key only when the task needs its value, and keep it out of the output. The variable lives only inside one Bash call, so consume it in that same call:
 
 ```bash
 VALUE=$(aws --profile jeeves_dev --region us-east-2 secretsmanager get-secret-value \
   --secret-id /shared/wallet-service/wallet-secrets --query SecretString --output text | jq -r '.<KEY>')
+printf '%s' "$VALUE" | <command that reads the value on stdin>
 ```
 
 For production, use `--profile jeeves_prod_releasemanager --region us-east-1` and a `/production/` path.

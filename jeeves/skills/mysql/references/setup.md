@@ -26,9 +26,9 @@ Each file holds `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASS`,
 - A database override changes only the database — the user and password still
   come from the env's file.
 
-`prod.env` is maintained by hand: its secret sits outside the accessible
-Secrets Manager account, so the pull skips it. Create it with the same six
-fields from the prod read-replica credentials stored in Keeper, `chmod 600`.
+`prod.env` is kept by hand: create it with the same six fields from the prod
+read-replica credentials stored in Keeper, `chmod 600`; `jsql-pull-secrets`
+skips it.
 
 ## First-time setup
 
@@ -42,10 +42,9 @@ fields from the prod read-replica credentials stored in Keeper, `chmod 600`.
    The wrapper prefers the pinned 8.4 keg, then falls back to `mysql` on
    `PATH`. Point `MYSQL_CLIENT` at a specific binary to override the search.
 
-2. Authenticate to AWS, then pull the credentials:
+2. Log in to AWS as `jeeves:aws-secrets` "Authentication" describes, then pull the credentials:
 
    ```bash
-   aws sso login --profile jeeves_dev
    jsql-pull-secrets
    ```
 
@@ -113,7 +112,7 @@ since it maps straight onto the Secrets Manager id — distinct from the short
 alias (`dev-05`) that `jsql` takes. A name with no matching secret reports
 `SKIP (secret not found)` and leaves the existing file untouched. Any other
 AWS error (an expired SSO session, a denied call) prints the error, stops the
-run and exits 1; run `aws sso login --profile jeeves_dev` and pull again. `prod` is
+run and exits 1; log in again (`jeeves:aws-secrets` "Authentication") and pull again. `prod` is
 absent from the pull list, per Credentials above.
 
 The DB endpoint is resolved at runtime from the RDS instance id via

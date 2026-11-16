@@ -135,15 +135,11 @@ Write the title without a scope, so every PR title reads the same (`references/p
 
 ### PR body format
 
-Write the PR title and the description's sections to the structure in `references/pr-description.md` (sub-ticket and parent-ticket shapes, with a skeleton). Write every PR description, PR comment and review summary in this style:
+Write the PR title and the description's sections to the structure in `references/pr-description.md` (sub-ticket and parent-ticket shapes, with a skeleton). Write every PR description, PR comment and review summary in the shared style (`${CLAUDE_PLUGIN_ROOT}/references/output-style.md`, "Posted markdown style"), with these GitHub specifics:
 
-- Start each section with a `## <emoji> Header`, one emoji per header. Use the repo's PR template sections:
+- Use the repo's PR template sections:
   `## ❗ Problem`, `## 🛠️ Solution`, `## 🔗 References`, `## 🧪 How to test`, `## 🚀 Deployed to`.
-- Use `- [ ]` task lists for test steps and follow-ups.
-- Bold each bullet's lead term.
-- Put names, paths and commands in `code`.
-- Use a table for anything with repeating columns.
-- Wrap long logs in `<details>`, and fence logs, command output and code with a language tag (`text`, `bash`, `sql`).
+- Wrap long logs in `<details>`.
 - Put a merge or deploy gate in a GitHub alert (`> [!IMPORTANT]` or `> [!WARNING]`) at the top of `## 🚦 Rollout`, followed by its checklist.
 - Describe the change itself. Keep rebase and cherry-pick mechanics, stacking banners and commit SHAs in the branch graph.
 - Point to PRs in other repos only through `## 🔗 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.

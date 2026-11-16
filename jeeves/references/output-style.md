@@ -21,6 +21,8 @@ Mark every status with its icon, so an outcome reads at a glance.
 | Skipped, not applicable | ⏭️ |
 | Open, todo, not started | ⚪ |
 
+Jaidev run state is the one exception: it uses the colour circles 🟢 🟡 🔴 ⚪ from the "Color coding" table in `jeeves:jaidev` `references/background-agents.md`.
+
 Git working-tree state uses the glyphs from the user's Starship prompt
 (`~/.config/starship.toml`), so the terminal prompt
 and a skill's output agree: ⬆️ ahead · ⬇️ behind · 🔀 diverged · ✅ staged ·
@@ -71,3 +73,18 @@ rather than every row:
 | --- | --- | --- |
 | `exceeded its progress deadline` | 43 | 10 Sep 5:56am |
 | `ECONNREFUSED 10.0.4.12:5432` | 6 | 10 Sep 6:02am |
+
+## Posted markdown style (tickets, PR descriptions, comments)
+
+Write every Linear ticket and comment, PR description, PR comment and review
+summary in this style. The platform skill adds its own sections and
+collapsible form.
+
+- Start each section with `## <emoji> Header` (`###` for a sub-section), one emoji per header, chosen to name the section's content; keep body text plain apart from bolded lead terms.
+- Bold the lead term of each bullet or checkbox (`- [ ] **Gap analysis**: current state vs target`).
+- Put one distinct fact, cause or symptom in each bullet.
+- Use `- [ ]` task lists for acceptance criteria, test steps and follow-ups.
+- Use a table for anything with repeating columns.
+- Put names, paths and commands in `code`; fence SQL, logs, stack traces, config and command output with a language tag (`text`, `bash`, `sql`).
+- Wrap a long log dump in the platform's collapsible: `+++ <title>` … `+++` in Linear, `<details>` in GitHub.
+

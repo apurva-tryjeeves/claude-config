@@ -37,7 +37,9 @@ uvx awscurl --service es --region "$REGION" \
 
 ## Send a monitor body from a file
 
-Pass the JSON through `-d "$(cat file)"` so escape sequences arrive verbatim:
+Shell variables are lost between Bash calls, so run the setup block above and
+this request in one Bash call. Pass the JSON through `-d "$(cat file)"` so
+escape sequences arrive verbatim:
 
 ```bash
 uvx awscurl --service es --region "$REGION" \

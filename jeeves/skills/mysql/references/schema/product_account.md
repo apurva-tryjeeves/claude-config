@@ -1,8 +1,6 @@
 # product_account (product-account-service)
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `product_account_<n>` | `preprod_product_account` | `product_account` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## `product_accounts_ledger`
 
@@ -40,7 +38,8 @@ One row per product account; holds the live balance. `id` is shared with `wallet
 | `productType` | enum | `self-funded`, `jeeves-pay-external`, `jeeves-pay-credit`, `crypto-wallet`, `credit-line`, `stablecoin` |
 | `baseCurrency` | smallint | `20840` = USDC |
 | `accountBalance` / `availableBalance` | decimal(30,6) | |
-| `accountStatus` | enum | `pending`, `active`, `closed`, … |
+| `accountStatus` | enum | `pending`, `closed`, `active`, `deactivate`, `archived` |
+| `kycStatus` | enum | `approved`, `pending`, `in-review`, `in-jeeves-review`, `in-review-error`, `rejected`, `rfi-required`, `rfi-answered`, `rfi-closed` |
 
 ```sql
 SELECT id, productType, baseCurrency, accountBalance, availableBalance, accountStatus, updatedAt

@@ -119,6 +119,8 @@ environment.
    jenkins-api queue
    ```
 
+   The queue output carries each item's `params`; match `ENVIRONMENT=<chosen slot>` there.
+
    Fetch a CSRF crumb (required for POST requests):
 
    ```bash
@@ -260,5 +262,5 @@ jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=${TREE}" \
 deploying multiple services at once (e.g. `web` + `accounting` + `aiservice`
 together) runs them in parallel, so its total duration is closer to the
 *slowest* of the enabled services' individual times, not their sum — use the
-single-service numbers above as a per-service ceiling estimate, not an
-additive one.
+single-service numbers in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
+as a per-service ceiling estimate, not an additive one.

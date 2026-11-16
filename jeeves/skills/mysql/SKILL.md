@@ -10,7 +10,7 @@ description: Query Jeeves MySQL dev/preprod/prod databases via the jsql wrapper 
 | dev-01…dev-20 | `dev-NN/<service>` | `<service>_NN`; backend `develop_NN` | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
 | preprod | `preprod/preprod_<service>` | `preprod_<service>`; backend `preprod` | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
 | development, qa, sandbox | `<env>/<database>` | full database name; list with `SHOW DATABASES` | `$JEEVES_SECRETS_DIR/development.env`, `qa.env`, `sandbox.env` | Succeed — shared |
-| prod | `prod/<service>` | `<service>`; backend `jeeves` | `$JEEVES_SECRETS_DIR/prod.env` | Read-only: `jsql` runs `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` and `WITH`, and opens the session `READ ONLY` |
+| prod | `prod/<service>` | `<service>`; backend `jeeves` (full list: "Default" table below) | `$JEEVES_SECRETS_DIR/prod.env` | Read-only: `jsql` runs `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` and `WITH`, and opens the session `READ ONLY` |
 
 On `prod`, `jsql` exits with status 2 for any other statement, before it
 connects. On every other env the wrapper sends statements straight to MySQL.
@@ -192,6 +192,7 @@ One file per service covers its dev, preprod and prod databases.
 | `references/schema/develop.md` | backend `develop_<n>` |
 | `references/schema/product_account.md` | `product_account_<n>` |
 | `references/schema/stablecoin.md` | `stablecoin_<n>` |
+| `references/schema/transactions.md` | `transactions_<n>` (`ut_transactions` columns) |
 | `references/schema/wallet.md` | `wallet_<n>` |
 
 Read and write these notes (and `references/common-lookups.md`,

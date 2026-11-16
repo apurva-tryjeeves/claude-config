@@ -26,8 +26,8 @@ this skill's procedure.
   `log` fields, the two trace ids, the `match_phrase` pattern.
 - **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
-- **Reusable queries** → `../../references/queries.md` — read it before
-  composing a query; when the user shares a new one, add it to that file following
+- **Reusable queries** → `../../references/queries.md` — read it when the user
+  refers to a saved query; when the user shares a new one, add it to that file following
   `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## Steps

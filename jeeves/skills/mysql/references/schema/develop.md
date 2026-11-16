@@ -1,8 +1,6 @@
 # backend (monolith / "jeeves")
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `develop_<n>` (e.g. `develop_01`) | `preprod` | `jeeves` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## `exchange_rates`
 

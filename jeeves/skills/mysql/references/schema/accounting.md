@@ -1,8 +1,6 @@
 # accounting (accounting-service)
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `accounting_<n>` (e.g. `accounting_20`) | `preprod_accounting` | `accounting` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## `integration`
 

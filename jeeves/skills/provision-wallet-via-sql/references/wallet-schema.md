@@ -66,14 +66,4 @@ linked row for the same wallet.
 
 ## Enums
 
-| Table | Column | Values |
-| --- | --- | --- |
-| `product_accounts` | `accountStatus` | `pending` / `closed` / `active` / `deactivate` / `archived` |
-| `product_accounts` | `productType` | `self-funded` / `jeeves-pay-external` / `jeeves-pay-credit` / `crypto-wallet` / `credit-line` / `stablecoin` |
-| `wallet_instruments` | `instrumentType` | `self-funded` / `jeeves-pay-external` / `crypto-wallet` / `stablecoin` |
-| `product_accounts` | `kycStatus` | `approved` / `pending` / `in-review` / `in-jeeves-review` / `in-review-error` / `rejected` / `rfi-required` / `rfi-answered` / `rfi-closed` |
-| `wallet_instruments` | `accountStatus` | `pending` / `active` / `deactivated` / `closed` |
-| `wallet_instruments` | `KYCStatus` | `approved` / `pending` / `in-review` / `suspended` / `rejected` / `rfi-*` |
-| `wallet_instrument_provider_linked_bank_accounts` | `type` | `topup` / `withdrawal` |
-| `wallet_instrument_provider_linked_bank_accounts` | `subType` | `bankaccount` / `brl-pix` |
-| `wallet_instrument_provider_linked_bank_accounts` | `status` | `active` / `pending` / `deactivated` / `deleted` |
+Enum values live in the mysql schema notes: `jeeves:mysql` `references/schema/wallet.md` (`wallet_instruments`, `wallet_instrument_provider_linked_bank_accounts`) and `references/schema/product_account.md` (`product_accounts`).

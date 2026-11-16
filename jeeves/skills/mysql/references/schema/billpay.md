@@ -1,8 +1,6 @@
 # billpay-service schema notes
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `billpay_<n>` | `preprod_billpay` | `billpay` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## `invoices`
 

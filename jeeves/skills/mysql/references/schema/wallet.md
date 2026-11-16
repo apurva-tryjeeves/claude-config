@@ -1,8 +1,6 @@
 # wallet-service schema notes
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `wallet_<n>` | `preprod_wallet` | `wallet` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## `wallet_instruments`
 
@@ -14,6 +12,7 @@ One row per customer wallet. `id` is shared with `product_account.product_accoun
 | `companyId` | int unsigned | |
 | `instrumentType` | enum | `self-funded`, `jeeves-pay-external`, `crypto-wallet`, `stablecoin` |
 | `accountStatus` | enum | `pending`, `active`, `deactivated`, `closed` |
+| `KYCStatus` | enum | `approved`, `pending`, `in-review`, `suspended`, `rejected`, `rfi-*` |
 | `baseCurrency` | smallint | ISO numeric; `20840` = USDC, `170` = COP |
 
 ```sql
@@ -84,3 +83,13 @@ One row per PSE (Colombia COP) on-ramp link. Holds only the COP amount; the USD 
 | `bridgeTransferId` | varchar, unique | = `wallet_transactions.transactionReferenceId` of the deposit |
 | `amount` | varchar | COP |
 | `status` | enum | `initiated`, `pending`, `completed`, `failed` |
+
+## `wallet_instrument_provider_linked_bank_accounts`
+
+One row per linked bank account or deposit address of a provider account (`walletInstrumentProviderAccountId` → `wallet_instrument_provider_accounts.id`).
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `type` | enum | `topup`, `withdrawal` |
+| `subType` | enum | `bankaccount`, `brl-pix` |
+| `status` | enum | `active`, `pending`, `deactivated`, `deleted` |

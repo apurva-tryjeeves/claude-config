@@ -148,8 +148,12 @@ before working with a job:
 
 Change these scripts through the `jeeves:jeeves-python-engineer` agent.
 
-All take a `scripts/`-relative path, so run them from this skill's own
-directory (`cd` there first, or prefix the path).
+Every `scripts/…` path in this skill and its references is relative to the
+skill directory; run from there:
+
+```bash
+cd "${CLAUDE_SKILL_DIR}"
+```
 
 Build a packed positional parameter with its script rather than assembling the
 string by hand — position is the only thing the job reads, so the script's

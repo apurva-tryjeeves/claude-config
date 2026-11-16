@@ -10,12 +10,7 @@ description: Search JeevesInc application logs on the OpenSearch clusters, and m
 | prod | `opensearch-prod` | `jeeves_prod` | `us-east-1` |
 | dev | `opensearch-dev` | `jeeves_dev` | `us-east-2` |
 
-Every profile shares one `sso-session`, so a single login authenticates both
-clusters:
-
-```bash
-aws sso login --profile jeeves_dev
-```
+Every profile shares one `sso-session`; log in as `jeeves:aws-secrets` "Authentication" describes.
 
 | Operation | Reach it with | Depth |
 | --- | --- | --- |

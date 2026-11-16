@@ -17,8 +17,8 @@ This skill produces the plan those read from.
 
 - **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
-- **Reusable queries** → `../../references/queries.md` — read it before
-  composing a query; when the user shares a new one, add it to that file following
+- **Reusable queries** → `../../references/queries.md` — read it when the user
+  refers to a saved query; when the user shares a new one, add it to that file following
   `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 - **GitHub** → `mcp__github__*`, or `gh` via Bash.
 
@@ -41,7 +41,8 @@ This skill produces the plan those read from.
    APIs, DB migrations, config, inter-service contracts, risks — plus a
    sequencing section saying what lands first. For TypeScript services, settle
    new identifier and file names with `jeeves:typescript-naming` first. Save it as a reviewable markdown
-   file.
+   file; ask the user where, defaulting to
+   `<ticket-or-feature>-plan.md` in the working directory.
 
 ## Report the plan
 
