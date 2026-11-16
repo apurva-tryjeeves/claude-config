@@ -28,6 +28,11 @@ Confirm a session is live with:
 aws sts get-caller-identity --profile jeeves_dev --region us-east-2
 ```
 
+## Production secrets
+
+Before any `/production/` fetch, name the secret and the key, then wait for the
+user's yes.
+
 ## Reporting secrets
 
 List a secret's key names, and extract a single key's value only when the task

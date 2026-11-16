@@ -50,7 +50,7 @@ this skill's procedure.
    ```bash
    NODE_ENV=test npx jest <path>
    ```
-6. **Commit** following the `jeeves:git-preferences` skill for message format and the
+6. **Commit when the user asks**, following the `jeeves:git-preferences` skill for message format and the
    co-author trailer. Push when the user asks, then follow that skill's Checks
    poller section for CI.
 

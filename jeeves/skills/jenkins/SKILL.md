@@ -119,8 +119,9 @@ Quote only the line you need from it.
 
 ## Diagnose, trigger, or check an agent
 
+Confirm the job, environment and services with the user before any POST.
 `references/build-ops.md` covers these heavier, less frequent operations,
-kept out of the base skill:
+kept out of the base skill; read it before triggering, retrying or aborting:
 
 - Diagnosing a failed build (concurrent-build workspace races)
 - Triggering, retrying, or aborting a build
