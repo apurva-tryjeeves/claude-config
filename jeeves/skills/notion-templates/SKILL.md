@@ -1,6 +1,6 @@
 ---
 name: notion-templates
-description: Create Jeeves Notion pages from the stored template library — currently the weekly/hotfix release page under Engineering > Releases. Trigger when asked to create, set up, or scaffold a Notion release page (or another catalogued template) for a given date, Also holds the default formatting (heading icons, callouts, toggles) for any Notion page written from markdown — load it before creating or editing one.
+description: Create Jeeves Notion pages from the stored template library — currently the weekly/hotfix release page under Engineering > Releases. Trigger when asked to create, set up, or scaffold a Notion release page (or another catalogued template) for a given date. Also load it before creating or editing any Notion page written from markdown; it holds the default formatting (heading icons, callouts, toggles).
 ---
 
 # Jeeves Notion Templates
@@ -27,6 +27,34 @@ Read the chosen template's reference file before creating anything — it holds
 the page naming convention, the parent location, the section-by-section fill
 guide, and the fallback body.
 
+## Confirm before filling in people and dates
+
+Show the user these values, then wait for the user's yes before creating the
+page:
+
+- The page date and release type (weekly release vs hotfix) — these set the
+  title.
+- The release captain, and the co-captain when there is one.
+- The repos in the release. For a hotfix these also name the page, e.g.
+  `17-Sep-2026 - Hotfix Release (accounting, jeeves-web)`. The title, the
+  Tickets table and the deployment-status table name this same set of repos;
+  the reference file's fill guide says how each repo's status cell starts.
+- The tickets: developer, POD, pull-request link, repo, and QA owner per row.
+
+Carry over every other default from the reference file as-is — the Pre-Prod
+environment block, the UTV callout, the full repository list.
+
+### Record what you resolve
+
+The reference file's month page IDs, Notion user IDs, and POD names grow with
+use. Read the copy in your clone of the plugin
+(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/notion-templates/references/release-page.md`)
+when it exists — it carries rows not yet released — else this skill's own
+copy, and check it before resolving anything live. Record a newly confirmed
+month page, user ID, or POD name in the clone's copy, leave the change
+uncommitted, and tell the user it is ready to review and push. When the clone
+is missing, report the value instead.
+
 ## Create the page
 
 Duplicate the live Notion template page. It carries the fixtures that survive
@@ -40,7 +68,7 @@ callout background colours, and the embed block.
    wait for the user's choice of which page the release runs on. Otherwise
    pick the child page whose title ends in `(template)`. When the lookup was
    resolved live, record the month's row (see "Record what you resolve"
-   below).
+   above).
 2. Duplicate it with `notion-duplicate-page`. Duplication finishes
    asynchronously, so re-fetch the new page until its content is present
    before editing it.
@@ -63,78 +91,13 @@ it carries none, build the page from the reference file's fallback body:
   header-column layout arrive at Notion defaults, so they can set those by
   hand or seed a `(template)` child for next month.
 
-## Confirm before filling in people and dates
-
-Confirm with the user, before the page is created:
-
-- The page date and release type (weekly release vs hotfix) — these set the
-  title.
-- The release captain, and the co-captain when there is one.
-- The repos in the release. For a hotfix these also name the page, e.g.
-  `17-Sep-2026 - Hotfix Release (accounting, jeeves-web)`.
-- The tickets: developer, POD, pull-request link, repo, and QA owner per row.
-
-Carry over every other default from the reference file as-is — the Pre-Prod
-environment block, the UTV callout, the full repository list.
-
-### Record what you resolve
-
-The reference file's month page IDs, Notion user IDs, and POD names grow with
-use. Read the copy in your clone of the plugin
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/notion-templates/references/release-page.md`)
-when it exists — it carries rows not yet released — else this skill's own
-copy, and check it before resolving anything live. Record a newly confirmed
-month page, user ID, or POD name in the clone's copy, leave the change
-uncommitted, and tell the user it is ready to review and push. When the clone
-is missing, report the value instead.
-
-Keep the title, the Tickets table, and the deployment-status table naming the
-same set of repos: each repo in the Tickets table starts at `PENDING` on an
-orange background in the deployment-status table, and every other row keeps an
-empty status cell — blank is how the page says a service sits out the release.
-
 ## Format pages built from markdown
 
-Apply this by default to every page body written as Notion-flavored markdown —
-the fallback body, a new template's body, a write-up page — without waiting to
-be asked. A duplicated `(template)` page keeps the formatting it already has.
-
-| Content | Element |
-| --- | --- |
-| Page identity | An emoji `icon` on `notion-create-pages` |
-| Top of page | A `gray_bg` `<callout>` with a one-line purpose, then `<table_of_contents/>` |
-| Section headings | One leading emoji per `##` / `###` that names the content (`## 🧪 Safety net`); numbered headings keep the number first (`## 1. 📋 TL;DR`) |
-| Warning or priority groups | A sub-heading carrying a signal icon — `### 🚨 Money safety`, `### 🔑 Decides order of work` |
-| Long code, before/after sketches | A `<toggle heading="h3">` block: the title on the line after the opening tag, a blank line, then the children unindented, code in fenced blocks, and `</toggle>` right after the last child |
-| Diagrams | A `mermaid` code block |
-| Repeating columns | `<table header-row="true">` |
-| Questions and follow-ups | `- [ ]` checkboxes |
-
-To bring an existing page up to this style, change markup alone — heading
-icons, callouts, toggles — and keep every word. Patch each heading line
-with `update_content`, using the exact heading text as `old_str`.
-
-Write through the Notion MCP with these behaviours in mind:
-
-- Wrap filenames and `file:line` references in inline code — bare `CLAUDE.md`
-  or `File:line` in text is auto-linked (`[CLAUDE.md](http://CLAUDE.md)`).
-- In a table cell, join two inline-code spans with "and" or "plus": a literal
-  `` `a` + `b` `` renders as `` `a` • `b` ``, and `update_content` cannot
-  correct it afterwards.
-- Escape `< > { } | ~ $ ^` in plain text; code spans stay literal. A code span
-  cannot hold a backtick, so rephrase instead (e.g. "the template literal
-  `balance - ${x}`").
-- Keep a `<page url="…">` tag for every child page in a `replace_content`
-  body — a child left out is deleted.
-- Write each sub-section as a `### <emoji> …` header: the doc-format-gate
-  hook rejects a bold-only line such as `**Pagination**` standing in for a
-  header, and any `##`/`###` header without a leading emoji.
-- Send a page over about 20k characters as a short `notion-create-pages`
-  body (callout, table of contents, first sections), then append each later
-  `##` section with `insert_content` at `position: end`.
-- A `notion-fetch` result over about 50k characters is saved to a file; verify
-  edits by parsing that file (`json.loads(...)['text']`) rather than reading it
-  inline.
+Every page body written as Notion-flavored markdown — the fallback body, a new
+template's body, a write-up page — gets heading icons, a purpose callout, a
+table of contents and toggles for long code, and follows the Notion MCP's
+escaping and size limits. Read `references/page-formatting.md` before writing
+or restyling any such body.
 
 ## Add a new template
 
