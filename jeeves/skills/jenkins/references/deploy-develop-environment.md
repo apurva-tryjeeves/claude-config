@@ -106,7 +106,7 @@ environment.
    enabled service's branch and mode, and get explicit go-ahead — this is a
    shared dev environment other people may be using. Mention the expected
    duration from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` for the service(s)
-   being deployed, if a row exists there. To say what the slot runs now, use
+   being deployed, when that file exists and has their rows. To say what the slot runs now, use
    the user's answer or the Grafana dashboard per SKILL.md → "Name the build
    you mean"; otherwise leave it out.
 7. **Trigger.** Same-slot builds run concurrently (see "Concurrency model"),
@@ -244,7 +244,8 @@ age out of the API while its row keeps them — merge a fresh sample into the
 existing row (widen min/max, add to the sample size) rather than replacing it.
 A service with no row yet gets one the first time a clean single-service build
 appears for it. Record rows in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
-in the same turn.
+in the same turn, creating the file with the first row when it doesn't exist yet (SKILL.md
+has its header).
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
 one batched request, filter to

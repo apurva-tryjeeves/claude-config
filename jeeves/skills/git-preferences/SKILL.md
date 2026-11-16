@@ -215,12 +215,13 @@ Watches for review/PR comments that need a response.
 
 Watches CI/check status until it settles.
 
-- Cadence is per-repo. Check `references/ci-check-timing.md` (the source clone's copy first — see **Write back a timing row**) for a row matching the target repo; when one exists, use its `First check`/`Interval` columns directly.
-- For a repo with no row yet, derive the cadence from that repo's own CI history with a background `Agent` instead of asking the user. Pull the last 10 successful PR runs of each PR-check workflow:
+- Cadence is per-repo. When `~/.claude/org-memory/jeevesinc/ci-check-timing.md` exists, look there for a row matching the target repo; when one exists, use its `First check`/`Interval` columns directly.
+- For a repo with no row yet, or no table yet, derive the cadence from that repo's own CI history with a background `Agent` instead of asking the user. Pull the last 10 successful PR runs of each PR-check workflow:
   ```bash
   gh run list --repo JeevesInc/<repo> --workflow <file> --status success --event pull_request --limit 10 --json createdAt,updatedAt \
     --jq '[.[] | ((.updatedAt|fromdateiso8601) - (.createdAt|fromdateiso8601)) | select(. < 7200)] | "n=\(length) min=\(min)s max=\(max)s mean=\(add/length|floor)s"'
   ```
+  Time only the long-pole workflow, the slowest PR-check workflow; faster workflows and non-Actions checks (SentinelOne CNS scans) leave the cadence unchanged. Copy the check names from a recent PR's rollup (`gh pr view <n> --json statusCheckRollup`): repos on the shared `infra-reusable-workflows` unit-test workflow prefix each job with `test / `, and jeeves-web uses unprefixed names.
   Set `First check` a little under the fastest duration and `Interval` from the spread between fastest and slowest, then add the row (repo, long-pole workflow, check name, min/max/mean, sample size, first check, interval) per **Write back a timing row** below, and start polling once the agent reports back.
 - After checks settle, if the actual settle time differs noticeably from the remembered cadence, refine that repo's row in the same turn, per **Write back a timing row**.
 - Start the poller by invoking the `loop` skill with no interval (dynamic mode), passing the
@@ -238,16 +239,13 @@ Watches CI/check status until it settles.
 
 ### Write back a timing row
 
-Edit the source clone of the plugin, not the installed skill copy:
+The table lives in your org memory, outside the plugin, so each person's samples build up locally:
 
 ```bash
-${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/git-preferences/references/ci-check-timing.md
+~/.claude/org-memory/jeevesinc/ci-check-timing.md
 ```
 
-Leave the edit uncommitted and tell the user it is ready to review and push. When that directory doesn't exist, report the new row and the proposed edit instead. Read the source clone's copy of the table when it exists, else this skill's own `references/ci-check-timing.md`.
-Read the clone as it is on disk: its branch, working tree and `master` stay exactly as the user
-left them, with no `pull`, `switch`, `reset` or `stash`. The user owns its git state. To open a
-PR against claude-config itself, work in a separate `git worktree` cut from `origin/master`.
+Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval |`, then index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`.
 
 ## Report findings
 
@@ -263,7 +261,8 @@ Icons, linking and value-rendering vocabulary live in the shared
 - **On a failure, list only the failing checks** and fence the handful of log
   lines naming the cause; the passing ones stay off the table.
 - **While checks still run**, give elapsed against the expected settle time from
-  `references/ci-check-timing.md`: `⏳ 2m10s elapsed · ~6m expected`.
+  the timing row, when the repo has one: `⏳ 2m10s elapsed · ~6m expected`.
+  Without a row, give the elapsed time alone.
 
 **PR status:**
 

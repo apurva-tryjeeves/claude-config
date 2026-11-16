@@ -33,7 +33,8 @@ from jaidev_watch.models import (
 )
 
 WAVE2 = Path(__file__).resolve().parent / "fixtures" / "wave2-state.json"
-TIMINGS = load()
+CI_TABLE = Path(__file__).resolve().parent / "fixtures" / "ci-check-timing.md"
+TIMINGS = load(CI_TABLE)
 REPO = "/x/ap-data-source-connector"
 
 
@@ -401,7 +402,9 @@ class CommandTest(unittest.TestCase):
         return code, out.getvalue()
 
     def test_explain_wave2(self) -> None:
-        code, out = self.run_cli("explain", str(self.path), "--at", "2026-11-06T03:00:00Z")
+        code, out = self.run_cli(
+            "explain", str(self.path), "--at", "2026-11-06T03:00:00Z", "--ci-timing", str(CI_TABLE)
+        )
         self.assertEqual(code, 0)
         self.assertIn("ACC-1670 done", out)
         self.assertIn("ci=ap-data-source-connector", out)

@@ -14,6 +14,8 @@ from typing import Any
 from jaidev_watch import ci_derive, ci_timing
 from jaidev_watch.ci_derive import CiDeriveError, DerivedRow
 
+FIXTURE = Path(__file__).parent / "fixtures" / "ci-check-timing.md"
+
 ROLLUP = json.loads((Path(__file__).parent / "fixtures" / "acc-1670-rollup.json").read_text())
 
 
@@ -71,7 +73,7 @@ class PureTest(unittest.TestCase):
             "new-repo", "test / Unit Test", ("SonarCloud Code Analysis",), [s(132), s(294)]
         )
         row = DerivedRow(timing=timing, workflow="unit-test.yml", sample_size=2)
-        text = ci_derive.insert_row(ci_timing.DEFAULT_PATH.read_text(), ci_derive.format_row(row))
+        text = ci_derive.insert_row(FIXTURE.read_text(), ci_derive.format_row(row))
         parsed = ci_timing.parse_table(text)["new-repo"]
         self.assertEqual(parsed.settles_on, timing.settles_on)
         self.assertEqual(
@@ -112,7 +114,7 @@ class TableWriteTest(unittest.TestCase):
         self.assertEqual([p.name for p in self.folder.iterdir() if p.name.startswith(".")], [])
 
     def test_first_check_matches_every_existing_row(self) -> None:
-        for repo, row in ci_timing.load().items():
+        for repo, row in ci_timing.load(FIXTURE).items():
             with self.subTest(repo=repo):
                 derived = ci_derive.derive_timing(repo, "c", ("c",), [row.minimum, row.maximum])
                 self.assertEqual(derived.first_check, row.first_check)
@@ -168,15 +170,15 @@ class DeriveRowTest(unittest.TestCase):
         with self.assertRaisesRegex(CiDeriveError, "no successful PR runs"):
             ci_derive.derive_row("ap-x", self.fake_gh([]))
 
-    def test_write_row_only_into_an_existing_table(self) -> None:
+    def test_write_row_creates_the_table_on_its_first_row(self) -> None:
         folder = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, folder)
-        table = folder / "ci-check-timing.md"
+        table = folder / "jeevesinc" / "ci-check-timing.md"
         row = ci_derive.derive_row("ap-x", self.fake_gh([run("01:00:00", "01:02:12")]))
-        self.assertFalse(ci_derive.write_row(row, table))
-        shutil.copy(ci_timing.DEFAULT_PATH, table)
         self.assertTrue(ci_derive.write_row(row, table))
-        self.assertIn("ap-x", ci_timing.load(table))
+        self.assertTrue(ci_derive.write_row(row, table))
+        self.assertEqual(list(ci_timing.load(table)), ["ap-x"])
+        self.assertTrue(table.read_text().startswith("---\nname: ci-check-timing\n"))
 
 
 if __name__ == "__main__":

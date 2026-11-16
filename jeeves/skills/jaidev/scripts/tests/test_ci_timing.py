@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import unittest
 from datetime import timedelta
+from pathlib import Path
 
 from jaidev_watch import ci_timing
+
+FIXTURE = Path(__file__).parent / "fixtures" / "ci-check-timing.md"
 
 
 class CiTimingTest(unittest.TestCase):
@@ -19,14 +22,14 @@ class CiTimingTest(unittest.TestCase):
                 ci_timing.parse_duration(text)
 
     def test_reads_the_ap_data_source_connector_row(self) -> None:
-        row = ci_timing.load()["ap-data-source-connector"]
+        row = ci_timing.load(FIXTURE)["ap-data-source-connector"]
         self.assertEqual(row.check_name, "test / Unit Test")
         self.assertEqual(row.settles_on, ("test / Scan for secrets", "SonarCloud Code Analysis"))
         self.assertEqual(row.maximum, timedelta(minutes=4, seconds=54))
         self.assertEqual((row.first_check, row.interval), (timedelta(minutes=2),) * 2)
 
     def test_every_row_parses(self) -> None:
-        timings = ci_timing.load()
+        timings = ci_timing.load(FIXTURE)
         self.assertGreaterEqual(len(timings), 9)
         for repo, row in timings.items():
             with self.subTest(repo=repo):

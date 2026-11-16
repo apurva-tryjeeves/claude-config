@@ -1,11 +1,13 @@
+---
+name: ci-check-timing
+description: Per-repo PR check settle times (long-pole workflow, check names, min/max/mean, first check, interval); read before starting a checks poller or a Jaidev CI watch, and add or refine a repo's row after its checks settle
+metadata:
+  type: reference
+---
+
 # CI check timing
 
-Per-repo PR check settle times across JeevesInc repos, used to set the checks-poller cadence
-per the "Checks poller" section of `SKILL.md`.
-
-One row per repo. Add a new row the first time a repo's cadence is derived; refine an existing
-row if a later PR's actual settle time differs noticeably — both per "Write back a timing row" in
-`SKILL.md`.
+One row per JeevesInc repo; the git-preferences skill's "Checks poller" section derives and refines rows.
 
 | Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval |
 |---|---|---|---|---|---|---|---|---|---|
@@ -19,19 +21,3 @@ row if a later PR's actual settle time differs noticeably — both per "Write ba
 | billpay-service | unit-test.yml | `test / Unit Test` | `test / Scan for secrets`, `SonarCloud Code Analysis` | 12m34s | 16m28s | 14m37s | 9 | 12min | 3min |
 | ap-data-source-connector | unit-test.yml | `test / Unit Test` | `test / Scan for secrets`, `SonarCloud Code Analysis` | 2m12s | 4m54s | 3m18s | 10 | 2min | 2min |
 | cms | unit-test.yml | `test / Unit Test` | `test / Code Analysis`, `SonarCloud Code Analysis` | 7m24s | 17m13s | 9m00s | 10 | 7min | 3min |
-
-**Check names:** copy them from the PR's own rollup (`gh pr view <n> --json statusCheckRollup`).
-Repos on the shared `infra-reusable-workflows` unit-test workflow prefix each job with `test / `;
-jeeves-web runs its own workflow with unprefixed names.
-
-**Deriving a row:** drop any run longer than ~2h before taking min/max/mean. A run that sat queued
-or was re-run hours later still reports a huge `updatedAt - createdAt`, and one of those is enough
-to pull the mean far off (a jeeves-web sample once carried a 1433m run alongside 33-36m ones).
-
-**Why the long-pole column:** a repo's cadence is driven by its slowest PR-check workflow alone —
-faster workflows on the same repo have no bearing on it. Checks that aren't GitHub Actions runs
-(e.g. SentinelOne CNS scans) historically settle in well under a minute and are excluded from the
-timing data.
-
-**How to apply:** look up the row for the target repo per the Checks poller section in `SKILL.md`.
-No row yet for a repo — derive it from that repo's own CI history (see the skill) and add a row here.

@@ -1,6 +1,6 @@
 ---
 name: jaidev
-description: Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked.
+description: "Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked."
 ---
 
 # Jaidev
@@ -15,7 +15,17 @@ trigger is what makes Jaidev start, so follow its wording to the letter.
 
 Check the reference file first whenever Jaidev acts. When Jaidev shows
 something new — a command, a trigger, a comment format, a limit, a timing —
-update the file now, in this same turn.
+write it back in this same turn to the plugin's source clone, where the edit
+survives plugin updates:
+
+```bash
+${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jaidev/references/
+```
+
+Edit the file there as the clone stands, on its current branch, leave it
+uncommitted, and tell the user it is ready to review and push. When that directory is absent, report the proposed edit
+(file, before and after) instead. Every "write back" in this skill's
+references follows this rule.
 
 Linear tools come from whichever server is connected — `mcp__linear__*` or
 `mcp__claude_ai_Linear__*`; both take the same parameters. Filter tickets by
@@ -361,7 +371,7 @@ the ticket to the user.
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
-- Add the run's row to the cost table in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`, and widen a typical range or edit a pattern when the run falls outside it.
+- Add the run's row to the cost table in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`, creating the file with this first row when it doesn't exist yet, and widen a typical range or edit a pattern when the run falls outside it.
 - Update the progress and return to step 1.
 
 ## Background agents

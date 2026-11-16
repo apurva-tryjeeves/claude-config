@@ -1,6 +1,6 @@
 # Repo notes for agent briefs
 
-Facts agents found while running tickets, one section per repo. Paste the repo's section into the brief template's "Repo facts" part. After each merge, append the agent's "Repo facts learned" here in the same turn, and keep each section to the facts a new agent would otherwise rediscover. For a repo with no section yet, add one after its first merge.
+Facts agents found while running tickets, one section per repo. Paste the repo's section into the brief template's "Repo facts" part. After each merge, append the agent's "Repo facts learned" to the source clone's copy of this file in the same turn (SKILL.md → write-back rule), and keep each section to the facts a new agent would otherwise rediscover. For a repo with no section yet, add one after its first merge.
 
 ## accounting-service
 

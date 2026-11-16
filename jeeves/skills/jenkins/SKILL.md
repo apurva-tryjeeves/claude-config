@@ -194,15 +194,19 @@ concurrent-build race per `references/build-ops.md`):
 > The new `api` pod stayed unready until the deadline — an app issue in the deployed module.
 
 **A running build** — elapsed so far, alongside the service's expected duration
-from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`, and the
-current stage named from the job's stages reference:
+from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` when that file
+has a row for it (elapsed alone otherwise), and the current stage named from
+the job's stages reference:
 
 > ⏳ **building** — [#44089](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/44089/) · 3m20s elapsed, `api` usually takes ~8m56s · in `build` (image scan)
 
 When a deploy finishes and exactly one service was enabled, that build is a
 clean timing sample: merge it into that service's row in
 `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` — widen min/max, add to the sample
-size — in the same turn.
+size — in the same turn. When the file doesn't exist yet, create it with this first row, a
+`reference` memory frontmatter (`name: jenkins-deploy-timings`) and the header
+`| Service | Min | Max | Mean | Sample size |`, then index it in
+`~/.claude/org-memory/jeevesinc/MEMORY.md`.
 
 Keep the rest lean: name the failing step, and leave out the steps that
 succeeded, the URLs the user already has, `jenkins-api` usage examples, the
