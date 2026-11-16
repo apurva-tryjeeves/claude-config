@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Look up, create, update, and query Linear issues for JeevesInc, and draft issue/comment replies tailored to engineering, product, or customer-support audiences. Trigger when the user references a Linear ticket (e.g. WAL-1234, ACC-1234) or URL, starts work on a ticket, asks to create/update an issue, asks for their open tickets or cycle status, or asks to draft/post a reply on a ticket. Load before any Linear write (`save_issue`, `save_comment`).
+description: Look up, create, update and query Linear issues for JeevesInc, and draft issue/comment replies for engineering, product or support audiences. Trigger when the user references a Linear ticket (e.g. WAL-1234) or URL, starts work on a ticket, creates or updates an issue, asks for their open tickets or cycle status, or drafts a reply. Load before a Linear write (`save_issue`, `save_comment`); every `@jaidev` comment follows the jaidev skill.
 ---
 
 # Linear
@@ -66,7 +66,9 @@ code — even when the task brief doesn't mention Linear:
 
 1. Fetch the ticket with `mcp__linear__get_issue`.
 2. Set `state: "In Progress"`, put it in the team's current cycle (resolve it
-   live with `list_cycles`), and assign it to the user.
+   live with `list_cycles`), and assign it to the user. Delegating the ticket
+   to Jaidev leaves it unassigned to the user; that flow follows the
+   `jaidev` skill.
 3. For a missing **estimate** or **project**, fetch live options, narrow them
    as described in "Team, project, estimate, cycle" below, and ask with one
    `AskUserQuestion` call.
@@ -289,6 +291,9 @@ Follow `../../references/output-style.md` (plugin root) for the shared reporting
 vocabulary.
 
 ## Draft a reply — match the audience
+
+Every `@jaidev` comment follows the `jaidev` skill (its comment format and
+per-comment approval); this section covers all other replies.
 
 A reply's tone and content depend entirely on who reads it. Ask which
 audience if it isn't obvious from context, then draft accordingly:

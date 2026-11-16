@@ -1,6 +1,6 @@
 ---
 name: jaidev
-description: "Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked."
+description: "Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked. Every `@jaidev` comment on a ticket follows this skill."
 ---
 
 # Jaidev
@@ -93,6 +93,9 @@ progress after every step.
 ### 1. Pick the next batch
 
 1. List the tickets in scope with status, blocked-by relations and comments.
+   Delegating a ticket to Jaidev leaves it unassigned to the user; the
+   `linear` skill's "Start work on a ticket" assignment applies to the user's
+   own work.
 2. Mark a ticket **ready** when all hold:
    - it needs code changes in a repository;
    - its state type is `backlog`, `triage`, `unstarted` or `started`;
@@ -184,6 +187,8 @@ shared-brief rules, the state file and the watcher.
 - Run each PR review in a fresh `jeeves:jaidev-pr-reviewer` agent.
 - Model and effort come from the agent definition, as do the skills the
   agent loads besides the brief.
+- Change the watcher scripts in `scripts/` through the
+  `jeeves:jeeves-python-engineer` agent.
 
 ## Progress
 

@@ -11,7 +11,7 @@ Read and write this file following `references/write-back.md` at the plugin root
 | Login OTP / MFA / verification code for a user (dev and preprod only; on prod, decline and say the code reaches the user by email) | `develop_<n>` | `multifactor_action_code` | `references/schema/develop.md` → `multifactor_action_code` |
 | Company by name | `develop_<n>` | `companies` | `references/schema/develop.md` → `companies` |
 | User by email | `develop_<n>` | `users` | `references/schema/develop.md` → `users` |
-| Invites to a company — invited users, pending or accepted | `develop_<n>` | `invite_users` | `references/schema/develop.md` → `invite_users` |
+| Invites to a company — invited users, pending or accepted (sending, cancelling or checking an invite: `jeeves:invite-dev-company-user`) | `develop_<n>` | `invite_users` | `references/schema/develop.md` → `invite_users` |
 | Exchange rate | `develop_<n>` | `exchange_rates` | `references/schema/develop.md` → `exchange_rates` |
 | Feature flags enabled for a company | `develop_<n>` | `company_settings` | `references/schema/develop.md` → `company_settings` |
 | Accounting integrations / connections (QBO, Xero, NetSuite via Codat) — which companies have one, their status | `accounting_<n>` | `integration` | `references/schema/accounting.md` → `integration` |

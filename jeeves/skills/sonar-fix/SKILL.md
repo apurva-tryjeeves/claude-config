@@ -1,6 +1,6 @@
 ---
 name: sonar-fix
-description: Clear a failing SonarCloud quality gate on a JeevesInc pull request — read the gate, fix every open issue and hotspot, close the coverage-on-new-code gap, verify locally, commit and push. Trigger when a PR's Sonar check is red, a quality gate is blocking a merge, or the user asks to fix Sonar issues or new-code coverage.
+description: Clear a failing SonarCloud quality gate on a JeevesInc pull request — read the gate, fix every open issue and hotspot, close the coverage-on-new-code gap, verify locally, commit and push. Trigger when a PR's Sonar check is red (a rule id lookup alone goes to sonar-proactive-rules), a quality gate is blocking a merge, or the user asks to fix Sonar issues or new-code coverage.
 ---
 
 # Sonar Fix
@@ -77,7 +77,7 @@ Fix the SonarCloud quality gate for a pull request end to end.
    ```
    Run `eslint --fix` for pure formatting, then run the repo's test script with coverage (jest in most services, mocha in `backend`) — confirm all tests pass and coverage on changed files clears the threshold from step 2.
 
-6. **Commit exactly the files you edited**, staged explicitly by path (leave `*.postman_collection.json` unstaged if it appears among changes — it is a local Postman export, outside the Sonar fix). Follow the `jeeves:git-preferences` skill for commit message style and the co-author trailer. Show the staged files and the commit message, then wait for the user's yes before committing.
+6. **Commit exactly the files you edited**, staged explicitly by path. Follow the `jeeves:git-preferences` skill for commit message style and the co-author trailer. Show the staged files and the commit message, then wait for the user's yes before committing.
 
 7. **Push** once the user confirms — show the branch and the commit(s) first. Then follow the `jeeves:git-preferences` skill's PR Post-Create Polling section: ask which poller(s) to start, and for the Checks poller use its per-repo cadence and stop rule until the `SonarCloud Code Analysis` check reaches a terminal state, then report pass/fail. Re-read the gate (step 2) and iterate against the live result to confirm each fix worked.
 

@@ -6,7 +6,7 @@ description: Trace one JeevesInc transaction end to end — its rows in the wall
 # Trace a Transaction
 
 Trace one transaction across Jeeves services and produce a single chronological
-timeline.
+timeline. For a batch, sync or trace id, search the logs with `jeeves:opensearch`.
 
 | Environment | Wallet / transactions / product-account databases | Logs |
 | --- | --- | --- |

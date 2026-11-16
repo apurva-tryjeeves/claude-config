@@ -1,6 +1,6 @@
 ---
 name: sonar-proactive-rules
-description: SonarCloud "Sonar way comprehensive" TypeScript rules to write to proactively in Jeeves backend Node/TS services, so PRs pass the quality gate clean. Trigger when writing or editing TypeScript in a Jeeves repo, or when a Sonar issue cites a rule id (grep references/sonar-ts-rules-catalog.md by id).
+description: SonarCloud "Sonar way comprehensive" TypeScript rules to write to proactively in Jeeves backend Node/TS services, so PRs pass the quality gate clean. Trigger when writing or editing TypeScript in a Jeeves repo, or to look up what a Sonar rule id means; to clear a PR's red gate use sonar-fix.
 ---
 
 # SonarCloud proactive rules — Jeeves TypeScript

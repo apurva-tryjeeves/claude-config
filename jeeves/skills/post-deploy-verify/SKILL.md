@@ -16,7 +16,9 @@ fix it where it doesn't.
 **Hand-off:** when the user already has an approved test plan to execute and
 the `release-test` workflow is installed, it runs the plan and returns a merge
 verdict. This skill covers the
-looser "I just deployed it, does it work?" pass.
+looser "I just deployed it, does it work?" pass. For a per-ticket background
+verification, hand off to the `jeeves:jeeves-verifier` agent, which applies
+this skill's procedure.
 
 ## Read these first
 

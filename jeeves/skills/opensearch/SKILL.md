@@ -1,6 +1,6 @@
 ---
 name: opensearch
-description: Search JeevesInc application logs on the OpenSearch clusters, and manage alerting monitors over the Alerting API. Trigger when the user asks to search or debug production logs, trace a transaction/batch/sync UUID, or create, update or list an OpenSearch monitor or notification channel.
+description: Search JeevesInc application logs on the OpenSearch clusters, and manage alerting monitors over the Alerting API. Trigger when the user asks to search or debug production logs, find the log lines for a batch, sync or trace id (a transaction UUID goes to trace-tx), or create, update or list an OpenSearch monitor or notification channel.
 ---
 
 # OpenSearch — application logs and alerting monitors
@@ -39,7 +39,7 @@ All Jeeves services ship app logs into **daily indices `logs-YYYY.MM.DD`**
 
 ### Query patterns
 
-**A known transaction/batch/sync UUID:** `match_phrase` on the `log` field, plus a `@timestamp` range filter (and an `app_name.keyword` filter to scope to a service). Service-specific breadcrumbs show up in `log` — e.g. accounting's Codat calls log as `[CodatAPI] Call for method[...]` with full request/response.
+**A known batch/sync UUID:** (a transaction UUID with the question "what happened to it" goes to `jeeves:trace-tx`) `match_phrase` on the `log` field, plus a `@timestamp` range filter (and an `app_name.keyword` filter to scope to a service). Service-specific breadcrumbs show up in `log` — e.g. accounting's Codat calls log as `[CodatAPI] Call for method[...]` with full request/response.
 
 **A known request trace id:** exact `term` filter on `traceId.keyword` or `jeeves_trace_id.keyword` (whichever id you have), plus a `@timestamp` range filter. Omit the `app_name.keyword` filter to pull every service the request touched in one query:
 

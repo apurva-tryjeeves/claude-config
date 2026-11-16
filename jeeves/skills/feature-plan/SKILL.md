@@ -39,7 +39,8 @@ This skill produces the plan those read from.
    ```
 5. **Write the plan.** One section per microservice — changes, new or changed
    APIs, DB migrations, config, inter-service contracts, risks — plus a
-   sequencing section saying what lands first. Save it as a reviewable markdown
+   sequencing section saying what lands first. For TypeScript services, settle
+   new identifier and file names with `jeeves:typescript-naming` first. Save it as a reviewable markdown
    file.
 
 ## Report the plan
