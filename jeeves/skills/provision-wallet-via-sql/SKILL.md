@@ -144,7 +144,7 @@ SQL
 
 Replace `NN` with the env number in every table name.
 
-## Verify & report
+## Verify
 
 ```bash
 jsql dev-NN/product_account '
@@ -178,11 +178,13 @@ WHERE walletInstrumentProviderAccountId = "<PROV_ACCT>"
 '
 ```
 
+## Reporting results
+
 Report the rows in a table with columns `Service | Table | Record` — one row per record — confirming the product account and wallet instrument share the PK.
 - Status values (`accountStatus`, `kycStatus`, `KYCStatus`, `status`) carry an
   icon beside the value: ✅ `active`/`approved`, ⏳ `pending`/`in-review`/`rfi-*`,
   ⛔ `closed`/`deactivate`/`deactivated`/`archived`/`deleted`/`rejected`, ⚠️ `suspended`/`in-review-error`.
 - Write every id in full — uuids and PKs stay untruncated.
 
-Answer with the table, then stop. Follow `../../references/output-style.md` (plugin root)
+Answer with the table, then stop. Follow `${CLAUDE_PLUGIN_ROOT}/references/output-style.md`
 for the shared reporting vocabulary.

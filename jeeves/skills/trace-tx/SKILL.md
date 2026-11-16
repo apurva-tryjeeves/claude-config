@@ -20,7 +20,7 @@ timeline. For a batch, sync or trace id, search the logs with `jeeves:opensearch
 - **Column names** → read `jeeves:mysql`'s `references/schema/<service>.md`
   (`wallet.md`, `product_account.md`) before composing a query, and record
   what you discover following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
-- **Reusable queries** → `../../references/queries.md` — read it when the user
+- **Reusable queries** → `${CLAUDE_PLUGIN_ROOT}/references/queries.md` — read it when the user
   refers to a saved query.
 - **Expired credentials** — an auth error from a log or DB query means a
   stale SSO session; log in as `jeeves:aws-secrets` "Authentication" describes. An empty result is a
@@ -46,12 +46,14 @@ The id usually matches on `id` or on the transaction reference id, which all thr
 3. **product_account** — related ledger entries in `product_accounts_ledger`.
 4. **Logs** — `match_phrase` the id in the `log` field over a sensible `@timestamp` window (widen it when empty), with no `app_name.keyword` filter, so the id match returns every service it touched; scope by an `app_name.keyword` seen in those hits when the volume is high. Use the MCP server for the env from the table above. Surface errors and webhook receipts.
 
-## Report
+## Reporting results
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
-Present one chronological timeline: created → wallet-transaction-engine →
-provider integration → webhook receipt → status propagation → ledger entries.
+Present one chronological timeline: created (`wallet_transactions`) → provider
+integration (`wallet_sub_transactions`, provider log lines) → webhook receipt
+(log lines) → status propagation (`ut_transactions`) → ledger entries
+(`product_accounts_ledger`).
 Give each step its key ids, status, amount and currency, timestamp, and
 provider. Call out explicitly:
 

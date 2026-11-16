@@ -163,10 +163,10 @@ git branch -D hot-fix/<ticket-id>_<context>
 git stash pop
 ```
 
-## 5. Report the result
+## 5. Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 - **Lead with a verdict line** — icon, the pushed branch, and the commit count:
   `✅ pushed hot-fix/ACC-1494_add-category-filters · 2 commits`.

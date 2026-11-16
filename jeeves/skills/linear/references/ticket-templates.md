@@ -31,7 +31,7 @@ edit the created issue with `patch` to fill the placeholders.
 
 ### Applying the bug template
 
-```
+```text
 save_issue(team: "Product - Wallet", title: "<bug title>", template: "Bug template")
 ```
 

@@ -157,7 +157,7 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    - `email` is the address the invitee signs up with: the typed address, or an alias such as `jane+12-75179971@tryjeeves.com`.
    - The rules that choose between the two live in Skill `jeeves:mysql` `references/schema/develop.md` → `invite_users`; read them when `email` differs from `normalizedEmail`.
    - One person can hold live invites to several companies: the typed address for the first, an alias for each later one.
-   - `createdAt` is UTC; quote it in local time per `../../references/output-style.md` (plugin root).
+   - `createdAt` is UTC; quote it in local time per `${CLAUDE_PLUGIN_ROOT}/references/output-style.md`.
 
 5. **Confirm the acceptance** once the user says the invitee has signed up.
    Acceptance does three things in the same second:

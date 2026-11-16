@@ -1,11 +1,17 @@
 {
   "name": "jeeves-local",
-  "owner": { "name": "Apurva Singh", "email": "apurva@tryjeeves.com" },
+  "owner": {
+    "name": "Apurva Singh",
+    "email": "apurva@tryjeeves.com"
+  },
   "plugins": [
     {
       "name": "jeeves",
       "source": "./jeeves",
-      "description": "Skills and agents for JeevesInc engineering work — Linear, Jenkins, MySQL, OpenSearch, AWS secrets, releases, and the git/PR, logging, SQS and SonarCloud conventions."
+      "description": "Skills and agents for JeevesInc engineering work — Linear, Notion release pages, Jaidev, Jenkins, MySQL, OpenSearch, AWS secrets, releases, TypeScript naming and the git/PR, logging, SQS and SonarCloud conventions."
     }
-  ]
+  ],
+  "metadata": {
+    "description": "JeevesInc engineering skills and agents for Claude Code: tickets, deploys, data, logs, releases and code conventions."
+  }
 }

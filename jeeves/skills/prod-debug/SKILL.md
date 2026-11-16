@@ -28,7 +28,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
   `log` fields, the two trace ids, the `match_phrase` pattern.
 - **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
-- **Reusable queries** → `../../references/queries.md` — SQL and OpenSearch
+- **Reusable queries** → `${CLAUDE_PLUGIN_ROOT}/references/queries.md` — SQL and OpenSearch
   strings the user has shared. Read it when the user refers to a saved query; when the user
   shares a new one, add it to that file following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
@@ -58,7 +58,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
 ## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 1. **Verdict line first** — icon, where it breaks, the service and `file:line`
    that decides the outcome, the ids.

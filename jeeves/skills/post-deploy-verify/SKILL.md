@@ -1,6 +1,6 @@
 ---
 name: post-deploy-verify
-description: Verify a change after it is deployed to a Jeeves dev or preprod environment — inspect the data it produced, search dev OpenSearch logs for its flow, fix what it got wrong, and extend the tests. Trigger after deploying to dev-xx or preprod, or when testing a just-built change end to end.
+description: Verify a change after it is deployed to a Jeeves dev or preprod environment — inspect the data it produced, search dev OpenSearch logs for its flow, fix what it got wrong, and extend the tests. Trigger after deploying to dev-NN or preprod, or when testing a just-built change end to end.
 ---
 
 # Post-Deploy Verification (JeevesInc)
@@ -14,7 +14,7 @@ fix it where it doesn't.
 | preprod | `jsql preprod/<database> '<sql>'` | `mcp__opensearch-dev__*` | Succeed — shared data, confirm first |
 
 **Hand-off:** when the user already has an approved test plan to execute and
-the `release-test` workflow is installed, it runs the plan and returns a merge
+the `release-test` workflow is installed (listed in `.claude/workflows/`), it runs the plan and returns a merge
 verdict. This skill covers the
 looser "I just deployed it, does it work?" pass. For a per-ticket background
 verification, hand off to the `jeeves:jeeves-verifier` agent, which applies
@@ -26,19 +26,22 @@ this skill's procedure.
   `log` fields, the two trace ids, the `match_phrase` pattern.
 - **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
-- **Reusable queries** → `../../references/queries.md` — read it when the user
+- **Reusable queries** → `${CLAUDE_PLUGIN_ROOT}/references/queries.md` — read it when the user
   refers to a saved query; when the user shares a new one, add it to that file following
   `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## Steps
 
-1. **Ask which environment** the code is deployed to (`dev-xx` or `preprod`),
-   and target `dev-NN/<service>` — the wrapper appends the env number.
+1. **Ask which environment** the code is deployed to (`dev-NN` or `preprod`),
+   and target `dev-NN/<service>` — the wrapper appends the env number. Jenkins
+   names the same slot `develop-NN`.
 2. **Mocking plan.** From the services involved, suggest which external
    providers and webhooks to mock — wallet providers (Bridge, Qitech,
    Airwallex, Routefusion, STP, Bexs, Dlocal), accounting (Codat) — and
    confirm the list with the user.
-3. **Inspect the data** the flow produced in that env's databases:
+3. **Inspect the data** the flow produced in that env's databases. When the
+   flow has not run yet, run it first (trigger the API call, webhook or job the
+   change affects) so the data and logs exist:
    ```bash
    jsql dev-20/wallet '<SELECT ...>'
    ```
@@ -54,10 +57,10 @@ this skill's procedure.
    co-author trailer. Push when the user asks, then follow that skill's Checks
    poller section for CI.
 
-## Report the verification
+## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 - **Verdict line first** — icon, what was verified, and the environment:
   `✅ deposit → wallet top-up verified on dev-20`.

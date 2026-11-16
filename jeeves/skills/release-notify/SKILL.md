@@ -123,7 +123,7 @@ type table above):
 ## Keep the service list plain, keep the Slack-native layout
 
 Slack is the destination, so only part of the shared reporting vocabulary in
-`../../references/output-style.md` (plugin root) transfers:
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` transfers:
 
 - **Name the service and nothing else.** Each bullet holds the service name in
   inline code: `• \`wallet-service\``. The Status line at the top of the

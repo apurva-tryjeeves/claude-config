@@ -5,8 +5,6 @@ description: Choose or reason about an AWS SQS queue type (FIFO vs Standard) for
 
 # AWS SQS — FIFO vs Standard Queues
 
-Reference for choosing/reasoning about SQS queue types across Jeeves services.
-
 | Property | Standard | FIFO (`*.fifo`) |
 |---|---|---|
 | Ordering | Best-effort, can arrive out of order | Strict order **within a `MessageGroupId`** |
@@ -34,6 +32,6 @@ Queues are defined in Terragrunt, one `terragrunt.hcl` per service with a `queue
 | Environment | Path |
 |---|---|
 | Development | `infra-terragrunt/infra-development/us-east-2/sqs/<service>/terragrunt.hcl` |
-| Production | `infra-terragrunt-production/production/<region>/sqs/<service>/terragrunt.hcl` |
+| Production | `infra-terragrunt-production/production/us-east-1/sqs/<service>/terragrunt.hcl` |
 
 Add the queue's key to `queue_map` in both, with `fifo_queue = true` (and `content_based_deduplication` as needed) for a FIFO queue. In the service, list FIFO queue URL keys where the repo keeps them — e.g. `FIFO_QUEUE_URL_KEYS` in stablecoin-service `src/constant/common.ts` — so producers send `MessageGroupId`.

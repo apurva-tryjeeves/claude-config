@@ -86,7 +86,7 @@ under exactly this name:
 
 | Server | Used by |
 |---|---|
-| `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` agent |
+| `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` and `jeeves-verifier` agents |
 | `linear` | `linear`, `feature-plan`, `jaidev` |
 | `notion` | `notion-templates`, `release-notify`, `hotfix-captain` agent |
 | `github` | `feature-plan` |
@@ -209,8 +209,8 @@ git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/apurva-tryj
 Set `JEEVES_PLUGIN_SRC` when the clone lives elsewhere. Skills follow
 [`jeeves/references/write-back.md`](jeeves/references/write-back.md): they read
 the clone's copy of these files when it exists, leave their edits uncommitted
-there, and tell you when one is ready. Review it, bump `version` in
-`jeeves/.claude-plugin/plugin.json`, then commit, push and open a PR. Once it
+there, and tell you when one is ready. Review it, then commit, push and open
+a PR that bumps the plugin version (`CLAUDE.md` → "Pull requests"). Once it
 merges, `/plugin marketplace update jeeves-local` brings the new version to
 everyone. Without a clone, skills report the new fact and the edit they would
 make.

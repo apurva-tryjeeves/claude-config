@@ -127,13 +127,14 @@ environment.
    CRUMB=$(jenkins-api crumb)
    ```
 
-   POST the params to `buildWithParameters`, keeping the response headers so
-   the queue id is captured:
+   POST the params to `buildWithParameters`, keeping the response headers in a
+   `mktemp` file (set `HDRS=$(mktemp)` in the same Bash call) so the queue id is
+   captured:
 
    ```bash
    jenkins-api "job/deploy-DEVELOP-environment/buildWithParameters" -H "$CRUMB" -X POST \
      --data-urlencode "ENVIRONMENT=<chosen slot>" \
-     --data-urlencode "MODULES=$MODULES" -D /tmp/trigger-headers.txt
+     --data-urlencode "MODULES=$MODULES" -D "$HDRS"
    ```
 
    This returns `201` with a `Location: .../queue/item/<id>/` header — no
@@ -141,7 +142,7 @@ environment.
    Jenkins keeps a queue item for about five minutes after the build starts:
 
    ```bash
-   jenkins-api queued "$(sed -n 's/^location: //Ip' /tmp/trigger-headers.txt)"
+   jenkins-api queued "$(sed -n 's/^location: //Ip' "$HDRS")"
    ```
 
    It prints the build number once assigned, or `waiting: <why>` while the
@@ -243,8 +244,10 @@ age out of the API while its row keeps them — merge a fresh sample into the
 existing row (widen min/max, add to the sample size) rather than replacing it.
 A service with no row yet gets one the first time a clean single-service build
 appears for it. Record rows in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
-in the same turn, creating the file with the first row when it doesn't exist yet (SKILL.md
-has its header).
+in the same turn. When the file doesn't exist yet, create it with the first row, a
+`reference` memory frontmatter (`name: jenkins-deploy-timings`) and the header
+`| Service | Min | Max | Mean | Sample size |`, then index it in
+`~/.claude/org-memory/jeevesinc/MEMORY.md`.
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
 one batched request, filter to

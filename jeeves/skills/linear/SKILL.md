@@ -80,12 +80,12 @@ code — even when the task brief doesn't mention Linear:
 
 Once the work is pushed or finished:
 
-1. Draft the state (`Done` when every ticket item is complete, `In Progress`
-   while one is open), any missing estimate or cycle, the commit or PR link,
-   and an outcome comment: done and open items, verification results, and
-   blockers with their ticket ids.
-2. Confirm the draft with one `AskUserQuestion`, then save it. Move to
-   `In Review` or `Done` as its own confirmed step.
+1. Draft any missing estimate or cycle, the commit or PR link, and an
+   outcome comment: done and open items, verification results, and blockers
+   with their ticket ids.
+2. Confirm the draft with one `AskUserQuestion`, then save it. Then move the
+   state as its own confirmed step: `Done` when every ticket item is complete,
+   `In Review` when review is next, `In Progress` while an item is open.
 3. List candidate related tickets as suggestions, and add a `relatedTo` link
    only for the ones the user approves.
 4. Treat any change to the ticket between your saves as the user's deliberate
@@ -176,7 +176,7 @@ a wall of text. The shared rules are in `${CLAUDE_PLUGIN_ROOT}/references/output
 | Sub-sections within a section | `### <emoji> Header` — e.g. `### 🗄️ Repository / data-access layer` | Breaks a long section into labelled blocks instead of bold-only lines |
 | Named things the reader scans for (patterns, key types, a flow) | Bold inline — `**Strategy**`, `**branded types**`, `**route → controller → service**` | Picks the key concepts out of a dense bullet |
 | A long log dump or stack trace | `+++ <title>` … `+++` collapsible section | Keeps the ticket scannable while the detail stays available |
-| Status of a service, check, or environment | The icons from `../../references/output-style.md` | A reader scans for the one that isn't ✅ |
+| Status of a service, check, or environment | The icons from `${CLAUDE_PLUGIN_ROOT}/references/output-style.md` | A reader scans for the one that isn't ✅ |
 
 Two Linear behaviours worth using deliberately:
 
@@ -229,7 +229,7 @@ columns (assignee, project, due date) the request calls for.
   Workflow states table above — so `In Review` reads `⏳ In Review` and
   `Production Ready` reads `✅ Production Ready`.
 
-Follow `../../references/output-style.md` (plugin root) for the shared reporting
+Follow `${CLAUDE_PLUGIN_ROOT}/references/output-style.md` for the shared reporting
 vocabulary.
 
 ## Draft a reply — match the audience

@@ -255,7 +255,7 @@ next?" — the user reads these in a terminal, and every extra line costs contex
 - When the turn added a schema note, close with one line naming the file and
   table documented.
 
-Present rows as the plugin's `../../references/output-style.md` describes
+Present rows as the plugin's `${CLAUDE_PLUGIN_ROOT}/references/output-style.md` describes
 ("Tables for rows, fenced blocks for logs" and its status icons), with ids
 full-length and values exactly as MySQL returned them.
 

@@ -47,22 +47,7 @@ uvx awscurl --service es --region "$REGION" \
   -H 'Content-Type: application/json' -d "$(cat monitor.json)"
 ```
 
-Use this route for any monitor whose `message_template.source` holds newlines.
-The Dashboards Dev Tools console decodes both `\n` and `\u000a` inside JSON
-strings before sending, and the request comes back as:
-
-```
-[script] failed to parse field [source]
-Illegal unquoted character ((CTRL-CHAR, code 10))
-```
-
-The reported line and column point at `message_template.source`. For a single
-edit, the Alerting UI's Message box also takes multi-line text and encodes it
-correctly.
-
-Dev Tools reads a blank line as a request separator, so keep the `{` on the line
-directly below the request line — otherwise the body is parsed as its own
-request and the call returns `request body is required`.
+Use this route for any monitor whose `message_template.source` holds newlines: the Dashboards Dev Tools console rejects them (`Illegal unquoted character ((CTRL-CHAR, code 10))`), and it reads a blank line as a request separator, so keep the `{` directly under the request line.
 
 ## Endpoints
 
@@ -79,8 +64,7 @@ request and the call returns `request body is required`.
 Pass `?dryrun=true` to `_execute` — it then runs the query and evaluates the
 trigger while creating no alert and sending no notification. A bare `_execute`
 defaults to `dryrun=false`: it creates alerts and fires the monitor's actions,
-including Slack messages. Confirm with the user before any POST, PUT, DELETE or
-`_execute`, naming the cluster, the monitor and the action.
+including Slack messages. Confirm before any POST, PUT, DELETE or `_execute` as `SKILL.md` "Manage alerting monitors" says.
 
 Create and update return `_id` and `_version`. Read the monitor back to confirm
 what was stored: `track_total_hits: true` returns as `2147483647`, and

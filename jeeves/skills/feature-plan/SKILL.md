@@ -6,18 +6,13 @@ description: Plan a new feature across JeevesInc microservices from a Notion spe
 # Feature Planning (JeevesInc)
 
 Turn a spec into a per-service implementation plan, grounded in what the code
-and data look like today. Work against a **dev-xx** environment — ask which.
-
-**Hand-off:** once the plan is approved and the work needs Linear tickets, hand
-it to the `prd-split` workflow (one ticket per repo) and then `prd-implement`
-when those workflows are installed; otherwise hand the plan back to the user.
-This skill produces the plan those read from.
+and data look like today. Work against a **dev-xx** environment (step 4 asks which).
 
 ## Read these first
 
 - **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
-- **Reusable queries** → `../../references/queries.md` — read it when the user
+- **Reusable queries** → `${CLAUDE_PLUGIN_ROOT}/references/queries.md` — read it when the user
   refers to a saved query; when the user shares a new one, add it to that file following
   `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 - **GitHub** → `mcp__github__*`, or `gh` via Bash.
@@ -44,10 +39,17 @@ This skill produces the plan those read from.
    file; ask the user where, defaulting to
    `<ticket-or-feature>-plan.md` in the working directory.
 
-## Report the plan
+## Hand-off
+
+Once the plan is approved and the work needs Linear tickets, hand it to the
+`prd-split` workflow (one ticket per repo) and then `prd-implement` when those
+workflows are installed; otherwise hand the plan back to the user. This skill
+produces the plan those read from.
+
+## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 - **Lead with the service list** as a table — columns `Service | Change |
   Depends on` — so the sequencing reads before the detail.

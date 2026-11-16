@@ -5,7 +5,7 @@ description: Fast-forward every JeevesInc repo's default branch from origin with
 
 # Sync repos
 
-Run `jeeves-sync-repos` with `run_in_background`, then report once it exits.
+Run `jeeves-sync-repos` (repos under `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}`) with `run_in_background`, then report once it exits.
 To rebase one feature branch onto its default branch, use `jeeves:git-preferences`.
 
 ## Reporting results

@@ -73,14 +73,23 @@ Example, via `mcp__opensearch-prod__SearchIndexTool`:
 
 **A log level:** phrase matching on `log` is case-insensitive, so `"level":"ERROR"` also matches the OpenTelemetry SDK's own `"level":"error"` lines. Add `{"exists": {"field": "pid"}}` to keep application logs only.
 
-**Large result sets** get written to a file with very long lines, which the Read tool would otherwise truncate. Parse it instead with a Python heredoc slicing the JSON.
+**Large result sets** get written to a file with very long lines, which the Read tool would otherwise truncate. Parse it instead with a Python heredoc slicing the JSON:
+
+```bash
+python3 - <<'PY'
+import json
+hits = json.load(open("<result-file>"))["hits"]["hits"]
+for h in hits[:20]:
+    print(h["_source"]["@timestamp"], h["_source"]["log"][:300])
+PY
+```
 
 For a service's DB tables, use the `jsql` wrapper with that service's database (see the `jeeves:mysql` skill).
 
-### Report search findings
+### Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 - **Lead with a verdict line** — icon, what was found, the hit count, and the
   window searched. Example: `❌ 43 hits — wallet-worker, 6 Aug 00:00–23:59`.

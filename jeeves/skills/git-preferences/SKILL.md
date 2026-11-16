@@ -246,7 +246,7 @@ Add or refine the repo's row there. When the file doesn't exist yet, create it w
 ## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it for every report.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it for every report.
 
 **Checks poller:**
 

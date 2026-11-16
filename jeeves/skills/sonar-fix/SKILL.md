@@ -13,7 +13,7 @@ Fix the SonarCloud quality gate for a pull request end to end.
   ```bash
   gh repo view --json nameWithOwner -q .nameWithOwner
   ```
-- **SonarCloud auth** — the `SONAR_TOKEN` env var (a read-only user token from sonarcloud.io → My Account → Security). Export it from your shell profile (see the marketplace README) so every shell has it. Confirm it's set:
+- **SonarCloud auth** — the `SONAR_TOKEN` env var (a read-only user token). Create and export it as the marketplace README → "Credentials and settings" describes so every shell has it. Confirm it's set:
   ```bash
   [ -n "${SONAR_TOKEN}" ] && echo set || echo unset
   ```
@@ -86,10 +86,10 @@ Fix the SonarCloud quality gate for a pull request end to end.
 - Confirm every condition in the gate response individually shows `status: OK` — clearing the gate needs all conditions green, not just the one just fixed.
 - A call to `api/qualitygates/project_status` returning `{"errors":[{"msg":"Project doesn't exist"}]}` signals a missing/unsent `SONAR_TOKEN` on this private project, even when the project key is correct — reissue the same call with `-u "${SONAR_TOKEN}:"` attached.
 
-## Report the outcome
+## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 - **Verdict line first** — icon, the gate's state, and the PR as a link:
   `✅ quality gate passing — [#534](https://github.com/JeevesInc/<repo>/pull/534)`.
