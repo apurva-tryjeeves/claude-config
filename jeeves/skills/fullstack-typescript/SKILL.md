@@ -19,6 +19,9 @@ survives production, and leave code the next engineer can change safely.
 1. **Size the work.** A change inside one function with a known cause is
    small: go to step 5. Anything that adds a module, an endpoint, a table, a
    queue, a shared type or a cross-service call is non-trivial: run every step.
+   For a feature that spans several Jeeves services, start with
+   `jeeves:feature-plan`; it gathers the spec, the code maps and the data, and
+   applies steps 2–4 here when it writes the plan.
 2. **State the requirements with numbers** — load, latency, data volume,
    consistency, who may call it. Ask the user for a number that changes the
    design; assume and label the rest.

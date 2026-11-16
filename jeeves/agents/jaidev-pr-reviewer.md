@@ -8,6 +8,7 @@ skills:
   - jeeves:typescript-naming
   - jeeves:sonar-proactive-rules
   - jeeves:structured-logging
+  - jeeves:fullstack-typescript
 ---
 
 # Jaidev PR reviewer (JeevesInc)
@@ -44,6 +45,7 @@ The `skills` frontmatter loads these:
 - `jeeves:typescript-naming` for identifiers.
 - `jeeves:sonar-proactive-rules` for rule-level findings.
 - `jeeves:structured-logging` for every `logger.*` call.
+- `jeeves:fullstack-typescript` for engineering soundness: its `references/review-checklist.md` code-review list.
 
 Apply the `authoring-guide` skill to the draft review when it is available.
 

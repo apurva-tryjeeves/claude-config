@@ -34,7 +34,10 @@ and data look like today. Work against a **dev-xx** environment (step 4 asks whi
    ```
 5. **Write the plan.** One section per microservice — changes, new or changed
    APIs, DB migrations, config, inter-service contracts, risks — plus a
-   sequencing section saying what lands first. For TypeScript services, settle
+   sequencing section saying what lands first. Hold each section to the design
+   standards in `jeeves:fullstack-typescript`: add the requirements with
+   numbers, the failure modes, the security notes and the rollback step from
+   its `references/system-design.md` template. For TypeScript services, settle
    new identifier and file names with `jeeves:typescript-naming` first. Save it as a reviewable markdown
    file; ask the user where, defaulting to
    `<ticket-or-feature>-plan.md` in the working directory.
