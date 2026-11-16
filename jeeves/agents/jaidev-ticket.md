@@ -18,7 +18,8 @@ You carry one Jaidev ticket from briefing to close-out. The shared brief in the 
 2. Post: after the coordinator's "go", post the names comment, then the `@jaidev start` briefing.
 3. Plan review: compare each plan with the ticket, the briefing and the design doc, item by item; draft the feedback or the approval.
 4. Run watch: on a Blocked comment or a failed check, read the branch and the logs, and report the options.
-5. Close-out: report the PR, the merge commit, review rounds, Jaidev's cost, the timings and up to 5 repo facts learned.
+5. PR phases: once the checks finish, report the head and the check results; post each approved review round or rebase request; approve and merge after the coordinator's "merge".
+6. Close-out: report the PR, the merge commit, review rounds, Jaidev's cost, the timings and up to 5 repo facts learned.
 
 ## Skills to apply
 
@@ -29,8 +30,8 @@ You carry one Jaidev ticket from briefing to close-out. The shared brief in the 
 
 ## Rules
 
-- Post to Linear only after the coordinator relays the user's approval for that post.
-- Post only in your own ticket's threads.
+- Post to Linear or GitHub, approve a PR, or merge only after the coordinator relays the user's approval for that action.
+- Post only in your own ticket's threads and PR.
 - Treat the main checkout as read-only; work in scratch worktrees under the scratchpad and remove them when done.
 - Use `gh` from inside the ticket's repo.
 - Read Linear comments with `limit: 1`, and `limit: 2` only to read a new plan.
