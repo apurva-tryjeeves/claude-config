@@ -257,12 +257,7 @@ FROM company_tags
 WHERE tag LIKE "%accounting%"
 ```
 
-## Prod connection note
-
-Prod's backend/monolith database is named **`jeeves`** — it does not follow the dev
-`develop_<n>` convention. Confirmed 2026-08-25 via `SELECT DATABASE()` on
-`jsql prod`. No 3rd-arg DB override is needed; `prod.env`'s `MYSQL_DB`
-already points at it.
+## Prod notes
 
 Prod `exchange_rates` write cadence is sporadic, not periodic: as of 2026-08-25 the
 newest row was `2026-04-29` (a single 112-row bulk run), with prior writes on
