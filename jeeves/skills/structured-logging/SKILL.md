@@ -19,7 +19,7 @@ In a winston repo, keep winston's order on existing loggers and use
 ## 1. One logger per module, created once
 
 ```typescript
-import { getLogger } from '@jeevesinc/jeeves-telemetry'; // or your service's equivalent
+import { getLogger } from '@jeevesinc/jeeves-telemetry';
 
 const logger = getLogger('moduleResponsibility'); // e.g. 'paymentReconciliation'
 ```
@@ -32,16 +32,6 @@ Create the logger once per module/file, store it in a single module-level
 Name the `source` string (and any bracket-text prefix in the message) after
 the job the code does, not after how or when it's currently invoked.
 
-- **Stability across invocation changes.** The trigger is plumbing that moves
-  over time — a cron route today, a queue consumer or admin endpoint
-  tomorrow — while the responsibility stays the same. A trigger-baked name
-  (a `Cron` prefix on code merely *called by* a cron route) goes stale the
-  moment the trigger moves, even though the code's job hasn't changed.
-- **No redundancy with the `source` field.** `source` already disambiguates
-  which module emitted a log line; a prefix that just repeats "this runs via
-  cron" adds nothing beyond what `source` already carries. Make the prefix
-  add information `source` doesn't — e.g. which responsibility layer or
-  sub-flow within the module.
 - When a name candidate contains a trigger word (`Cron`, `Queue`, `Webhook`,
   `Endpoint`, `Job`), replace it with the responsibility it fulfills: e.g. a
   module that reconciles balances against a provider is `balanceReconciler`,
@@ -88,8 +78,7 @@ this flow — the entity id, company/user id (if not already auto-injected),
 external provider reference, batch/job id. Prefer these over free-text detail
 buried in the message string. Check what your service's telemetry setup
 already injects automatically (`source`, trace/span ids, user/company context
-from CLS) before adding a field yourself — a manually duplicated key gets
-silently dropped or conflicts with the injected one.
+from CLS) and add only the fields it does not inject.
 
 Keep field names consistent for the same concept across the whole service
 (`transactionId`, not `txId` in one file and `transactionID` in another) —
@@ -100,9 +89,6 @@ consistent keys are what make cross-log search actually work.
 - Log once per significant state transition, not once per loop iteration or
   per retry attempt inside a tight loop — aggregate and log a summary instead
   (`{ processed, failed }`, not one line per item).
-- `debug` is for detail that's fine to leave permanently enabled — if a
-  `debug` line would flood output at normal traffic, it belongs at a lower
-  frequency (log a batch summary) or shouldn't exist.
 - A cron/sync job should log its start (with a run id) and its end (with a
   count/duration summary and per-item failures), not a line for every
   successful item — successes are implied by the summary; failures are what
@@ -118,7 +104,7 @@ before passing them to a logger:
   logging it.
 - Reduce a user/auth object down to just `{ userId, companyId }` before
   logging it.
-- If your redaction helper mutates its argument in place, pass a clone
+- When redaction mutates its argument in place (deleting keys, masking values), pass a clone
   (e.g. `structuredClone(req.body)`) so downstream handlers still see the
   original, unredacted data.
 
@@ -163,3 +149,10 @@ insert/update, a query over an unbounded or large result set.
 - For a batch of many individual calls (a loop, a chunked upsert), accumulate
   the per-call durations into one running total and log it once as a summary
   at the end of the batch, per rule 6.
+
+## Reporting results
+
+When reviewing how a service logs, report a table with columns
+`File:line | Rule | Finding | Fix`, one row per violation, ordered by rule
+number. Lead with a verdict line: the service and the count of violations. When
+nothing violates a rule, say so in one line.

@@ -5,8 +5,7 @@ description: JeevesInc AWS Secrets Manager paths and SSO authentication — the 
 
 # Jeeves AWS Secrets
 
-How JeevesInc services authenticate to AWS and where their secrets live. Other
-AWS topics get their own skill — `sqs` already does.
+How JeevesInc services authenticate to AWS and where their secrets live.
 
 ## Authentication
 
@@ -28,13 +27,18 @@ Confirm a session is live with:
 aws sts get-caller-identity --profile jeeves_dev --region us-east-2
 ```
 
+## Production secrets
+
+Before any `/production/` fetch, name the secret and the key, then wait for the
+user's yes.
+
 ## Reporting secrets
 
 List a secret's key names, and extract a single key's value only when the task
-needs that value. Show the user key names and paths, never secret values —
+needs that value. Show the user key names and paths only;
 when a value has to reach a command, pass it through a variable or a pipe so it
 stays out of the transcript.
 
 ## Secrets Manager
 
-Path conventions (env-type shapes, the service-name → secret-name mapping, known deviations, and the fetch/list commands) live in `references/secrets-manager.md` — read it before looking up or guessing a secret path. Confirming a new service's pair, a new env-type shape, or a deviation from the standard pattern? Record it in your clone of the plugin (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/aws-secrets/references/secrets-manager.md`), leave the change uncommitted and tell the user it is ready to review and push; when that directory is missing, report the finding instead.
+Path conventions (env-type shapes, the service-name → secret-name mapping, known deviations, and the fetch/list commands) live in `references/secrets-manager.md` — read it before looking up or guessing a secret path.

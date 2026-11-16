@@ -12,6 +12,7 @@ timestamp%5D%7B0,10%7D" \
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sys
@@ -126,8 +127,17 @@ def read_payload(stream: TextIO) -> object:
 
 def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr, force=True)
-    args = list(sys.argv[1:] if argv is None else argv)
-    base = args[0].rstrip("/") if args else ""
+    parser = argparse.ArgumentParser(
+        prog="build-table.py",
+        description="Render Jenkins build JSON from stdin as a markdown table.",
+    )
+    parser.add_argument(
+        "base_url",
+        nargs="?",
+        default="",
+        help="the job's base URL; turns each build number into a link",
+    )
+    base = str(parser.parse_args(argv).base_url).rstrip("/")
     try:
         builds = parse_builds(read_payload(sys.stdin))
     except TableError as exc:

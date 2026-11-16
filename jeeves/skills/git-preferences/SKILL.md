@@ -1,11 +1,12 @@
 ---
 name: git-preferences
-description: Personal git/PR preferences for JeevesInc repos — commit style (Linear ticket refs), branch strategy (including a parent-ticket integration branch for sub-issues that ship together), PR creation, and post-create polling. Invoke when doing git operations or creating/updating PRs in a JeevesInc repo, or when the user gives JeevesInc git-related guidance to remember.
+description: JeevesInc git and PR conventions — branch strategy (including a parent-ticket integration branch), commit and PR titles, PR descriptions, PR comment and CI pollers. Invoke when doing git operations or creating or updating PRs in a JeevesInc repo, when asked to rebase or sync a feature branch onto its default branch, or when the user gives JeevesInc git guidance to remember.
 ---
 
 # Git Preferences
 
-Personal git and PR preferences. This is a living list — add new guidance here as it's given.
+JeevesInc git and PR conventions. When the user gives new guidance, add it to
+this file, following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## Branch Strategy
 
@@ -32,7 +33,7 @@ When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with 
 | `feat/<PARENT>` (e.g. `feat/ACC-1555`) | the default branch | the default branch, once every sub-issue is in | Squash |
 | `feat/<SUB>` (e.g. `feat/ACC-1557`) | `feat/<PARENT>` | `feat/<PARENT>` | Squash |
 
-1. Create and push the parent branch once, from the updated local default branch:
+1. Show the parent branch name, then wait for the user's yes. Then create and push the parent branch once, from the updated local default branch:
    ```bash
    git switch <default-branch>
    git pull --ff-only origin <default-branch>
@@ -69,7 +70,7 @@ When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with 
    git rebase --onto feat/<PARENT> "$OLD_PARENT"
    git push --force-with-lease origin feat/<SUB>
    ```
-5. Once every sub-issue PR is squashed into the parent branch, open the parent PR against the default branch, titled with the parent's id. List each sub-issue PR in its description, then squash-merge it.
+5. Once every sub-issue PR is squashed into the parent branch, open the parent PR against the default branch, titled with the parent's id, and list each sub-issue PR in its description. Squash-merge it after the user says to merge.
 
 **Stacked-branch gotchas:**
 - Parallel sub-branches that each inject the same dependency into one service merge cleanly but break `tsc`. After each merge, rebase the remaining sub-branches and run `tsc` before merging the next.
@@ -91,7 +92,7 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) spec wit
 [optional footer(s)]
 ```
 
-**Types:** `feat:`, `fix:`, `docs:`, `refactor:`, `perf:`, `test:`, `chore:` — the set the repos' `lint / Validate PR title` check accepts.
+**Types:** the set in the **Create a PR** table, which the repos' `lint / Validate PR title` check accepts.
 
 **Examples:**
 ```bash
@@ -108,6 +109,8 @@ Co-Authored-By: <the session's own Claude model> <noreply@anthropic.com>
 ```
 
 **Reasoning:** put the "why" of a small, self-contained change in the commit message or PR body, and keep the code free of explanatory comments. Reserve an inline comment for a workaround for a specific external bug or a non-obvious invariant.
+
+**Cherry-picks:** use plain `git cherry-pick` (no `-x`) for commits that land in a PR.
 
 ## Create a PR
 
@@ -132,19 +135,14 @@ Write the title without a scope, so every PR title reads the same (`references/p
 
 ### PR body format
 
-Write the PR title and the description's sections to the structure in `references/pr-description.md` (sub-ticket and parent-ticket shapes, with a skeleton). Write every PR description, PR comment and review summary in this style:
+Write the PR title and the description's sections to the structure in `references/pr-description.md` (sub-ticket and parent-ticket shapes, with a skeleton). Write every PR description, PR comment and review summary in the shared style (`${CLAUDE_PLUGIN_ROOT}/references/output-style.md`, "Posted markdown style"), with these GitHub specifics:
 
-- Start each section with a `## <emoji> Header`, one emoji per header. Use the repo's PR template sections:
+- Use the repo's PR template sections:
   `## ❗ Problem`, `## 🛠️ Solution`, `## 🔗 References`, `## 🧪 How to test`, `## 🚀 Deployed to`.
-- Use `- [ ]` task lists for test steps and follow-ups.
-- Bold each bullet's lead term.
-- Put names, paths and commands in `code`.
-- Use a table for anything with repeating columns.
-- Wrap long logs in `<details>`, and fence logs, command output and code with a language tag (`text`, `bash`, `sql`).
+- Wrap long logs in `<details>`.
 - Put a merge or deploy gate in a GitHub alert (`> [!IMPORTANT]` or `> [!WARNING]`) at the top of `## 🚦 Rollout`, followed by its checklist.
 - Describe the change itself. Keep rebase and cherry-pick mechanics, stacking banners and commit SHAs in the branch graph.
 - Point to PRs in other repos only through `## 🔗 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.
-- Cherry-pick with plain `git cherry-pick` (no `-x`) for commits that land in a PR.
 
 ## Sync a feature branch onto the default branch
 
@@ -234,23 +232,21 @@ Watches CI/check status until it settles.
   ```bash
   gh pr view <n> --repo JeevesInc/<repo> --json statusCheckRollup --jq '.statusCheckRollup[] | {name, status, conclusion}'
   ```
-- Stop once every check has `status: COMPLETED` **and** every check in the row's `Settles on` column is in the list — on repos using the shared unit-test workflow that is `test / Scan for secrets` and `SonarCloud Code Analysis`. The workflow creates `test / Code Analysis` and `test / Scan for secrets` only after the job before them finishes, so an all-COMPLETED list missing them is mid-handoff — keep polling. Then report per **Report findings** below.
+- Stop once every check has `status: COMPLETED` **and** every check in the row's `Settles on` column is in the list — on repos using the shared unit-test workflow that is `test / Scan for secrets` and `SonarCloud Code Analysis`. The workflow creates `test / Code Analysis` and `test / Scan for secrets` only after the job before them finishes, so an all-COMPLETED list missing them is mid-handoff — keep polling. Then report per **Reporting results** below.
 - A failing check here often traces back to the SonarCloud quality gate — see the `jeeves:sonar-proactive-rules` skill for what triggers it, and `/jeeves:sonar-fix` to clear it.
 
 ### Write back a timing row
 
-The table lives in your org memory, outside the plugin, so each person's samples build up locally:
-
-```bash
-~/.claude/org-memory/jeevesinc/ci-check-timing.md
-```
+The table lives in your org memory, outside the plugin, at
+`~/.claude/org-memory/jeevesinc/ci-check-timing.md`, so each person's samples
+build up locally.
 
 Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval |`, then index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`.
 
-## Report findings
+## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it for every report.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it for every report.
 
 **Checks poller:**
 

@@ -1,8 +1,6 @@
 # backend (monolith / "jeeves")
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `develop_<n>` (e.g. `develop_01`) | `preprod` | `jeeves` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## `exchange_rates`
 
@@ -56,7 +54,8 @@ Used to resolve `exchange_rates.sourceCurrency` (numeric) to an alpha code via `
 
 Holds MFA/OTP codes for actions like login — this is where a dev-env login OTP
 lives when email delivery isn't configured/checked (retrieve it directly
-instead of waiting on an email).
+instead of waiting on an email). Read it on dev and preprod only; on prod,
+decline and say the code reaches the user by email.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -256,12 +255,7 @@ FROM company_tags
 WHERE tag LIKE "%accounting%"
 ```
 
-## Prod connection note
-
-Prod's backend/monolith database is named **`jeeves`** — it does not follow the dev
-`develop_<n>` convention. Confirmed 2026-08-25 via `SELECT DATABASE()` on
-`jsql prod`. No 3rd-arg DB override is needed; `prod.env`'s `MYSQL_DB`
-already points at it.
+## Prod notes
 
 Prod `exchange_rates` write cadence is sporadic, not periodic: as of 2026-08-25 the
 newest row was `2026-04-29` (a single 112-row bulk run), with prior writes on

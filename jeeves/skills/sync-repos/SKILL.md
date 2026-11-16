@@ -1,11 +1,12 @@
 ---
 name: sync-repos
-description: Fast-forward every JeevesInc repo's default branch from origin without changing what each repo has checked out. Trigger when the user asks to update, sync or pull development across all repos.
+description: Fast-forward every JeevesInc repo's default branch from origin without changing what each repo has checked out. Trigger when the user asks to update, sync or pull development across all repos. Rebasing one feature branch goes to git-preferences.
 ---
 
 # Sync repos
 
-Run `jeeves-sync-repos` with `run_in_background`, then report once it exits.
+Run `jeeves-sync-repos` (repos under `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}`) with `run_in_background`, then report once it exits.
+To rebase one feature branch onto its default branch, use `jeeves:git-preferences`.
 
 ## Reporting results
 

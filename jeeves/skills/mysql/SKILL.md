@@ -9,80 +9,47 @@ description: Query Jeeves MySQL dev/preprod/prod databases via the jsql wrapper 
 | --- | --- | --- | --- | --- |
 | dev-01…dev-20 | `dev-NN/<service>` | `<service>_NN`; backend `develop_NN` | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
 | preprod | `preprod/preprod_<service>` | `preprod_<service>`; backend `preprod` | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
-| prod | `prod/<service>` | `<service>`; backend `jeeves` | `$JEEVES_SECRETS_DIR/prod.env` | Rejected by the server (read replica, `ERROR 1290`) |
+| development, qa, sandbox | `<env>/<database>` | full database name; list with `SHOW DATABASES` | `$JEEVES_SECRETS_DIR/development.env`, `qa.env`, `sandbox.env` | Succeed — shared |
+| prod | `prod/<service>` | `<service>`; backend `jeeves` (full list: "Default" table below) | `$JEEVES_SECRETS_DIR/prod.env` | Read-only: `jsql` runs `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` and `WITH`, and opens the session `READ ONLY` |
 
-The wrapper sends statements straight to MySQL, so **the server is the only
-thing that stops a write**. Read intent from the table above before running
-anything that modifies data, and confirm with the user before writing to
-`preprod`.
+On `prod`, `jsql` exits with status 2 for any other statement, before it
+connects. On every other env the wrapper sends statements straight to MySQL.
+
+Before any statement that changes data or schema (`INSERT`, `UPDATE`,
+`DELETE`, `REPLACE`, DDL), on any env:
+
+1. Get the affected row count: run a `SELECT COUNT(*)` with the statement's
+   `WHERE`, or count the rows an `INSERT` adds.
+2. Show the user the statement and that count, then wait for the user's yes.
+3. Run the statement.
 
 On preprod, name a database that starts with `preprod`. The preprod host also
 holds every dev env's databases (`wallet_20`, …) plus stale unprefixed ones
 (`accounting`), and the preprod user can read them all — so
 `jsql preprod/wallet_20` returns dev-20 data under a preprod header.
 
-## Credentials
+## Setup and operations
 
-`JEEVES_SECRETS_DIR` defaults to `$HOME/.config/jeeves/mysql` — deliberately
-outside any source tree, so credentials stay clear of git, editor indexers and
-workspace-wide searches. Set it to relocate them. Keep the directory out of any
-git repo; `jsql-pull-secrets` writes a `.gitignore` (`*`) into it as insurance
-should it ever land inside one.
+Credentials, first-time setup, the header colours, environment overrides and
+secret regeneration live in `references/setup.md` — read it when a secret
+file is missing, the client fails to authenticate, or a tunnel is needed.
 
-Each file holds `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASS`,
-`MYSQL_DB`, `MYSQL_SSL`, one MySQL user per environment:
+## Secret files
 
-| User | Privileges |
-| --- | --- |
-| `develop_NN` | `ALL` on that env's service databases (`*_NN`) |
-| `preprod` | `ALL` on `preprod` and `preprod_*`; `SELECT` on every database on the host, dev ones included |
-| prod read replica | read-only |
+Inspect a secret file by its key names only, and keep values out of output
+(aws-secrets, "Reporting secrets"):
 
-- Every `develop-NN` file carries a distinct user and password of its own.
-- dev-NN and preprod share one host; keep one file per env all the same.
-- A database override changes only the database — the user and password still
-  come from the env's file.
-
-`prod.env` is maintained by hand: its secret sits outside the accessible
-Secrets Manager account, so the pull skips it. Create it with the same six
-fields from the prod read-replica credentials stored in Keeper, `chmod 600`.
-
-## First-time setup
-
-1. Install a MySQL **8.4** client. The servers authenticate with
-   `mysql_native_password`, which the 9.x client dropped as a built-in:
-
-   ```bash
-   brew install mysql-client@8.4
-   ```
-
-   The wrapper prefers the pinned 8.4 keg, then falls back to `mysql` on
-   `PATH`. Point `MYSQL_CLIENT` at a specific binary to override the search.
-
-2. Authenticate to AWS, then pull the credentials:
-
-   ```bash
-   aws sso login --profile jeeves_dev
-   jsql-pull-secrets
-   ```
-
-3. Confirm access:
-
-   ```bash
-   jsql dev-13 'SELECT 1'
-   ```
-
-`jsql` ships in this plugin's `bin/`, which Claude Code puts on the Bash
-tool's `PATH` while the plugin is enabled — so the bare command resolves with
-no setup.
+```bash
+cut -d= -f1 "$JEEVES_SECRETS_DIR/develop-05.env"
+```
 
 ## Running queries
 
 Name the target as `<env>/<service>` in the first argument, so it reads
 before the SQL. Env names take the short form: `dev-01` … `dev-20`, `preprod`,
-`prod`. On a dev env the wrapper appends the env number, so `dev-07/accounting`
-targets `accounting_07`; a name already ending in a number passes through
-unchanged. On preprod and prod, write the full database name. Omit the
+`prod`, plus `development`, `qa` and `sandbox`. On a dev env the wrapper
+appends the env number, so `dev-07/accounting` targets `accounting_07`; a
+name already ending in a number passes through unchanged. On every other env, write the full database name. Omit the
 database to use the env's default from its secrets file.
 
 The command text is logged verbatim, so its shape is what the user reads:
@@ -130,48 +97,6 @@ The wrapper passes SQL through unmodified — the server decides what runs, and
 each statement succeeds exactly as far as that env's MySQL user permits.
 Errors surface on stderr and the wrapper propagates mysql's exit code, so
 empty output means an empty result rather than a hidden failure.
-
-A trailing 3rd argument also sets the database and takes precedence over the
-slash form; the slash form is preferred for new commands.
-
-### Header and colour
-
-The wrapper prints a `<env> · <database>` header to stderr before the results,
-styled by how much a statement can affect there:
-
-| Env | Style | Header note |
-| --- | --- | --- |
-| `dev-01`…`dev-20` | green | — |
-| `preprod` | yellow | `writes land on shared data` |
-| `prod` | inverse red | `read replica` |
-
-The notes print with or without colour. MySQL errors come through in red on
-stderr. Colour follows `JEEVES_DB_COLOR=always|never|auto` and defaults to
-`always`, so the styling shows in agent session logs as well as a terminal —
-set `auto` to limit it to a real terminal, `never` or `NO_COLOR` to switch it
-off.
-
-### Environment overrides
-
-Every default matches a standard checkout, so these stay unset in normal use:
-
-| Variable | Default | Applies to |
-| --- | --- | --- |
-| `JEEVES_SECRETS_DIR` | `$HOME/.config/jeeves/mysql` | both commands |
-| `JEEVES_DB_HOST` | the secret file's `MYSQL_HOST`; for the pull, the resolved RDS endpoint | both commands |
-| `JEEVES_DB_PORT` | the secret file's `MYSQL_PORT`; `3306` for the pull | both commands |
-| `JEEVES_DB_INSTANCE_ID` | `development-db-useast2` | `jsql-pull-secrets` |
-| `AWS_PROFILE` | `jeeves_dev` | `jsql-pull-secrets` |
-| `MYSQL_CLIENT` | the pinned `mysql-client@8.4` binary | `jsql` |
-| `JEEVES_DB_COLOR` | `always` | `jsql` |
-
-`JEEVES_DB_HOST`/`JEEVES_DB_PORT` override the endpoint from the secret file at
-query time, so an SSH tunnel or port-forward can be targeted while still using
-that env's credentials:
-
-```bash
-JEEVES_DB_HOST=127.0.0.1 JEEVES_DB_PORT=13306 jsql dev-13 'SELECT 1'
-```
 
 ## Selecting the service database
 
@@ -248,32 +173,30 @@ On preprod this lists every env's databases on the shared host; pick the
 
 ### Common lookups
 
-For these requests, go straight to the listed table and its ready-made query:
-
-| Request | Database | Table | Reference |
-| --- | --- | --- | --- |
-| Login OTP / MFA / verification code for a user | `develop_<n>` | `multifactor_action_code` | `references/schema/develop.md` → `multifactor_action_code` |
-| Company by name | `develop_<n>` | `companies` | `references/schema/develop.md` → `companies` |
-| User by email | `develop_<n>` | `users` | `references/schema/develop.md` → `users` |
-| Invites to a company — invited users, pending or accepted | `develop_<n>` | `invite_users` | `references/schema/develop.md` → `invite_users` |
-| Exchange rate | `develop_<n>` | `exchange_rates` | `references/schema/develop.md` → `exchange_rates` |
-| Feature flags enabled for a company | `develop_<n>` | `company_settings` | `references/schema/develop.md` → `company_settings` |
-| Accounting integrations / connections (QBO, Xero, NetSuite via Codat) — which companies have one, their status | `accounting_<n>` | `integration` | `references/schema/accounting.md` → `integration` |
-
-A row is added when a request that didn't name its table had to be searched for
-and the user approves the row (see step 3 below).
+Check `references/common-lookups.md` first for any lookup request (OTP,
+company, user, invites, exchange rate, feature flags, integrations): it maps
+each request to its table and schema note. Login OTP lookups run on dev and
+preprod only; on prod, decline and say the code reaches the user by email.
 
 ### Any other table
 
 Each service database has a schema-notes file at `references/schema/<service>.md`,
-named after the dev database prefix — the `<service>` in `jsql dev-NN/<service>`
-(`wallet.md`, `product_account.md`, `develop.md` for the backend). One file per
-service covers its dev, preprod and prod databases.
+named after the dev database prefix — the `<service>` in `jsql dev-NN/<service>`.
+One file per service covers its dev, preprod and prod databases.
+`references/schema/README.md` holds the one section template. The files so far:
 
-These notes live in your clone of the plugin — read and write
-`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/mysql/references/schema/<service>.md`
-when that directory exists (it carries notes not yet released), else read this
-skill's own copy and report new notes to the user instead of writing them.
+| File | Database |
+| --- | --- |
+| `references/schema/accounting.md` | `accounting_<n>` |
+| `references/schema/billpay.md` | `billpay_<n>` |
+| `references/schema/develop.md` | backend `develop_<n>` |
+| `references/schema/product_account.md` | `product_account_<n>` |
+| `references/schema/stablecoin.md` | `stablecoin_<n>` |
+| `references/schema/transactions.md` | `transactions_<n>` (`ut_transactions` columns) |
+| `references/schema/wallet.md` | `wallet_<n>` |
+
+Read and write these notes (and `references/common-lookups.md`,
+`references/cross-service-links.md`) following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 Before writing a query against a table:
 
 1. Read the schema note first. If it documents the table —
@@ -294,69 +217,30 @@ Before writing a query against a table:
    ```
 3. **Write the schema note in this same turn, before reporting results.** Any
    turn that ran `SHOW TABLES`, `DESCRIBE` or `SELECT DISTINCT` to learn a
-   table ends with that table documented in the clone's
-   `skills/mysql/references/schema/<service>.md` (create the file if new),
-   left uncommitted — tell the user it is ready to review and push. Append a
-   section in this shape:
-
-   ````markdown
-   ## `<table>`
-
-   <one line: what the table holds and which request it answers>
-
-   | Column | Type | Notes |
-   | --- | --- | --- |
-   | `<col>` | <type> | <enum values, FK target, date format> |
-
-   <the working query, fenced as sql>
-   ````
+   table ends with that table documented in
+   `references/schema/<service>.md` (create the file if new). Append a
+   section in the shape `references/schema/README.md` gives.
 
    Document the columns the query used plus any enum values and join keys
    seen; the full `DESCRIBE` output is optional. When the request described
    the task rather than naming the table (e.g. "get the OTP for this user"
    led to `multifactor_action_code`), ask via `AskUserQuestion` whether to add
-   it to **Common lookups** above. Show the proposed row in the question
+   it to `references/common-lookups.md`. Show the proposed row in the question
    (request described by the table's subject rather than the user's exact
    wording — name the entity, the likely synonyms and the questions it
    answers, e.g. "Accounting integrations / connections (QBO, Xero, NetSuite)
    — which companies have one, their status"; plus database and table) with options
    **Add to Common lookups** (Recommended) and **Skip**. On Add, write the row
-   into the clone's `skills/mysql/SKILL.md` in this same turn. The schema note itself is written either way.
+   into `references/common-lookups.md` in this same turn. The schema note itself is written either way.
 
 Each table then only has to be discovered once: later queries read the note
 instead of re-running `DESCRIBE`/`SELECT DISTINCT`.
 
 When a task needs data correlated across two service databases (e.g. a
 stablecoin deposit and the wallet top-up it produced), check
-`references/cross-service-links.md` first the same way (the clone's copy when
-it exists) — read it before guessing which columns line up, and append a new
-section to the clone's copy the first time a cross-service query is worked
-out.
-
-## Regenerating secret files
-
-`jsql-pull-secrets` re-pulls credentials from AWS Secrets Manager (dev
-host, profile `jeeves_dev`) and writes them into the secrets directory:
-
-```bash
-jsql-pull-secrets                # pull all envs
-jsql-pull-secrets develop-05     # pull one env
-```
-
-The single-env argument is the **full** env name (`develop-05`, `preprod`),
-since it maps straight onto the Secrets Manager id — distinct from the short
-alias (`dev-05`) that `jsql` takes. A name with no matching secret reports
-`SKIP (secret not found)` and leaves the existing file untouched. `prod` is
-absent from the pull list, per Credentials above.
-
-The DB endpoint is resolved at runtime from the RDS instance id via
-`rds:DescribeDBInstances`, so it isn't stored in the repo. Set `JEEVES_DB_HOST`
-to the endpoint hostname to skip that lookup — useful when a role lacks the
-describe permission:
-
-```bash
-JEEVES_DB_HOST=<endpoint-hostname> jsql-pull-secrets
-```
+`references/cross-service-links.md` first — read it before guessing which
+columns line up, and append a new section the first time a cross-service query
+is worked out.
 
 ## Reporting results
 
@@ -371,17 +255,9 @@ next?" — the user reads these in a terminal, and every extra line costs contex
 - When the turn added a schema note, close with one line naming the file and
   table documented.
 
-**Present rows as a markdown table.** One column per selected column, one row
-per record, headers matching the column names the query returned. This is the
-default for every result set, including a single row.
-
-In that table view, a status column (`status`, `accountStatus`, `kycStatus`,
-`result`) reads faster with its icon beside the value it already holds — e.g.
-`✅ ACTIVE`, `⏳ PENDING`, `❌ FAILED`. The plugin's
-`../../references/output-style.md` carries the shared icon set, so a status renders
-the same here as in the Jenkins, Linear and OpenSearch skills. Ids stay
-full-length, and the underlying value stays exactly as MySQL returned it — the
-icon sits alongside it rather than replacing it.
+Present rows as the plugin's `${CLAUDE_PLUGIN_ROOT}/references/output-style.md` describes
+("Tables for rows, fenced blocks for logs" and its status icons), with ids
+full-length and values exactly as MySQL returned them.
 
 **On "raw", return the rows as pretty-printed JSON** in a fenced ```json
 block: an array of objects, one per row, keys in the query's column order and
@@ -389,9 +265,3 @@ named exactly as returned. Values carry through untouched — full-length ids,
 `NULL` as `null`, numbers and dates exactly as MySQL printed them, and no
 icons. JSON is the formatting; the data itself stays unedited, with every row
 present and none truncated, rounded or reordered.
-
-Run the query on its own — the command text is logged verbatim, so `echo`
-banners, section separators and label lines around it double what the user
-reads. The wrapper's `<env> · <database>` header already names the target. Run
-one query per call, sending several calls together in one message, rather
-than chaining queries behind separators.

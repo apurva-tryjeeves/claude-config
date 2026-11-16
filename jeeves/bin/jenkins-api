@@ -20,7 +20,7 @@
 #                          block until the build finishes (default 20 min, 60 s),
 #                          then print its result and the last 40 log lines;
 #                          exits 0 on SUCCESS, 1 on any other result, 2 on timeout
-#   queue                  what is waiting to run, and why
+#   queue                  what is waiting to run, why, and each item's parameters
 #   queued <queue-id>      the build number a trigger's queue item became
 #   crumb                  a CSRF crumb, ready to pass as -H on a POST
 #   url    <job> [build]   print the browser URL, no request made
@@ -41,6 +41,14 @@
 #   JENKINS_ENV_FILE   secrets file to source (default ~/.config/jeeves/jenkins/dev.env)
 
 set -uo pipefail
+
+# Help needs no secrets, so answer it before reading the env file.
+case "${1:-}" in
+  -h | --help | help)
+    sed -n '2,/^$/p' "$0" | sed -e 's/^# \{0,1\}//'
+    exit 0
+    ;;
+esac
 
 ENV_FILE="${JENKINS_ENV_FILE:-$HOME/.config/jeeves/jenkins/dev.env}"
 
@@ -157,7 +165,7 @@ else:
     done
     ;;
   queue)
-    tree=$(encode_tree 'tree=items[why,blocked,stuck,task[name]]')
+    tree=$(encode_tree 'tree=items[why,blocked,stuck,params,task[name]]')
     api "queue/api/json?$tree"
     ;;
   queued)

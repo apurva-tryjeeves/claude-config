@@ -2,7 +2,7 @@
 
 Source: SonarCloud org `jeevesinc`, quality profile `Sonar way comprehensive` (the org's default TypeScript profile, used by every Jeeves service), pulled 2026-10-06 from `api/rules/search?activation=true`. Grep this file by rule id (e.g. `S6582`) or keyword when a Sonar issue cites a rule. Sections follow each rule's software quality: RELIABILITY (bug), SECURITY (vulnerability/hotspot), MAINTAINABILITY (code smell).
 
-Regenerate it when an issue cites a rule id missing here:
+Regenerate it when an issue cites a rule id missing here, writing the result to this file following `references/write-back.md` at the plugin root. The command prints one flat list; place each rule under the section for its software quality by hand:
 
 ```bash
 PROFILE=$(curl -s -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualityprofiles/search?organization=jeevesinc&language=ts" \

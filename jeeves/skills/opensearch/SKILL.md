@@ -1,6 +1,6 @@
 ---
 name: opensearch
-description: Search JeevesInc application logs on the OpenSearch clusters, and manage alerting monitors over the Alerting API. Trigger when the user asks to search or debug production logs, trace a transaction/batch/sync UUID, or create, update or list an OpenSearch monitor or notification channel.
+description: Search JeevesInc application logs on the OpenSearch clusters, and manage alerting monitors over the Alerting API. Trigger when the user asks to search or debug production logs, find the log lines for a batch, sync or trace id (a transaction UUID goes to trace-tx), or create, update or list an OpenSearch monitor or notification channel.
 ---
 
 # OpenSearch — application logs and alerting monitors
@@ -10,12 +10,7 @@ description: Search JeevesInc application logs on the OpenSearch clusters, and m
 | prod | `opensearch-prod` | `jeeves_prod` | `us-east-1` |
 | dev | `opensearch-dev` | `jeeves_dev` | `us-east-2` |
 
-Every profile shares one `sso-session`, so a single login authenticates both
-clusters:
-
-```bash
-aws sso login --profile jeeves_dev
-```
+Every profile shares one `sso-session`; log in as `jeeves:aws-secrets` "Authentication" describes.
 
 | Operation | Reach it with | Depth |
 | --- | --- | --- |
@@ -39,7 +34,7 @@ All Jeeves services ship app logs into **daily indices `logs-YYYY.MM.DD`**
 
 ### Query patterns
 
-**A known transaction/batch/sync UUID:** `match_phrase` on the `log` field, plus a `@timestamp` range filter (and an `app_name.keyword` filter to scope to a service). Service-specific breadcrumbs show up in `log` — e.g. accounting's Codat calls log as `[CodatAPI] Call for method[...]` with full request/response.
+**A known batch/sync UUID:** (a transaction UUID with the question "what happened to it" goes to `jeeves:trace-tx`) `match_phrase` on the `log` field, plus a `@timestamp` range filter (and an `app_name.keyword` filter to scope to a service). Service-specific breadcrumbs show up in `log` — e.g. accounting's Codat calls log as `[CodatAPI] Call for method[...]` with full request/response.
 
 **A known request trace id:** exact `term` filter on `traceId.keyword` or `jeeves_trace_id.keyword` (whichever id you have), plus a `@timestamp` range filter. Omit the `app_name.keyword` filter to pull every service the request touched in one query:
 
@@ -78,14 +73,23 @@ Example, via `mcp__opensearch-prod__SearchIndexTool`:
 
 **A log level:** phrase matching on `log` is case-insensitive, so `"level":"ERROR"` also matches the OpenTelemetry SDK's own `"level":"error"` lines. Add `{"exists": {"field": "pid"}}` to keep application logs only.
 
-**Large result sets** get written to a file with very long lines, which the Read tool would otherwise truncate. Parse it instead with a Python heredoc slicing the JSON.
+**Large result sets** get written to a file with very long lines, which the Read tool would otherwise truncate. Parse it instead with a Python heredoc slicing the JSON:
+
+```bash
+python3 - <<'PY'
+import json
+hits = json.load(open("<result-file>"))["hits"]["hits"]
+for h in hits[:20]:
+    print(h["_source"]["@timestamp"], h["_source"]["log"][:300])
+PY
+```
 
 For a service's DB tables, use the `jsql` wrapper with that service's database (see the `jeeves:mysql` skill).
 
-### Report search findings
+### Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 
 - **Lead with a verdict line** — icon, what was found, the hit count, and the
   window searched. Example: `❌ 43 hits — wallet-worker, 6 Aug 00:00–23:59`.

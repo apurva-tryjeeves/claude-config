@@ -32,7 +32,7 @@ row when a month ships a new one.
 |---|---|---|
 | Weekly release | `DD-Mon-YYYY - Release` | `23-Sep-2026 - Release` |
 | Hotfix | `DD-Mon-YYYY - Hotfix Release (<services>)` | `17-Sep-2026 - Hotfix Release (accounting, jeeves-web)` |
-| Hotfix with a ticket | `DD-Mon-YYYY - [HOTFIX] [<repo>] (<TICKET>)` | `01-Sep-2026 - [HOTFIX] [backend] [exchange-rates] (WAL-5940)` |
+| Hotfix with a ticket | `DD-Mon-YYYY - [HOTFIX] [<repo>] [<context>] (<TICKET>)` | `01-Sep-2026 - [HOTFIX] [backend] [exchange-rates] (WAL-5940)` |
 
 The month abbreviation is three letters (`Sep`), and the day is zero-padded
 (`04-Sep-2026`). Hotfix titles vary in the wild — match the shape the release
@@ -60,10 +60,10 @@ For a hotfix touching several repos:
 | Release Info › Release Playbook, Approved by | Left blank for the captain to fill |
 | Tickets table | One row per ticket — see [Tickets table row](#tickets-table-row) below |
 | Issues identified by QA | Left empty; QA fills it during Pre-Prod testing |
-| Deployment status table | One row per repository, pre-seeded with the full list below. At creation, set every repo named in the Tickets table to `PENDING` on an orange background and leave every other row blank; move each to `RELEASED` on a green background as it deploys |
+| Deployment status table | One row per repository, pre-seeded with the full list from the [fallback body](#fallback-body). At creation, set every repo named in the Tickets table to `PENDING` on an orange background and leave every other row blank; move each to `RELEASED` on a green background as it deploys |
 | Deployment instructions | Left empty unless the release needs manual steps |
 | SCRIPT TO BE EXECUTED POST DEPLOY | An empty `javascript` code block, filled when a post-deploy script is needed |
-| SECRETS TO BE ADDED | The warning callout below, then bullets naming each secret. Put a Keeper reference here, never a secret value |
+| SECRETS TO BE ADDED | The ⚠️ secrets callout from the [fallback body](#fallback-body), then bullets naming each secret. Put a Keeper reference here, never a secret value |
 
 ## Tickets table row
 
@@ -138,45 +138,23 @@ resolve").
 | Frontend | https://preprod.dev.tryjeeves.com/client/web/login |
 | CMS | http://admin-preprod.dev.jeeves.vpn/ |
 
-### Repository list for the deployment-status table
+### Repository list and callouts
 
-Rows carry a GitHub link where the template has one, and plain text where it
-does not (`open-banking`, `expense-management-service`, `trunarrative service`,
-`lumen engine service`). All links point at `https://github.com/JeevesInc/<repo>`,
-with three exceptions: `flow (jumanji)` → `jumanji`, `ai-service` → `jeeves-ai`,
-and the first six rows (`backend`, `frontend`, `cms`, `payment-transfer-service`,
-`banking-service`, `stp-transfer-service`) whose link text is bold.
+The [fallback body](#fallback-body) holds the full repository list for the
+deployment-status table, the 💡 UTV coordination callout (directly under the
+Tickets table) and the ⚠️ secrets callout (at the foot of the page); carry each
+over from there as written.
 
-backend, frontend, cms, payment-transfer-service, banking-service,
-stp-transfer-service, open-banking, expense-management-service,
-trunarrative service, lumen engine service, cashback-service, jeeves-drive,
-authentication-service, credit-statements-service, flow (jumanji), jeeves-web,
-product-account-service, wallet-service, cards-service, billpay-service,
-ocr-service, accounting-service, notification-service, underwriting-service,
-universal-transactions-glue, dbt-transform, transactions-service,
-pricing-engine, ap-data-source-connector, risk-service, recon-service,
-cards-gateway-service, btg-integration, ai-service, credit-service
+In the repository list, rows carry a GitHub link where the template has one and
+plain text where it does not (`open-banking`, `expense-management-service`,
+`trunarrative service`, `lumen engine service`). Links point at
+`https://github.com/JeevesInc/<repo>`, with two different link targets:
 
-### UTV coordination callout
+- `flow (jumanji)` → `jumanji`
+- `ai-service` → `jeeves-ai`
 
-A 💡 callout on a gray background, placed directly under the Tickets table:
-
-> Automated Release process for UTV(Universal Transaction View) is in-progress
-> so till the time,
-> Release captain has to coordinate with the PR owner of `dbt-transform` and
-> `universal-transactions-glue` to make sure the changes of this two services
-> are released by the PR owners on production at-least a one day before the
-> regular release day, The reason is this service changes need the redshift
-> data reload which can take the time(**~45min**) and during that time or
-> before if we release dependent PR of `transactions-service` then the UTV page
-> UI can break.
-
-### Secrets callout
-
-A ⚠️ callout on a gray background, at the foot of the page:
-
-> **DO NOT** paste secrets here.
-> Store them in Keeper, then put a reference here.
+The first six rows (`backend`, `frontend`, `cms`, `payment-transfer-service`,
+`banking-service`, `stp-transfer-service`) carry bold link text.
 
 ## Fallback body
 

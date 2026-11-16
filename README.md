@@ -86,7 +86,7 @@ under exactly this name:
 
 | Server | Used by |
 |---|---|
-| `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` agent |
+| `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` and `jeeves-verifier` agents |
 | `linear` | `linear`, `feature-plan`, `jaidev` |
 | `notion` | `notion-templates`, `release-notify`, `hotfix-captain` agent |
 | `github` | `feature-plan` |
@@ -185,13 +185,18 @@ marked connected in `/mcp` means the plugin is ready.
 
 Several skills record facts they discover back into their own files:
 
-| Skill | File it updates |
+| Skill | File it updates (from the plugin root, `jeeves/`) |
 |---|---|
-| `jaidev` | `skills/jaidev/references/jaidev-reference.md`, `references/repo-notes.md` |
-| `jenkins` | `skills/jenkins/scripts/modules.py`, `references/deploy-develop-environment.md`, `references/deploy-develop-environment-stages.md` |
+| `jaidev` | `skills/jaidev/references/jaidev-reference.md`, `skills/jaidev/references/repo-notes.md` |
+| `jenkins` | `skills/jenkins/scripts/modules.py`, `skills/jenkins/references/deploy-develop-environment.md`, `skills/jenkins/references/deploy-develop-environment-stages.md` |
 | `mysql`, `trace-tx`, `feature-plan`, `post-deploy-verify` | `references/queries.md`, `skills/mysql/references/schema/` |
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
 | `notion-templates` | `skills/notion-templates/references/release-page.md` |
+| `opensearch` | `skills/opensearch/references/alerting-api.md` |
+| `aws-secrets` | `skills/aws-secrets/references/secrets-manager.md` |
+| `invite-dev-company-user` | `skills/invite-dev-company-user/references/confirmed-envs.md` |
+| `git-preferences` | `skills/git-preferences/SKILL.md` |
+| `sonar-proactive-rules` | `skills/sonar-proactive-rules/references/sonar-ts-rules-catalog.md` |
 
 Claude Code runs the plugin from a versioned copy under
 `~/.claude/plugins/cache/jeeves-local/jeeves/<version>/`, which each update
@@ -201,18 +206,14 @@ replaces, so skills write what they learn into your clone of this repo instead:
 git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/apurva-tryjeeves/claude-config
 ```
 
-Set `JEEVES_PLUGIN_SRC` when the clone lives elsewhere. Skills read the clone's
-copy of these files when it exists and leave their edits uncommitted there, and
-tell you when one is ready. Review it, bump `version` in
-`jeeves/.claude-plugin/plugin.json`, then commit, push and open a PR. Once it
+Set `JEEVES_PLUGIN_SRC` when the clone lives elsewhere. Skills follow
+[`jeeves/references/write-back.md`](jeeves/references/write-back.md): they read
+the clone's copy of these files when it exists, leave their edits uncommitted
+there, and tell you when one is ready. Review it, then commit, push and open
+a PR that bumps the plugin version (`CLAUDE.md` → "Pull requests"). Once it
 merges, `/plugin marketplace update jeeves-local` brings the new version to
 everyone. Without a clone, skills report the new fact and the edit they would
 make.
-
-Skills edit the clone as it is on disk: its branch, working tree and `master`
-stay as you left them, with no `pull`, `switch`, `reset` or `stash`. To open a
-PR against claude-config itself, work in a separate `git worktree` cut from
-`origin/master`.
 
 Timing samples stay on your machine, in `~/.claude/org-memory/jeevesinc/`,
 since they change with every run:

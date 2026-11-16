@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 # Fast-forward each JeevesInc repo's default branch from origin, leaving every checkout where it is.
+# Usage: jeeves-sync-repos            — sync every repo under $JEEVES_REPOS_DIR
+#        jeeves-sync-repos --help     — print this header
+#   JEEVES_REPOS_DIR   directory holding the repos (default ~/github/JeevesInc)
+if [ $# -gt 0 ]; then
+  sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'
+  case "$1" in -h|--help) exit 0 ;; *) exit 2 ;; esac
+fi
 root="${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}"
 printf '%s\t%s\t%s\n' repo branch result
 for dir in "$root"/*/; do

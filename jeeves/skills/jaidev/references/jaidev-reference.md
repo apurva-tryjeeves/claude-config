@@ -2,8 +2,7 @@
 
 Observed behaviour of Jaidev ("Jeeves AI Developer", `@jaidev` on Linear),
 from real tickets. Check here first; when Jaidev shows something new, write it
-back to the source clone's copy of this file in the same turn (SKILL.md →
-write-back rule).
+back to this file in the same turn (`references/write-back.md` at the plugin root).
 
 Sections 1–5 hold stable behaviour and are safe to reuse across runs.
 Section 6 points to the local file that holds timings and costs, which vary
@@ -162,36 +161,19 @@ allocated develop environments (see At a glance).
   Jaidev explores the code directly, so give the briefing extra context.
 - The start comment loses identifiers, inline backticks and fenced code
   (WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive
-  intact. Post in this order, and ask Jaidev to quote key lines back:
-  1. The names comment: a top-level comment with the Names table and code
-     blocks up to ~20 lines.
-  2. The start comment, as prose and short lists, as a second top-level
-     comment.
-  3. Plan feedback in plan v1's thread: every code block over ~20 lines, the
-     base branch restated, and the names again when plan v1 still misses them.
+  intact. Jaidev plans v1 as soon as the start comment lands, without
+  waiting for a thread reply. Split every briefing across three posts, in
+  this order, and ask Jaidev to quote key lines back:
+
+  | Post | Holds | Where and when |
+  |---|---|---|
+  | Names comment | The Names table and code blocks up to ~20 lines | Top-level comment, posted first |
+  | Start comment | The briefing, as prose and short lists | Second top-level comment, straight after the names comment |
+  | Plan feedback | Every code block over ~20 lines, the base branch restated, and the names again when plan v1 still misses them | Reply in plan v1's thread |
+
 - Put code in plain fenced blocks and keep every section expanded: a
   briefing in a `+++` collapsible reached Jaidev with its identifiers blanked.
-- Jaidev plans v1 without waiting for a thread reply. Evidence for the order
-  above (Nov 2026):
-  - ACC-1666 and ACC-1667: a names thread reply held back for a first
-    question never reached it; plan v1 on ACC-1667 said "I don't have the
-    thread reply… the names in this plan are my own design".
-  - ACC-1668: planning began at 16:42:31 IST and the thread reply landed at
-    16:43:26; plan v1 invented names and wrote the code as prose; planning
-    cost $4.10.
-  - ACC-1669 (names comment, then 10 s later a start comment whose closing
-    paragraph pointed to the comment above it): plan v1 used every name
-    exactly, quoted the signature and reused the test-setup notes; planning
-    cost $0.90. It still showed `development` as the base in the Affected
-    Services table, cut Done-when to 4 of 8 criteria and described a class
-    in prose; plan review checks all three.
-  - ACC-1669 plan v2 reported the names comment's long service-code section
-    as outside its context, and rebuilt the class from the plan. The Names
-    table and short code blocks reached it intact.
-  - ACC-1670 (names comment 22 s before the start comment): plan v1 reported
-    the 45-line config block as "empty in the prompt" while the prose around
-    it arrived. It also read `development` instead of the briefed parent
-    branch, so its hit list named files the parent had already deleted.
+- The "Evidence" section below holds the runs behind the three-post split.
 - Implementation works from the plan's text (WAL-6301): code that must land verbatim
   goes in the plan in full, so ask Jaidev to include it.
 - With `collectCoverage: true` and a global threshold in `jest.config.js`, a
@@ -234,9 +216,32 @@ allocated develop environments (see At a glance).
 - ACC-1670: a plan feedback reply without `@jaidev` (20:56 UTC) drew no ack for 5.5 h; a one-line reply in the same thread starting `@jaidev please revise the plan per the feedback reply above` (02:31:17 UTC) drew "Plan feedback received" 23 s later, and plan v2 used the earlier reply in full. When a feedback reply gets no ack within 1 min, post that `@jaidev` line in the same thread.
 - A correction posted while Jaidev is already writing the next plan version can be missed: on ACC-1636 plan v2 was posted before it read the correction in the v1 thread. Repeat the correction in the v2 thread (the next plan then carries it).
 - Plan code blocks can carry literal `\n` text (ACC-1645 plan v2). Check the opened PR's source for stray `\n` sequences.
-- The doc-format hook requires `## <emoji>` section headers in GitHub
-  approval bodies and Linear comments; comments starting with `@jaidev`
-  are exempt.
+- Open GitHub approval bodies and Linear comments with `## <emoji>` section
+  headers; comments starting with `@jaidev` follow the briefing format.
+
+### Evidence
+
+Runs behind the three-post split (Nov 2026):
+
+- ACC-1666 and ACC-1667: a names thread reply held back for a first
+  question never reached it; plan v1 on ACC-1667 said "I don't have the
+  thread reply… the names in this plan are my own design".
+- ACC-1668: planning began at 16:42:31 IST and the thread reply landed at
+  16:43:26; plan v1 invented names and wrote the code as prose; planning
+  cost $4.10.
+- ACC-1669 (names comment, then 10 s later a start comment whose closing
+  paragraph pointed to the comment above it): plan v1 used every name
+  exactly, quoted the signature and reused the test-setup notes; planning
+  cost $0.90. It still showed `development` as the base in the Affected
+  Services table, cut Done-when to 4 of 8 criteria and described a class
+  in prose; plan review checks all three.
+- ACC-1669 plan v2 reported the names comment's long service-code section
+  as outside its context, and rebuilt the class from the plan. The Names
+  table and short code blocks reached it intact.
+- ACC-1670 (names comment 22 s before the start comment): plan v1 reported
+  the 45-line config block as "empty in the prompt" while the prose around
+  it arrived. It also read `development` instead of the briefed parent
+  branch, so its hit list named files the parent had already deleted.
 
 ## 6. Timings and costs
 

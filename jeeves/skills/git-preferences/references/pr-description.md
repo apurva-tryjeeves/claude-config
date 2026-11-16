@@ -11,7 +11,7 @@ terms, code formatting, tables.
 <type>: [<TICKET>] - <imperative outcome>
 ```
 
-- **Type:** `feat`, `fix`, `chore`, `docs`, `refactor`, `perf` or `test`.
+- **Type:** one from the Type row of the `SKILL.md` "Create a PR" table.
 - **Scope:** write the title without one, so every PR title reads the same.
 - **Ticket:** the PR's own ticket; a parent-ticket PR uses the parent id.
 - **Outcome:** a sentence-case verb phrase saying what the change achieves.

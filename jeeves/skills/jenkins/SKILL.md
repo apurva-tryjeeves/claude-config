@@ -77,11 +77,11 @@ jenkins-api "job/<job>/<build>/api/json?tree=actions%5Bparameters%5Bname,value%5
 ```
 
 After triggering a build, capture the queue id from the POST's `Location`
-header and resolve it to your build number while the item still exists —
+header (saved with `-D "$HDRS"`, where `HDRS=$(mktemp)` is set in the same Bash call as the POST) and resolve it to your build number while the item still exists —
 Jenkins keeps a queue item for about five minutes past the build's start:
 
 ```bash
-jenkins-api queued "$(sed -n 's/^location: //Ip' /tmp/trigger-headers.txt)"
+jenkins-api queued "$(sed -n 's/^location: //Ip' "$HDRS")"
 ```
 
 Pass that number to every later `status` and `log` call.
@@ -119,8 +119,9 @@ Quote only the line you need from it.
 
 ## Diagnose, trigger, or check an agent
 
+Confirm the job, environment and services with the user before any POST.
 `references/build-ops.md` covers these heavier, less frequent operations,
-kept out of the base skill:
+kept out of the base skill; read it before triggering, retrying or aborting:
 
 - Diagnosing a failed build (concurrent-build workspace races)
 - Triggering, retrying, or aborting a build
@@ -145,8 +146,14 @@ before working with a job:
 | `scripts/build-table.py` | Rendering several builds as a markdown table with icons, durations and links |
 | `scripts/build-params.py` | Reading a `builds[...]` response with parameters on stdin: `--building` lists running builds and their `ENVIRONMENT`, `--single-service` lists `service number duration` for SUCCESS builds that enabled one service, no flag prints a tab-separated row per build |
 
-All take a `scripts/`-relative path, so run them from this skill's own
-directory (`cd` there first, or prefix the path).
+Change these scripts through the `jeeves:jeeves-python-engineer` agent.
+
+Every `scripts/…` path in this skill and its references is relative to the
+skill directory; run from there:
+
+```bash
+cd "${CLAUDE_SKILL_DIR}"
+```
 
 Build a packed positional parameter with its script rather than assembling the
 string by hand — position is the only thing the job reads, so the script's
@@ -158,7 +165,7 @@ Lead with the verdict line. Add detail below it only where that detail changes
 what the user does next.
 
 Icons, linking and value-rendering vocabulary live in the shared
-`../../references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
 A Jenkins `result` maps onto it: `SUCCESS` ✅, `FAILURE` ❌, `UNSTABLE` ⚠️,
 `ABORTED` ⛔, building ⏳. A deploy that ends `ABORTED` after `rollout status`
 and `Timeout has been exceeded` is a failed rollout, not a user abort — report
@@ -200,13 +207,9 @@ the job's stages reference:
 
 > ⏳ **building** — [#44089](https://jenkins.dev.tryjeeves.vpn/job/deploy-DEVELOP-environment/44089/) · 3m20s elapsed, `api` usually takes ~8m56s · in `build` (image scan)
 
-When a deploy finishes and exactly one service was enabled, that build is a
-clean timing sample: merge it into that service's row in
-`~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` — widen min/max, add to the sample
-size — in the same turn. When the file doesn't exist yet, create it with this first row, a
-`reference` memory frontmatter (`name: jenkins-deploy-timings`) and the header
-`| Service | Min | Max | Mean | Sample size |`, then index it in
-`~/.claude/org-memory/jeevesinc/MEMORY.md`.
+When a deploy finishes with exactly one service enabled, record the build as a
+timing sample as `references/deploy-develop-environment.md` "Per-service deploy
+timing" says.
 
 Keep the rest lean: name the failing step, and leave out the steps that
 succeeded, the URLs the user already has, `jenkins-api` usage examples, the

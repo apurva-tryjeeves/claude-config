@@ -23,10 +23,14 @@ optionally with a new product account, chained by a shared PK.
 
 Walk these in order, gathering answers before composing any query.
 
-1. **Ask for the org** — `companyId` and env (e.g. dev-20).
+1. **Ask for the org** — `companyId` and env (e.g. dev-20). Continue only on a `dev-NN` env, then confirm the company exists:
+   ```bash
+   jsql dev-NN/develop 'SELECT id, name, status FROM companies WHERE id = <companyId>'
+   ```
+   An empty result means the `companyId` is wrong: ask again.
 
 2. **Ask: new or existing product account?**
-   - **New** → generate a shared UUID; the flow inserts a `product_accounts` row. Ask the wallet type to fill `productType` / `baseCurrency` from the wallet-type table.
+   - **New** → generate a shared UUID with `uuidgen`; the flow inserts a `product_accounts` row. Ask the wallet type to fill `productType` / `baseCurrency` from the wallet-type table.
    - **Existing** → ask for the `productAccountId`; that id becomes the shared PK. Skip the `product_accounts` insert. Read its type so the instrument matches:
      ```bash
      jsql dev-NN/product_account '
@@ -35,6 +39,11 @@ Walk these in order, gathering answers before composing any query.
      WHERE id = "<productAccountId>"
      '
      ```
+
+   Check the shared id (new UUID or existing `productAccountId`) is free in `wallet_instruments`; an existing row means this product account already has a wallet, so show it to the user and stop:
+   ```bash
+   jsql dev-NN/wallet 'SELECT id, instrumentType FROM wallet_instruments WHERE id = "<SHARED>"'
+   ```
 
 3. **Choose the provider** — show the full list and let the user pick:
    ```bash
@@ -89,15 +98,7 @@ Walk these in order, gathering answers before composing any query.
 ## Queries to compose
 
 Generate one shared UUID (or reuse the existing productAccountId), plus a fresh
-UUID for the provider account row and for each linked row. Before composing,
-check the shared id is free in `wallet_instruments`:
-
-```bash
-jsql dev-NN/wallet 'SELECT id, instrumentType FROM wallet_instruments WHERE id = "<SHARED>"'
-```
-
-An existing row means this product account already has a wallet — stop and
-show it to the user.
+UUID for the provider account row and for each linked row (`uuidgen`).
 
 Run every insert as one transaction through one connection, with
 schema-qualified tables and strict mode, so a bad enum value fails instead of
@@ -143,7 +144,7 @@ SQL
 
 Replace `NN` with the env number in every table name.
 
-## Verify & report
+## Verify
 
 ```bash
 jsql dev-NN/product_account '
@@ -177,11 +178,13 @@ WHERE walletInstrumentProviderAccountId = "<PROV_ACCT>"
 '
 ```
 
+## Reporting results
+
 Report the rows in a table with columns `Service | Table | Record` — one row per record — confirming the product account and wallet instrument share the PK.
 - Status values (`accountStatus`, `kycStatus`, `KYCStatus`, `status`) carry an
   icon beside the value: ✅ `active`/`approved`, ⏳ `pending`/`in-review`/`rfi-*`,
   ⛔ `closed`/`deactivate`/`deactivated`/`archived`/`deleted`/`rejected`, ⚠️ `suspended`/`in-review-error`.
 - Write every id in full — uuids and PKs stay untruncated.
 
-Answer with the table, then stop. Follow `../../references/output-style.md` (plugin root)
+Answer with the table, then stop. Follow `${CLAUDE_PLUGIN_ROOT}/references/output-style.md`
 for the shared reporting vocabulary.

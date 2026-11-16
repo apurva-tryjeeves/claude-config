@@ -6,7 +6,7 @@ keeps the user's approvals, and the agents do the ticket work.
 
 | Piece | Rule |
 |---|---|
-| Agents | One `jeeves:jaidev-ticket` agent per ticket for the ticket work, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round. The agent type sets model sonnet, effort medium |
+| Agents | One `jeeves:jaidev-ticket` agent per ticket for the ticket work, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round, started with the prompt in "Starting a PR reviewer". Model and effort come from the agent definition |
 | Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only the skills their agent type names besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
@@ -16,7 +16,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides. A pre-approval to merge a named set of PRs once CI passes covers only those PRs: after the agent reports a clean review and the head still matches, send the agent "merge" yourself; ask the user when a finding, a failed check or a moved head appears |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
-| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to the source clone's copy of that file in the same turn (SKILL.md → write-back rule) |
+| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn (`references/write-back.md` at the plugin root) |
 | Cleanup | After each merge, run `state set <state-file> <ticket> merged true`; the watcher prints `ALL MERGED` once every ticket is done, and exits |
 
 ### Color coding
@@ -26,7 +26,7 @@ Give every agent an identity color and every message a status circle. The identi
 1. When you spawn an agent, pick the next unused emoji from the palette and record it:
 
    ```bash
-   cd <skill-dir>/scripts && python3 -m jaidev_watch state set <state-file> <ticket> color <emoji>
+   cd "${CLAUDE_SKILL_DIR}/scripts" && python3 -m jaidev_watch state set <state-file> <ticket> color <emoji>
    ```
 2. Start every message you relay about that agent or its ticket with the identity emoji and the ticket id. Tickets batched under one agent share its emoji.
 3. Mark the status with one circle:
@@ -60,7 +60,7 @@ stage expects an answer, so the coordinator wakes only for an event. Run every
 command from the skill's `scripts` directory, with an absolute state-file path:
 
 ```bash
-cd <skill-dir>/scripts
+cd "${CLAUDE_SKILL_DIR}/scripts"
 python3 -m jaidev_watch state init <state-file> <ticket> <agent-id> <repo-dir>
 python3 -m jaidev_watch watch <state-file>
 ```
@@ -135,7 +135,7 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `<ticket> CI LATE …` | Read the PR's checks with `gh pr view`; tell the user which check is stuck |
 | `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
 | `LINEAR POLL ERROR <ticket> missing from the reply` | Restart the watcher; the ticket counts as unread, so no deadline fires from it |
-| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; restart the watcher |
+| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; when the file was just created, index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`; restart the watcher |
 | `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' "Checks poller", add it, and restart the watcher. The watcher retries the derivation 2 min after a failure (`<state-file stem>.ci-hold.json`) |
 | `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
@@ -153,6 +153,25 @@ the user's "merge", or a pre-approval naming that PR.
 #### Agent tools
 
 Linear tools may be `mcp__claude_ai_Linear__*` or `mcp__linear__*`. Tell each agent which server is connected when you spawn it.
+
+### Starting a PR reviewer
+
+Start a fresh `jeeves:jaidev-pr-reviewer` for each review round once the
+ticket agent reports the settled head. Fill this prompt; the agent's "Inputs"
+list names each field. Point the checklist at `references/pr-review.md`, read per `references/write-back.md` at the plugin root:
+
+```text
+Review Jaidev PR <org/repo>#<n> for <ticket-id>, review round <N>.
+- Head SHA: <sha the ticket agent reported>
+- Repo checkout: <main checkout; run gh from inside it>
+- Briefing: <scratchpad>/<ticket-id>-briefing.md
+- Names comment: <scratchpad>/<ticket-id>-names-comment.md
+- Plan feedback: <scratchpad>/<ticket-id>-plan-feedback.md, or "none"
+- Design doc: <URL>, or "none"
+- Checklist: <absolute path of skills/jaidev/references/pr-review.md>
+- Linear server: <mcp__claude_ai_Linear__* or mcp__linear__*>
+- Scratchpad: <directory>; write <ticket-id>-review-r<N>.md there.
+```
 
 ### Preparing the next ticket
 

@@ -23,11 +23,16 @@ visible to the team:
 1. **Preview pass** (the first run). Resolve every input, cut the branch and
    cherry-pick locally, and check for an existing release page — then stop and
    return a preview: release date, captain, repos, each branch name with its
-   base (`origin/<prod-branch>` and tip date), the picked commits, the ticket
-   rows, and the page title. Push nothing and create no page.
+   base (`origin/<prod-branch>` and tip date), the picked commits, any stash
+   made, the ticket rows, and the page title. Leave the push and the page for
+   the ship pass.
 2. **Ship pass** (when the caller resumes you with the user's confirmation or
    corrections). Apply any corrections, push the branch(es), create the page,
    and draft the Slack updates.
+3. **Declined** (when the caller resumes you with the user's no). In each repo,
+   follow the declined-push path in `jeeves:hotfix-release` step 4 — switch
+   back, delete the local hot-fix branch, restore the stash — then report the
+   repos restored and stop.
 
 Hand the Slack drafts back to the calling session as text and let a human post
 them — sending on the captain's behalf needs their explicit go-ahead each time,
@@ -41,7 +46,6 @@ the preview so the user confirms it.
 | Input | Default when absent |
 |---|---|
 | Service repo(s) | Derive from the PR URLs. PRs spanning several repos get one hot-fix branch per repo, each run from that repo's checkout at `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}/<repo>` |
-| Combined ticket id and context (multi-PR) | `<TICKET-A>_<TICKET-B>` in merge order, and a 3-5 word slug from the first commit's subject |
 | PR links/numbers (already merged) | Required — report back if none given |
 | Release date | Today |
 | Release captain (+ co-captain) | The invoking user — resolve with `notion-get-users` (`user_id: "self"`); when they are missing from the `Release captains` table, record their row as the `jeeves:notion-templates` skill describes |
@@ -51,15 +55,12 @@ the preview so the user confirms it.
 
 ## 1. Cut the branch
 
-Follow `jeeves:hotfix-release` through the local cherry-picks in the preview
-pass, and the push in the ship pass. Points that decide whether the branch is
-correct:
-
-- Take the production branch the skill picks (the newer of `origin/main` and
-  `origin/master`) and put it, with its tip date, in the preview for the user
-  to confirm.
-- Cherry-pick each PR's `mergeCommit` — the squashed commit on `development`
-  — after checking it is on `development`, oldest first by `mergedAt`.
+Follow `jeeves:hotfix-release` through step 4's cherry-picks in the preview
+pass, and push in the ship pass. Put the confirmations the skill asks for —
+the production branch, the branch name, the push — in the preview, so the user
+answers them all at once. When a repo's `git status --short` lists changes,
+stop the preview pass before stashing and return that list; stash once the
+caller resumes you with the user's yes.
 
 ## 2. Create the release page
 
@@ -67,26 +68,20 @@ Follow `jeeves:notion-templates`, reading
 `references/release-page.md` for the naming, the fill guide, and the defaults
 to carry over.
 
-Two checks the reference file's stored IDs earn:
+The skill's "Create the page" step 1 covers the existing-page check; put an
+existing page and its URL in the preview so the caller decides which page the
+release runs on.
 
-- **Look for an existing page for this date first.** Fetch the month page and
-  scan its children before creating anything — a hotfix page for the same date
-  and service may already exist, put there by whoever else is shipping today.
-  Finding one, report it and its URL instead of creating a second page, and let
-  the caller decide which one the release runs on.
-- **Confirm the stored `(template)` child ID still resolves to a `(template)`
-  page.** These get renamed into real release pages, so an ID that worked last
-  month can now point at someone's shipped hotfix. When it has moved, find the
-  live `(template)` child on the month page, use that, and record the corrected
-  row as the `jeeves:notion-templates` skill describes.
+**Confirm the stored `(template)` child ID still resolves to a `(template)`
+page.** These get renamed into real release pages, so an ID that worked last
+month can now point at someone's shipped hotfix. When it has moved, find the
+live `(template)` child on the month page, use that, and record the corrected
+row as the `jeeves:notion-templates` skill describes. When the month page has
+no `(template)` child at all, stop and report that the month has no
+`(template)` child; the calling session builds the page from the fallback body.
 
-Write the Ticket cell as the bare PR URL. Notion converts it to the GitHub
-link-preview mention on its own when the connector is live; when a read-back
-shows a plain markdown link instead, note in your report that the cell wants a
-manual re-paste in the Notion UI.
-
-Seed the deployment-status row for each repo in the release to `PENDING` on an
-orange background, and leave every other repo's row as it stands.
+When a read-back shows a Ticket cell as a plain markdown link, note in your
+report that the cell wants a manual re-paste in the Notion UI.
 
 ## 3. Draft the Slack updates
 
@@ -103,9 +98,8 @@ After the preview pass, return the preview described above and stop. After the
 ship pass, the calling session relays your report, so make it complete and
 short:
 
-- Verdict line for the branch — icon, branch name, commit count — then the
-  cherry-pick table (`Commit` linked to
-  `https://github.com/JeevesInc/<repo>/commit/<sha>`, `Subject`, `Result`).
+- The branch verdict line and cherry-pick table, shaped as
+  `jeeves:hotfix-release` step 5 lays out.
 - The release page title and URL.
 - The Slack drafts, as plain text, labelled by stage.
 - Anything the captain still owns: a POD name left blank, a Ticket cell needing

@@ -1,8 +1,6 @@
 # stablecoin-service schema notes
 
-| dev-NN | preprod | prod |
-| --- | --- | --- |
-| `stablecoin_<n>` | `preprod_stablecoin` | confirm with `jsql prod 'SHOW DATABASES'` |
+Database names per env: the service table in `SKILL.md` ("Default").
 
 ## stablecoin_webhook_events
 

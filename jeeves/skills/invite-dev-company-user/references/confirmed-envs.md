@@ -2,7 +2,7 @@
 
 One row per env where `invite-dev-company-user` has run end to end with the
 shared `jeeves-cms-dev` login. For an env with no row yet, run the flow, then
-add its row in the same turn. When an env needs a login of its own, store it as
+add its row in the same turn, in this file, following `references/write-back.md` at the plugin root. When an env needs a login of its own, store it as
 the Keychain item `jeeves-cms-<env>` and name that item in the row.
 
 | Env | Keychain item | Last confirmed | Proof |

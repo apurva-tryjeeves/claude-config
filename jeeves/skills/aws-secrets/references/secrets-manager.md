@@ -1,8 +1,8 @@
 # Secrets Manager — path conventions
 
-Grows with use: whenever a lookup confirms a new service's `service-dir`/`secret-leaf` pair, a new environment-type shape, or a deviation from the standard pattern, record it in your clone of the plugin (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/aws-secrets/references/secrets-manager.md`), leave the change uncommitted and tell the user it is ready to review and push; when that directory is missing, report the finding instead.
+Grows with use: whenever a lookup confirms a new service's `service-dir`/`secret-leaf` pair, a new environment-type shape, or a deviation from the standard pattern, record it in this file, following `references/write-back.md` at the plugin root.
 
-Every secret path has the shape `/{env}/{service-dir}/{secret-leaf}`. `service-dir` and `secret-leaf` are fixed per service and identical across every environment type — only `{env}` changes. Confirmed by listing all ~1484 secrets (`aws secretsmanager list-secrets`) and diffing the `/shared/`, `/develop-20/`, `/preprod/`, and `/qa/` prefixes: the same 40 `service-dir/secret-leaf` pairs appear under each.
+Every secret path has the shape `/{env}/{service-dir}/{secret-leaf}`. `service-dir` and `secret-leaf` are fixed per service and identical across every environment type — only `{env}` changes. Confirmed by listing all ~1484 secrets (`aws secretsmanager list-secrets`) and diffing the `/shared/`, `/develop-20/`, `/preprod/`, and `/qa/` prefixes: the same `service-dir/secret-leaf` pairs appear under each.
 
 ## Environment-type convention
 
@@ -88,11 +88,12 @@ aws --profile jeeves_dev --region us-east-2 secretsmanager get-secret-value \
   --secret-id /shared/wallet-service/wallet-secrets --query SecretString --output text | jq 'keys'
 ```
 
-Extract one key only when the task needs its value, and keep it out of the output (assign it to a variable or pipe it onward):
+Extract one key only when the task needs its value, and keep it out of the output. The variable lives only inside one Bash call, so consume it in that same call:
 
 ```bash
 VALUE=$(aws --profile jeeves_dev --region us-east-2 secretsmanager get-secret-value \
   --secret-id /shared/wallet-service/wallet-secrets --query SecretString --output text | jq -r '.<KEY>')
+printf '%s' "$VALUE" | <command that reads the value on stdin>
 ```
 
 For production, use `--profile jeeves_prod_releasemanager --region us-east-1` and a `/production/` path.

@@ -54,11 +54,8 @@ environment.
   `--list` prints each service alongside its git repo name; the local
   checkout lives under `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}`. A
   service showing `-` has no repo recorded yet: ask the user for the repo
-  name, then record it in your clone of the plugin — edit `SERVICES` in
-  `${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/scripts/modules.py`,
-  leave the change uncommitted, and tell the user it is ready to review and
-  push. When that directory is missing, report the repo name and the edit
-  instead.
+  name, then record it by editing `SERVICES` in `scripts/modules.py`, following
+  `references/write-back.md` at the plugin root.
 
   Example decoded triple from a captured build: `api` at position 1 with
   `true,MP-5198,latest` means deploy `api`, branch `MP-5198`, mode `latest`.
@@ -122,19 +119,22 @@ environment.
    jenkins-api queue
    ```
 
+   The queue output carries each item's `params`; match `ENVIRONMENT=<chosen slot>` there.
+
    Fetch a CSRF crumb (required for POST requests):
 
    ```bash
    CRUMB=$(jenkins-api crumb)
    ```
 
-   POST the params to `buildWithParameters`, keeping the response headers so
-   the queue id is captured:
+   POST the params to `buildWithParameters`, keeping the response headers in a
+   `mktemp` file (set `HDRS=$(mktemp)` in the same Bash call) so the queue id is
+   captured:
 
    ```bash
    jenkins-api "job/deploy-DEVELOP-environment/buildWithParameters" -H "$CRUMB" -X POST \
      --data-urlencode "ENVIRONMENT=<chosen slot>" \
-     --data-urlencode "MODULES=$MODULES" -D /tmp/trigger-headers.txt
+     --data-urlencode "MODULES=$MODULES" -D "$HDRS"
    ```
 
    This returns `201` with a `Location: .../queue/item/<id>/` header — no
@@ -142,7 +142,7 @@ environment.
    Jenkins keeps a queue item for about five minutes after the build starts:
 
    ```bash
-   jenkins-api queued "$(sed -n 's/^location: //Ip' /tmp/trigger-headers.txt)"
+   jenkins-api queued "$(sed -n 's/^location: //Ip' "$HDRS")"
    ```
 
    It prints the build number once assigned, or `waiting: <why>` while the
@@ -218,8 +218,8 @@ or when `--decode` reports a field count it cannot read.
      look for the failure's cause in the console log instead.
    - On a mismatch it names the modules added and removed upstream and prints
      the full replacement `SERVICES` block.
-2. Apply the change in your clone of the plugin
-   (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/scripts/modules.py`):
+2. Apply the change in `scripts/modules.py`, following
+   `references/write-back.md` at the plugin root:
    - Replace `SERVICES` with the printed block.
    - Set `MAIN_BRANCH` to the modules with a `developmentbranch` other than `development` (today `simulationserver`, `aiweb`).
    - Update `tests/test_modules.py` where it names a removed module or the service count.
@@ -229,7 +229,7 @@ or when `--decode` reports a field count it cannot read.
    python3 -m unittest discover -s scripts/tests -q
    ```
 
-4. Leave the change uncommitted and tell the user it is ready to review and push.
+4. Report the result as the write-back rule says.
 
 ## Per-service deploy timing
 
@@ -244,8 +244,10 @@ age out of the API while its row keeps them — merge a fresh sample into the
 existing row (widen min/max, add to the sample size) rather than replacing it.
 A service with no row yet gets one the first time a clean single-service build
 appears for it. Record rows in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
-in the same turn, creating the file with the first row when it doesn't exist yet (SKILL.md
-has its header).
+in the same turn. When the file doesn't exist yet, create it with the first row, a
+`reference` memory frontmatter (`name: jenkins-deploy-timings`) and the header
+`| Service | Min | Max | Mean | Sample size |`, then index it in
+`~/.claude/org-memory/jeevesinc/MEMORY.md`.
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
 one batched request, filter to
@@ -263,5 +265,5 @@ jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=${TREE}" \
 deploying multiple services at once (e.g. `web` + `accounting` + `aiservice`
 together) runs them in parallel, so its total duration is closer to the
 *slowest* of the enabled services' individual times, not their sum — use the
-single-service numbers above as a per-service ceiling estimate, not an
-additive one.
+single-service numbers in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
+as a per-service ceiling estimate, not an additive one.

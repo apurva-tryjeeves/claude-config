@@ -31,7 +31,7 @@ edit the created issue with `patch` to fill the placeholders.
 
 ### Applying the bug template
 
-```
+```text
 save_issue(team: "Product - Wallet", title: "<bug title>", template: "Bug template")
 ```
 
@@ -214,5 +214,5 @@ independently.
    tracks that work," while `relatedTo` expresses "these are peers, done
    together."
 
-Show the full set of tickets (title + repo/team for each) to the user before
-creating any of them, same as any other multi-issue write.
+Show each ticket's whole draft (the `SKILL.md` "Create or update an issue"
+rule) and wait for the user's yes before creating any of them.

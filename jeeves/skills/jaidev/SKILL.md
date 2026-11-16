@@ -1,6 +1,6 @@
 ---
 name: jaidev
-description: "Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked."
+description: "Coordinate Jaidev (`@jaidev` on Linear) through code tickets: brief it, answer its questions, review its plans and PRs, unblock runs, track batches with background agents. Use to delegate tickets to Jaidev, write a Jaidev briefing, review a Jaidev plan or PR, or when Jaidev didn't start or got blocked. Every `@jaidev` comment on a ticket follows this skill."
 ---
 
 # Jaidev
@@ -15,17 +15,12 @@ trigger is what makes Jaidev start, so follow its wording to the letter.
 
 Check the reference file first whenever Jaidev acts. When Jaidev shows
 something new — a command, a trigger, a comment format, a limit, a timing —
-write it back in this same turn to the plugin's source clone, where the edit
-survives plugin updates:
-
-```bash
-${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jaidev/references/
-```
-
-Edit the file there as the clone stands, on its current branch, leave it
-uncommitted, and tell the user it is ready to review and push. When that directory is absent, report the proposed edit
-(file, before and after) instead. Every "write back" in this skill's
-references follows this rule.
+write it back in this same turn to the clone's copy of
+`references/jaidev-reference.md`, and read every jaidev reference
+(`references/*.md`) from the clone's copy when it exists. The rule
+(clone path, read order, uncommitted edit, absent clone) is in
+`${CLAUDE_PLUGIN_ROOT}/references/write-back.md`; every "write back" in this
+skill's references follows it.
 
 Linear tools come from whichever server is connected — `mcp__linear__*` or
 `mcp__claude_ai_Linear__*`; both take the same parameters. Filter tickets by
@@ -63,7 +58,7 @@ Pick the pattern from the ticket's shape; both run the loop below.
 | Jaidev's start branch | the repository's default branch | the parent branch `feat/<PARENT-ID>` |
 | PR base | the default branch | the parent branch |
 | Jaidev's branch | `jai-dev/<ticket-id>` | `jai-dev/<sub-ticket-id>`, cut from the parent branch |
-| Merge | the user merges the PR | the user merges each sub-ticket PR into the parent; the parent's own PR to the default branch comes last |
+| Merge | the PR merges after the user's "merge" (see Rules) | each sub-ticket PR merges into the parent after the user's "merge"; the parent's own PR to the default branch comes last |
 | Order | blocked-by relations | blocked-by relations, then file overlap |
 
 For a parent feature:
@@ -98,6 +93,9 @@ progress after every step.
 ### 1. Pick the next batch
 
 1. List the tickets in scope with status, blocked-by relations and comments.
+   Delegating a ticket to Jaidev leaves it unassigned to the user; the
+   `linear` skill's "Start work on a ticket" assignment applies to the user's
+   own work.
 2. Mark a ticket **ready** when all hold:
    - it needs code changes in a repository;
    - its state type is `backlog`, `triage`, `unstarted` or `started`;
@@ -113,141 +111,30 @@ progress after every step.
 
 ### 2. Write the briefing
 
-Research first. Jaidev plans from the ticket and its comments, so every
-verified fact in the briefing becomes a correct assumption in its plan:
-
-- Read the ticket, its related and blocking tickets, the repository, and
-  every precedent PR the ticket names. Spell out every reference: when the
-  ticket says "same as stablecoin-service PR 9", read that PR and write what
-  it did.
-- Check every factual claim in the ticket against the code — current config,
-  versions, file layout, what CI runs. Brief Jaidev on what is true, and
-  tell the user each correction.
-- When the project has a design doc, compare the briefing and names comment
-  with it section by section: names, file paths, signatures, behaviour and
-  log messages. Fix clear mismatches, and bring real differences to the
-  user as decisions. Briefings drift from the design doc even when they
-  copy a sibling repo.
-- Read how one or two sibling services do the same thing, and follow the
-  setting the team already uses.
-- When the ticket touches build, lint or CI, read `.github/workflows/*`, the
-  inputs it passes to any reusable workflow, and the npm scripts those
-  inputs run, including `pre*` hooks (e.g. `prebuild` running lint).
-- Run every acceptance-criterion command in the repository before
-  briefing, and adjust any that fail in Jaidev's sandbox (e.g. single
-  test files need `--coverage=false` when `jest.config.js` enforces a global
-  threshold). Run any code the briefing gives the same way: compile it,
-  lint it under the rules it will meet (including open PRs that tighten
-  them), and test it under the strictest compiler flags the team's
-  guidelines require. Keep test output short: add
-  `--coverageReporters=text-summary` when coverage is on, and pipe long
-  runs through `tail -40`.
-- Settle every identifier the briefing introduces with the
-  `jeeves:typescript-naming` skill, following its "During planning" steps.
-  Read the repo rules and the surrounding code first, then write the Names
-  table (kind, name, file, purpose) and the renames list. The names comment
-  carries the table, and Jaidev uses the names as written.
-
-Then draft one comment in exactly this format:
-
-````markdown
-@jaidev start
-
-Please pick up this ticket in <org/repo>. Start your branch from <start-branch> and open the PR against <base-branch>.
-
-## 🎯 Goal
-
-<1–3 sentences: what this achieves and which tickets it unblocks>
-
-## 📋 Context
-
-- <current state of the code, in words>
-- <precedent PRs to follow and what they did>
-- <known CI or environment limitations>
-- <related tickets in flight and the files they touch>
-
-## 🛠️ Changes
-
-- <every change in prose: what changes and why; the exact names, paths and values are in the names comment just above the start comment>
-
-## 🚧 Constraints
-
-- <what stays unchanged; scope boundaries with other tickets>
-- Secrets stay out of code; coverage thresholds stay as they are.
-- Report known CI failures as they stand.
-- Your changes stay outside .github/workflows.
-
-## 🧑‍🔧 Manual follow-up
-
-- <changes a human makes on your branch, e.g. .github/workflows edits; they sit outside your definition of done>
-
-## ✅ Acceptance criteria
-
-- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI test / Unit Test passes">
-
-The exact names and code are in the comment just above this one; use them as written. Copy every acceptance criterion into your plan's Done when, word for word. Name any you fail to meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
-````
-
-Write the briefing to these rules:
-
-- Carry every ticket item into Changes, Acceptance criteria or Manual
-  follow-up, word for word where possible.
-- Put every change to `.github/workflows/*` under Manual follow-up. Jaidev's
-  GitHub token pushes code only, so those changes reach the branch through
-  the user (see Rules).
-- Include the Manual follow-up section only when it has items, and then add
-  "A human makes the items under Manual follow-up." to the workflows
-  Constraint.
-- Write acceptance criteria Jaidev can meet in its sandbox: commands that
-  exist in the base branch's `package.json` and single test files. Name the
-  full suite and coverage gate by their CI check (reference §5).
-- Keep lists one level deep, with each item's detail on its own line.
-- Describe credentials by name and location (e.g. the Secrets Manager key);
-  keep their values out of the comment.
-
-Jaidev plans as soon as the start comment lands, and a start comment loses
-identifiers, paths, backticks and code, so split the content across three
-posts (reference §5):
-
-| Post | Holds | Where and when |
-|---|---|---|
-| Names comment | The Names table and code blocks up to ~20 lines | Top-level comment, posted first |
-| Start comment | The briefing above, as prose and short lists | Second top-level comment, straight after the names comment |
-| Plan feedback | Every code block over ~20 lines, and the base branch restated | Reply in plan v1's thread (step 4) |
-
-- Draft the plan feedback's long code blocks now, with the names comment: a
-  45-line block reached Jaidev empty even there (ACC-1670).
-- Put code in plain fenced blocks and keep every section expanded, without
-  `+++` collapsibles.
-- Open each section of the names comment with a `## <emoji>` header, as the
-  doc-format hook requires, and end it with a line that sends questions to the
-  replies under the `@jaidev start` comment.
-- Show the user each draft and wait for explicit approval (see Rules). A
-  general go-ahead ("coordinate with Jaidev per the skill") starts the
-  drafting. Then post the names comment as a **top-level comment**, and the
-  briefing as a second top-level comment straight after it, both under that one
-  approval. The plan feedback goes up after plan v1, under its own approval.
+Research the ticket against the code, draft a names comment and an
+`@jaidev start` comment in the one format in `assets/briefing-format.md`,
+and post both after the user's yes. Read `references/briefing.md` before the
+first briefing of a session: it holds the research list, the drafting rules,
+the three-post split and the posting order.
 
 ### 3. Watch the run
 
-- Watch with `python3 -m jaidev_watch watch <state-file>` from `scripts/`, as
-  `references/background-agents.md` ("Poll events") describes, for one ticket
-  or many. The coordinator wakes only when the watcher prints an event. Plan
-  v1 typically lands in about 4 min, plan v2 about 1.5 min after feedback,
-  and the PR about 10 min after approval.
+- Watch the wave, one ticket or many, as `references/background-agents.md`
+  ("Poll events") describes. The coordinator wakes only when the watcher
+  prints an event:
+
+  ```bash
+  cd "${CLAUDE_SKILL_DIR}/scripts" && python3 -m jaidev_watch watch <state-file>
+  ```
+
+- Read expected stage times from
+  `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md` when it exists.
 - Stamp each post in the state file right after it goes up: `startedAt`,
   `feedbackAt`, `approvedAt`, `reviewAt`, with their inputs ("Stamp each
   post"). The watcher reads only where the stage expects an answer, so an
   unstamped post goes unwatched.
-- Act on the watcher's deadline events:
-  - `NO ACK` on plan feedback: post `@jaidev please revise the plan per the
-    feedback reply above` in the same thread once the user approves, then
-    stamp `feedbackAt` again.
-  - `PLAN LATE`, `PR LATE`, `FIX LATE`: read the status comment with
-    `limit: 1` and tell the user what it shows.
-  - `CI LATE`: read the PR's checks and tell the user which one is stuck.
-  - `IDLE`: every ticket waits on you; restart the watcher after the next
-    stamp.
+- Act on each watcher event, deadline events included, as the "Event lines"
+  table in `references/background-agents.md` says.
 - When an event needs context, read Jaidev's status comment with
   `list_comments` and `limit: 1`; its Timeline shows "Plan v1 posted", "Plan feedback received" and "Revised plan
   v2 posted". Open a full plan with `limit: 2` only when the timeline shows a
@@ -264,110 +151,23 @@ posts (reference §5):
 
 ### 4. Review the plan
 
-Plan v1 usually needs one correction round. Expect these gaps and check each
-first:
-
-- the Affected Services table shows the base as `development`, the default
-  branch, instead of the briefed one (ACC-1669, ACC-1670);
-- names are invented where the briefing's names arrived blank;
-- Done-when is short of the full criteria list (4 of 8 on ACC-1669);
-- acceptance criteria arrive blank;
-- code is written as prose instead of in full (a class on ACC-1669).
-
-Compare Jaidev's latest "Implementation plan" with the ticket, the
-briefing and the design doc, item by item:
-
-- repository and base branch match;
-- the quote-back matches the briefing;
-- the Implementation Sequence writes out every code block from the names
-  comment and the plan feedback in full, exactly as briefed;
-- every Change and Acceptance criterion is covered, value by value — rule
-  names, options, versions and file names exactly as briefed. An item is
-  covered when the plan names its value; a preset that "includes most of
-  it" counts as missing;
-- scope matches the ticket, and the files belong to this ticket alone;
-- names, signatures and behaviour match the design doc; report each
-  difference as a decision for the user;
-- each Key Assumption holds — verify it in the code. A revised plan may omit
-  the section; verify the assumptions it now relies on;
-- risks and mitigations are acceptable.
-
-Send the correction as one feedback reply that holds, in plain fenced
-blocks:
-
-- the base branch, restated;
-- the Names table, and the rest of the names comment again when plan v1
-  still misses names or code;
-- every code block over ~20 lines held back from the names comment;
-- every Done-when criterion, word for word;
-- the PR title.
-
-Approve v2 when it matches.
-
-Report a verdict (approve / request changes), a table of ticket and
-design-doc items → covered / missing / wrong, and any wrong assumptions. When changes are
-needed, draft the feedback reply. Post `@jaidev plan:approved` or the
-feedback as a reply in the thread of the **latest** plan once the user
-confirms. A revised plan arrives as a new top-level comment ("Implementation
-plan (v2)"), and Jaidev resolves the previous plan's thread.
+Compare Jaidev's latest plan with the ticket, the briefing and the design
+doc item by item, then post one correction or `@jaidev plan:approved` after
+the user's yes. Read `references/plan-review.md` when a plan lands: it holds
+plan v1's expected gaps, the checklist, the correction contents and the
+report shape.
 
 ### 5. Review the PR
 
-When Jaidev opens the PR:
-
-1. Read `.github/CODEOWNERS` when the file exists and tell the user any approval the merge needs besides theirs.
-2. Wait until every check has completed, SonarCloud included. Jaidev pushes
-   fixes for bot findings on its own, so review the head that remains after
-   that fix.
-3. Review the PR in a fresh `jeeves:jaidev-pr-reviewer` agent when background
-   agents run the batch: the ticket agent reports the settled head, the
-   reviewer writes the draft to the scratchpad, and the ticket agent posts it
-   after the user approves. The review covers these, against the head SHA
-   it records:
-   - the diff against the briefing's Changes, Constraints and Acceptance
-     criteria, using the PR's own file list (the result comment counts only
-     the last session's files);
-   - the diff against the design doc: names, signatures and behaviour;
-   - the title follows the ticket format (e.g. `feat: [WAL-123] - …`);
-   - CI results, noting which failures are known and expected;
-   - tests and coverage;
-   - generated files regenerate with no diff, and the lockfile adds or
-     removes only what the change needs;
-   - the effect beyond the PR: the deploy build (e.g. the Dockerfile's
-     `npm run build`) and other open PRs against the same base;
-   - the diff is clean of secrets and internal hostnames.
-4. Trace each finding through the code path and its call sites. Report
-   verified findings as issues and the rest as questions.
-5. Give the user a verdict, the issues, and draft specific, actionable
-   GitHub review comments, all in one review. Post them once the user
-   confirms — Jaidev picks up PR review comments as a revision.
-6. When nothing needs changing, confirm the head still matches the SHA you
-   reviewed, propose an Approve review, and submit it once the user
-   confirms. The approval goes out under the user's account.
-7. Read the merge box and tell the user any requirement still missing, such
-   as another required reviewer.
-8. Draft follow-ups that belong outside the PR as new tickets for the user,
-   each blocked by this ticket.
-
-Read the head SHA, review state and checks:
-
-```bash
-gh pr view <number> --json headRefOid,reviewDecision,mergeStateStatus,statusCheckRollup --jq '{head: .headRefOid, merge: .mergeStateStatus, review: .reviewDecision, checks: [.statusCheckRollup[] | {n: (.name // .context), s: .status, c: (.conclusion // .state)}]}'
-```
-
-Submit the approval:
-
-```bash
-gh pr review <number> --approve
-```
-
-Jaidev gets 3 attempts per PR, and each review round uses one — a SonarCloud
-finding counts as a round. When the third still falls short, stop and hand
-the ticket to the user.
+Wait for every check on the PR head, review it against the one checklist,
+and post the review or the approval after the user's yes. Read
+`references/pr-review.md` when Jaidev opens a PR: it holds the steps, the
+review checklist the `jeeves:jaidev-pr-reviewer` agent also uses, the `gh`
+commands and the revision-round limit.
 
 ### 6. Close out
 
-- Once the user merges the PR, confirm the ticket reached a completed state,
+- After the merge, confirm the ticket reached a completed state,
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
@@ -381,10 +181,14 @@ With two or more tickets in flight, run each in its own background agent. Read
 shared-brief rules, the state file and the watcher.
 
 - Run the ticket work in a `jeeves:jaidev-ticket` agent, started from
-  `assets/agent-brief-template.md`.
+  `assets/agent-brief-template.md`. Fill its "Repo facts" from
+  `references/repo-notes.md`, the per-repo facts agents found on earlier
+  tickets.
 - Run each PR review in a fresh `jeeves:jaidev-pr-reviewer` agent.
-- The agent type sets model sonnet, effort medium, and the skills the agent
-  loads besides the brief.
+- Model and effort come from the agent definition, as do the skills the
+  agent loads besides the brief.
+- Change the watcher scripts in `scripts/` through the
+  `jeeves:jeeves-python-engineer` agent.
 
 ## Progress
 
@@ -408,14 +212,13 @@ so the progress shows what each merge unblocks.
 - Push to Jaidev's branch only the Manual follow-up changes the user
   approved, commit by commit; every other fix reaches Jaidev as a review
   comment.
-- Merge only after the user's "merge", or a pre-approval that names the PRs;
-  the agent runs the merge.
+- Merging: the agent runs the merge, and only after the user's "merge" or a
+  pre-approval that names the PRs.
 - Leave repository settings, branch protection, access and infrastructure
   to the user.
 - Open every approval review, and every Linear comment addressed to someone
-  other than Jaidev, with `## <emoji>` section headers, as the doc-format
-  hook requires. Comments addressed to `@jaidev` follow the
-  briefing format.
+  other than Jaidev, with `## <emoji>` section headers. Comments addressed to
+  `@jaidev` follow the briefing format.
 - When a ticket is ambiguous or conflicts with the code or another ticket,
   ask the user.
 - Ask the user one decision at a time with `AskUserQuestion` (two or three

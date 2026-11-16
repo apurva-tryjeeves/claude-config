@@ -96,11 +96,7 @@ aws ec2 describe-instances --profile jeeves_dev --instance-ids <instance-id> --q
 ```
 
 The `jeeves_dev` AWS SSO profile comes from the marketplace README's AWS setup.
-Refresh an expired token interactively:
-
-```bash
-aws sso login --profile jeeves_dev
-```
+Refresh an expired token as `jeeves:aws-secrets` "Authentication" describes.
 
 The `Developers` SSO role supports EC2 instance-state checks
 (`describe-instances`) as shown above. Confirm SSM session permissions

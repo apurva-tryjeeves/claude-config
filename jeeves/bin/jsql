@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: jsql <env>[/<database>] <sql> [database]
-# Envs: dev-01..dev-20, preprod, prod
+# Envs: dev-01..dev-20, preprod, prod (read-only: SELECT, SHOW, DESCRIBE, EXPLAIN, WITH)
 #
 # Name the database up front as <env>/<database> so it reads before the SQL.
 # On dev envs the service name alone is enough; the env number is appended:
@@ -17,6 +17,16 @@
 #   MYSQL_CLIENT        path to the mysql client binary
 #                       (default: the pinned mysql-client@8.4 keg, else the
 #                        first `mysql` on PATH)
+
+usage() {
+  echo "Usage: jsql <env>[/<database>] <sql> [database]"
+  echo "       jsql <env>[/<database>] <<'SQL'  ... SQL"
+  echo "Envs:  dev-01..dev-20, preprod, prod (prod runs read-only statements)"
+}
+
+case "$1" in
+  -h|--help) usage; exit 0 ;;
+esac
 
 ENV=$1
 SQL=$2
@@ -52,9 +62,24 @@ if [ -z "$SQL" ] || [ "$SQL" = "-" ]; then
 fi
 
 if [ -z "$ENV" ] || [ -z "$SQL" ]; then
-  echo "Usage: jsql <env>[/<database>] <sql> [database]" >&2
-  echo "       jsql <env>[/<database>] <<'SQL'  ... SQL" >&2
+  usage >&2
   exit 1
+fi
+
+# prod takes read statements only. The first keyword is checked here for a
+# clear message; the session also opens READ ONLY below, which covers every
+# statement in a multi-statement call.
+if [ "$ENV" = "prod" ]; then
+  _FIRST=$(printf '%s' "$SQL" | tr '[:upper:]' '[:lower:]' \
+    | sed -e 's/^[[:space:](]*//' | awk 'NF { print $1; exit }')
+  case "$_FIRST" in
+    select|show|describe|desc|explain|with) ;;
+    *)
+      echo "jsql: prod is read-only here; statement starts with '${_FIRST}'." >&2
+      echo "Run SELECT, SHOW, DESCRIBE, EXPLAIN or WITH on prod." >&2
+      exit 2
+      ;;
+  esac
 fi
 
 _BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -156,10 +181,20 @@ if [ -z "$MYSQL_BIN" ]; then
   exit 1
 fi
 
+# Hand the password over in an owner-only option file, so it stays out of the
+# process list. mktemp creates the file 0600.
 STDERR_FILE=$(mktemp)
-"$MYSQL_BIN" \
-  -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASS" \
-  --ssl-mode=REQUIRED "$TARGET_DB" -e "$SQL" 2>"$STDERR_FILE"
+DEFAULTS_FILE=$(mktemp)
+trap 'rm -f "$STDERR_FILE" "$DEFAULTS_FILE"' EXIT
+_ESCAPED_PASS=$(printf '%s' "$MYSQL_PASS" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+printf '[client]\npassword="%s"\n' "$_ESCAPED_PASS" > "$DEFAULTS_FILE"
+
+_INIT=()
+[ "$ENV" = "prod" ] && _INIT=(--init-command="SET SESSION TRANSACTION READ ONLY")
+
+"$MYSQL_BIN" --defaults-extra-file="$DEFAULTS_FILE" \
+  -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER" \
+  --ssl-mode=REQUIRED "${_INIT[@]}" "$TARGET_DB" -e "$SQL" 2>"$STDERR_FILE"
 STATUS=$?
 
 # Surface real errors (connection/auth/SQL) but drop the known insecure-password noise.
@@ -169,6 +204,4 @@ if [ "$_COLOR" = 1 ]; then
 else
   grep -v "Using a password on the command line interface can be insecure" "$STDERR_FILE" >&2
 fi
-rm -f "$STDERR_FILE"
-
 exit $STATUS
