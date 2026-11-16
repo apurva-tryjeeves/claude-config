@@ -9,12 +9,12 @@ description: Query Jeeves MySQL dev/preprod/prod databases via the jsql wrapper 
 | --- | --- | --- | --- | --- |
 | dev-01…dev-20 | `dev-NN/<service>` | `<service>_NN`; backend `develop_NN` | `$JEEVES_SECRETS_DIR/develop-01.env` … `develop-20.env` | Succeed |
 | preprod | `preprod/preprod_<service>` | `preprod_<service>`; backend `preprod` | `$JEEVES_SECRETS_DIR/preprod.env` | Succeed — treat as real shared data |
-| prod | `prod/<service>` | `<service>`; backend `jeeves` | `$JEEVES_SECRETS_DIR/prod.env` | Rejected by the server (read replica, `ERROR 1290`) |
+| prod | `prod/<service>` | `<service>`; backend `jeeves` | `$JEEVES_SECRETS_DIR/prod.env` | Read-only: `jsql` runs `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` and `WITH`, and opens the session `READ ONLY` |
 
-The wrapper sends statements straight to MySQL, so **the server is the only
-thing that stops a write**. Read intent from the table above before running
-anything that modifies data, and confirm with the user before writing to
-`preprod`.
+On `prod`, `jsql` exits with status 2 for any other statement, before it
+connects. On dev and preprod the wrapper sends statements straight to MySQL,
+so read intent from the table above before running anything that modifies
+data, and confirm with the user before writing to `preprod`.
 
 On preprod, name a database that starts with `preprod`. The preprod host also
 holds every dev env's databases (`wallet_20`, …) plus stale unprefixed ones
@@ -252,7 +252,7 @@ For these requests, go straight to the listed table and its ready-made query:
 
 | Request | Database | Table | Reference |
 | --- | --- | --- | --- |
-| Login OTP / MFA / verification code for a user | `develop_<n>` | `multifactor_action_code` | `references/schema/develop.md` → `multifactor_action_code` |
+| Login OTP / MFA / verification code for a user (dev and preprod only; on prod, decline and say the code reaches the user by email) | `develop_<n>` | `multifactor_action_code` | `references/schema/develop.md` → `multifactor_action_code` |
 | Company by name | `develop_<n>` | `companies` | `references/schema/develop.md` → `companies` |
 | User by email | `develop_<n>` | `users` | `references/schema/develop.md` → `users` |
 | Invites to a company — invited users, pending or accepted | `develop_<n>` | `invite_users` | `references/schema/develop.md` → `invite_users` |
@@ -346,7 +346,9 @@ jsql-pull-secrets develop-05     # pull one env
 The single-env argument is the **full** env name (`develop-05`, `preprod`),
 since it maps straight onto the Secrets Manager id — distinct from the short
 alias (`dev-05`) that `jsql` takes. A name with no matching secret reports
-`SKIP (secret not found)` and leaves the existing file untouched. `prod` is
+`SKIP (secret not found)` and leaves the existing file untouched. Any other
+AWS error (an expired SSO session, a denied call) prints the error, stops the
+run and exits 1; run `aws sso login --profile jeeves_dev` and pull again. `prod` is
 absent from the pull list, per Credentials above.
 
 The DB endpoint is resolved at runtime from the RDS instance id via

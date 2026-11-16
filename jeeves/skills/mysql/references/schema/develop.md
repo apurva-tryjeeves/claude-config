@@ -56,7 +56,8 @@ Used to resolve `exchange_rates.sourceCurrency` (numeric) to an alpha code via `
 
 Holds MFA/OTP codes for actions like login — this is where a dev-env login OTP
 lives when email delivery isn't configured/checked (retrieve it directly
-instead of waiting on an email).
+instead of waiting on an email). Read it on dev and preprod only; on prod,
+decline and say the code reaches the user by email.
 
 | Column | Type | Notes |
 | --- | --- | --- |
