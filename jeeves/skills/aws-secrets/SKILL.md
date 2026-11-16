@@ -37,4 +37,4 @@ stays out of the transcript.
 
 ## Secrets Manager
 
-Path conventions (env-type shapes, the service-name → secret-name mapping, known deviations, and the fetch/list commands) live in `references/secrets-manager.md` — read it before looking up or guessing a secret path. Confirming a new service's pair, a new env-type shape, or a deviation from the standard pattern? Record it in your clone of the plugin (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/aws-secrets/references/secrets-manager.md`), leave the change uncommitted and tell the user it is ready to review and push; when that directory is missing, report the finding instead.
+Path conventions (env-type shapes, the service-name → secret-name mapping, known deviations, and the fetch/list commands) live in `references/secrets-manager.md` — read it before looking up or guessing a secret path. Confirming a new service's pair, a new env-type shape, or a deviation from the standard pattern? Record it in `references/secrets-manager.md`, following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.

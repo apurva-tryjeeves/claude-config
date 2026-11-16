@@ -4,10 +4,7 @@ Requests that go straight to a known table and its ready-made query. Check
 this table first for any lookup request; when a request maps to a row, read
 the schema note it names and build the query from there.
 
-Read the clone's copy
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/mysql/references/common-lookups.md`)
-when it exists — it carries rows not yet released — else this skill's own
-copy.
+Read and write this file following `references/write-back.md` at the plugin root.
 
 | Request | Database | Table | Reference |
 | --- | --- | --- | --- |
@@ -23,6 +20,4 @@ copy.
 
 Add a row in the same turn, after the user approves it, when a request that
 named no table had to be searched for (`SKILL.md`, "Any other table" step 3).
-Write it into the clone's copy of this file, leave it uncommitted, and tell
-the user it is ready to review and push. When the clone is missing, report
-the row instead.
+Write it into this file following `references/write-back.md` at the plugin root.

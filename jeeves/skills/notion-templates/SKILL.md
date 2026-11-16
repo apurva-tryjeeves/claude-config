@@ -47,13 +47,9 @@ environment block, the UTV callout, the full repository list.
 ### Record what you resolve
 
 The reference file's month page IDs, Notion user IDs, and POD names grow with
-use. Read the copy in your clone of the plugin
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/notion-templates/references/release-page.md`)
-when it exists — it carries rows not yet released — else this skill's own
-copy, and check it before resolving anything live. Record a newly confirmed
-month page, user ID, or POD name in the clone's copy, leave the change
-uncommitted, and tell the user it is ready to review and push. When the clone
-is missing, report the value instead.
+use. Check `references/release-page.md` before resolving anything live, and
+record a newly confirmed month page, user ID, or POD name in it, following
+`${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## Create the page
 

@@ -213,16 +213,9 @@ user something they already answered. Cycle is never stable enough to cache
 (it rolls over roughly every two weeks), so always resolve it live regardless
 of what's in the reference file.
 
-Read the reference file from your clone of the plugin
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/linear/references/repo-team-project-map.md`)
-when it exists — it carries rows not yet released — else this skill's own copy.
-
-**Record what you confirm**: after the user confirms a repo's team/project
-(via `AskUserQuestion` or otherwise), add or update that repo's row in the
-clone's copy of `repo-team-project-map.md`, leave the change uncommitted, and
-tell the user it is ready to review and push. When the clone is missing,
-report the row instead. This is how the file grows into a fast path for
-future tickets.
+Read `repo-team-project-map.md` and, after the user confirms a repo's
+team/project (via `AskUserQuestion` or otherwise), add or update that repo's
+row in it, following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 For anything not already covered by the reference file, fetch the real
 options first, then ask with `AskUserQuestion` so the user picks from what

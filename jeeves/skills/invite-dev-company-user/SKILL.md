@@ -36,15 +36,8 @@ end, with the Keychain item each one logs in with. Read it before the first
 call and use that env's item in step 3; an env with no row uses
 `jeeves-cms-dev`.
 
-The file lives in your clone of the plugin — read and write
-`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/invite-dev-company-user/references/confirmed-envs.md`
-when that directory exists (it carries rows not yet released), else read this
-skill's own copy.
-
-After the first run on a new env, add its row in that same turn: edit the
-clone's copy as the clone stands, leave the change uncommitted, and tell the
-user it is ready to review and push. When that directory is absent, report
-the row to the user instead.
+After the first run on a new env, add its row to `confirmed-envs.md` in that
+same turn. Read and write the file following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## CMS admin credentials
 
@@ -98,7 +91,7 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
      2. Sync the External Secrets Operator copy. It refreshes the pod's Kubernetes Secret every 1 h (`infra-helm-charts/AGENTS.md`), and a pod started before the sync keeps the old value.
      3. Redeploy `notification` on that env with `development:latest`. When the user asks you to run the redeploy, use Skill `jeeves:jenkins` and its confirmation.
    - Confirm the new value took effect by inviting one person first: an empty `emailsNotSent` proves it.
-   - Record each env's list in the clone's copy of `confirmed-envs.md` → "Mail delivery per env" (see "Confirmed envs").
+   - Record each env's list in `confirmed-envs.md` → "Mail delivery per env" (see "Confirmed envs").
 
 3. **Confirm, then log in and invite in one Bash call.** The invite mails
    each address, so show the env, the company (`id` and `name` from step 1)

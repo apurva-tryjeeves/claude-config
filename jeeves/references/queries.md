@@ -1,7 +1,7 @@
 # Reusable queries
 
 Shared across the `jeeves:prod-debug`, `jeeves:post-deploy-verify`,
-`jeeves:feature-plan` and `jeeves:trace-tx` skills. The user grows this over time. When they share a SQL query or an OpenSearch search string, append it to the copy in your clone of the plugin (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/references/queries.md`), left uncommitted for the user to review and push — or report it when the clone is missing, under the right section with a one-line "when to use" note. Keep entries copy-pasteable.
+`jeeves:feature-plan` and `jeeves:trace-tx` skills. The user grows this over time. When they share a SQL query or an OpenSearch search string, append it to this file under the right section with a one-line "when to use" note, following `references/write-back.md` at the plugin root. Keep entries copy-pasteable.
 
 ## SQL — production (`jsql prod/<database> '<sql>'`, read-only)
 <!-- e.g.

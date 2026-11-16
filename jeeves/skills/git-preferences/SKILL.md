@@ -6,11 +6,7 @@ description: JeevesInc git and PR conventions — branch strategy (including a p
 # Git Preferences
 
 JeevesInc git and PR conventions. When the user gives new guidance, add it to
-your clone's copy of this file
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/git-preferences/SKILL.md`):
-edit it as the clone stands, leave the change uncommitted, and tell the user
-it is ready to review and push. When that directory is absent, report the new
-guidance text to the user instead.
+this file, following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## Branch Strategy
 

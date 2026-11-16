@@ -30,7 +30,7 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
   and per-service database selection (prod names: `<service>`, backend `jeeves`).
 - **Reusable queries** → `../../references/queries.md` — SQL and OpenSearch
   strings the user has shared. Read it before composing a query; when the user
-  shares a new one, add it as that file describes (to your clone of the plugin).
+  shares a new one, add it to that file following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ## Steps
 

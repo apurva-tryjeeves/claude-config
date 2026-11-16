@@ -16,7 +16,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides. A pre-approval to merge a named set of PRs once CI passes covers only those PRs: after the agent reports a clean review and the head still matches, send the agent "merge" yourself; ask the user when a finding, a failed check or a moved head appears |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
-| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to the source clone's copy of that file in the same turn (SKILL.md → write-back rule) |
+| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn (`references/write-back.md` at the plugin root) |
 | Cleanup | After each merge, run `state set <state-file> <ticket> merged true`; the watcher prints `ALL MERGED` once every ticket is done, and exits |
 
 ### Color coding
@@ -135,7 +135,7 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `<ticket> CI LATE …` | Read the PR's checks with `gh pr view`; tell the user which check is stuck |
 | `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
 | `LINEAR POLL ERROR <ticket> missing from the reply` | Restart the watcher; the ticket counts as unread, so no deadline fires from it |
-| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; restart the watcher |
+| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; when the file was just created, index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`; restart the watcher |
 | `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' "Checks poller", add it, and restart the watcher. The watcher retries the derivation 2 min after a failure (`<state-file stem>.ci-hold.json`) |
 | `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
@@ -158,8 +158,7 @@ Linear tools may be `mcp__claude_ai_Linear__*` or `mcp__linear__*`. Tell each ag
 
 Start a fresh `jeeves:jaidev-pr-reviewer` for each review round once the
 ticket agent reports the settled head. Fill this prompt; the agent's "Inputs"
-list names each field. Point the checklist at the source clone's
-`pr-review.md` when the clone exists, else at this skill's own copy:
+list names each field. Point the checklist at `references/pr-review.md`, read per `references/write-back.md` at the plugin root:
 
 ```text
 Review Jaidev PR <org/repo>#<n> for <ticket-id>, review round <N>.

@@ -112,10 +112,7 @@ A channel's config id is the last path segment of its channel-details URL:
 | `slack-cat-ops` | `JUIK640BAvEjoJNCY-mL` |
 
 Put the config id in the action's `destination_id`. When you wire a channel this
-table does not list, record its row in your clone of the plugin
-(`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/opensearch/references/alerting-api.md`),
-leave the change uncommitted and tell the user it is ready to review and push;
-when that directory is missing, report the id instead.
+table does not list, record its row in this file, following `references/write-back.md` at the plugin root.
 
 ## Deep-link an alert into Discover
 

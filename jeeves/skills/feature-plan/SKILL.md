@@ -18,8 +18,8 @@ This skill produces the plan those read from.
 - **DB access** → Skill `jeeves:mysql` — the `jsql <env>/<service> '<sql>'` wrapper
   and per-service database selection.
 - **Reusable queries** → `../../references/queries.md` — read it before
-  composing a query; when the user shares a new one, add it as that file
-  describes (to your clone of the plugin).
+  composing a query; when the user shares a new one, add it to that file following
+  `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 - **GitHub** → `mcp__github__*`, or `gh` via Bash.
 
 ## Steps

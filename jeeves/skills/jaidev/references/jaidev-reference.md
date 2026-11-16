@@ -2,8 +2,7 @@
 
 Observed behaviour of Jaidev ("Jeeves AI Developer", `@jaidev` on Linear),
 from real tickets. Check here first; when Jaidev shows something new, write it
-back to the source clone's copy of this file in the same turn (SKILL.md →
-write-back rule).
+back to this file in the same turn (`references/write-back.md` at the plugin root).
 
 Sections 1–5 hold stable behaviour and are safe to reuse across runs.
 Section 6 points to the local file that holds timings and costs, which vary

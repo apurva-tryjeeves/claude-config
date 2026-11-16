@@ -54,11 +54,8 @@ environment.
   `--list` prints each service alongside its git repo name; the local
   checkout lives under `${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}`. A
   service showing `-` has no repo recorded yet: ask the user for the repo
-  name, then record it in your clone of the plugin — edit `SERVICES` in
-  `${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/scripts/modules.py`,
-  leave the change uncommitted, and tell the user it is ready to review and
-  push. When that directory is missing, report the repo name and the edit
-  instead.
+  name, then record it by editing `SERVICES` in `scripts/modules.py`, following
+  `references/write-back.md` at the plugin root.
 
   Example decoded triple from a captured build: `api` at position 1 with
   `true,MP-5198,latest` means deploy `api`, branch `MP-5198`, mode `latest`.
@@ -218,8 +215,8 @@ or when `--decode` reports a field count it cannot read.
      look for the failure's cause in the console log instead.
    - On a mismatch it names the modules added and removed upstream and prints
      the full replacement `SERVICES` block.
-2. Apply the change in your clone of the plugin
-   (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jenkins/scripts/modules.py`):
+2. Apply the change in `scripts/modules.py`, following
+   `references/write-back.md` at the plugin root:
    - Replace `SERVICES` with the printed block.
    - Set `MAIN_BRANCH` to the modules with a `developmentbranch` other than `development` (today `simulationserver`, `aiweb`).
    - Update `tests/test_modules.py` where it names a removed module or the service count.
@@ -229,7 +226,7 @@ or when `--decode` reports a field count it cannot read.
    python3 -m unittest discover -s scripts/tests -q
    ```
 
-4. Leave the change uncommitted and tell the user it is ready to review and push.
+4. Report the result as the write-back rule says.
 
 ## Per-service deploy timing
 

@@ -19,7 +19,7 @@ timeline.
 - **Log rules** → Skill `jeeves:opensearch`, for indices, fields and query patterns.
 - **Column names** → read `jeeves:mysql`'s `references/schema/<service>.md`
   (`wallet.md`, `product_account.md`) before composing a query, and record
-  what you discover the way that skill describes (in your clone of the plugin).
+  what you discover following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 - **Reusable queries** → `../../references/queries.md` — read it before
   composing a query.
 - **Expired credentials** — prod log queries returning empty or unauthorized

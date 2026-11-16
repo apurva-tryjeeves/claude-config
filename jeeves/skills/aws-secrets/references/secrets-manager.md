@@ -1,6 +1,6 @@
 # Secrets Manager — path conventions
 
-Grows with use: whenever a lookup confirms a new service's `service-dir`/`secret-leaf` pair, a new environment-type shape, or a deviation from the standard pattern, record it in your clone of the plugin (`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/aws-secrets/references/secrets-manager.md`), leave the change uncommitted and tell the user it is ready to review and push; when that directory is missing, report the finding instead.
+Grows with use: whenever a lookup confirms a new service's `service-dir`/`secret-leaf` pair, a new environment-type shape, or a deviation from the standard pattern, record it in this file, following `references/write-back.md` at the plugin root.
 
 Every secret path has the shape `/{env}/{service-dir}/{secret-leaf}`. `service-dir` and `secret-leaf` are fixed per service and identical across every environment type — only `{env}` changes. Confirmed by listing all ~1484 secrets (`aws secretsmanager list-secrets`) and diffing the `/shared/`, `/develop-20/`, `/preprod/`, and `/qa/` prefixes: the same 40 `service-dir/secret-leaf` pairs appear under each.
 

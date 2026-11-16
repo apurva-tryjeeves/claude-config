@@ -194,10 +194,8 @@ One file per service covers its dev, preprod and prod databases.
 | `references/schema/stablecoin.md` | `stablecoin_<n>` |
 | `references/schema/wallet.md` | `wallet_<n>` |
 
-These notes live in your clone of the plugin — read and write
-`${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/mysql/references/schema/<service>.md`
-when that directory exists (it carries notes not yet released), else read this
-skill's own copy and report new notes to the user instead of writing them.
+Read and write these notes (and `references/common-lookups.md`,
+`references/cross-service-links.md`) following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 Before writing a query against a table:
 
 1. Read the schema note first. If it documents the table —
@@ -218,9 +216,8 @@ Before writing a query against a table:
    ```
 3. **Write the schema note in this same turn, before reporting results.** Any
    turn that ran `SHOW TABLES`, `DESCRIBE` or `SELECT DISTINCT` to learn a
-   table ends with that table documented in the clone's
-   `skills/mysql/references/schema/<service>.md` (create the file if new),
-   left uncommitted — tell the user it is ready to review and push. Append a
+   table ends with that table documented in
+   `references/schema/<service>.md` (create the file if new). Append a
    section in the shape `references/schema/README.md` gives.
 
    Document the columns the query used plus any enum values and join keys
@@ -233,17 +230,16 @@ Before writing a query against a table:
    answers, e.g. "Accounting integrations / connections (QBO, Xero, NetSuite)
    — which companies have one, their status"; plus database and table) with options
    **Add to Common lookups** (Recommended) and **Skip**. On Add, write the row
-   into the clone's `skills/mysql/references/common-lookups.md` in this same turn. The schema note itself is written either way.
+   into `references/common-lookups.md` in this same turn. The schema note itself is written either way.
 
 Each table then only has to be discovered once: later queries read the note
 instead of re-running `DESCRIBE`/`SELECT DISTINCT`.
 
 When a task needs data correlated across two service databases (e.g. a
 stablecoin deposit and the wallet top-up it produced), check
-`references/cross-service-links.md` first the same way (the clone's copy when
-it exists) — read it before guessing which columns line up, and append a new
-section to the clone's copy the first time a cross-service query is worked
-out.
+`references/cross-service-links.md` first — read it before guessing which
+columns line up, and append a new section the first time a cross-service query
+is worked out.
 
 ## Reporting results
 

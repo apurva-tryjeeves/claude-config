@@ -15,21 +15,12 @@ trigger is what makes Jaidev start, so follow its wording to the letter.
 
 Check the reference file first whenever Jaidev acts. When Jaidev shows
 something new — a command, a trigger, a comment format, a limit, a timing —
-write it back in this same turn to the plugin's source clone, where the edit
-survives plugin updates:
-
-```bash
-${JEEVES_PLUGIN_SRC:-$HOME/github/apurva-tryjeeves/claude-config}/jeeves/skills/jaidev/references/
-```
-
-Edit the file there as the clone stands, on its current branch, leave it
-uncommitted, and tell the user it is ready to review and push. When that directory is absent, report the proposed edit
-(file, before and after) instead. Every "write back" in this skill's
-references follows this rule.
-
-Read each jaidev reference (`references/*.md`) from the source clone's copy
-when it exists — it carries facts not yet released — else this skill's own
-copy.
+write it back in this same turn to the clone's copy of
+`references/jaidev-reference.md`, and read every jaidev reference
+(`references/*.md`) from the clone's copy when it exists. The rule
+(clone path, read order, uncommitted edit, absent clone) is in
+`${CLAUDE_PLUGIN_ROOT}/references/write-back.md`; every "write back" in this
+skill's references follows it.
 
 Linear tools come from whichever server is connected — `mcp__linear__*` or
 `mcp__claude_ai_Linear__*`; both take the same parameters. Filter tickets by
