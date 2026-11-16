@@ -187,7 +187,7 @@ Several skills record facts they discover back into their own files:
 
 | Skill | File it updates |
 |---|---|
-| `git-preferences` | `skills/git-preferences/references/ci-check-timing.md` |
+| `jaidev` | `skills/jaidev/references/jaidev-reference.md`, `references/repo-notes.md` |
 | `jenkins` | `skills/jenkins/scripts/modules.py`, `references/deploy-develop-environment.md`, `references/deploy-develop-environment-stages.md` |
 | `mysql`, `trace-tx`, `feature-plan`, `post-deploy-verify` | `references/queries.md`, `skills/mysql/references/schema/` |
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
@@ -208,3 +208,19 @@ tell you when one is ready. Review it, bump `version` in
 merges, `/plugin marketplace update jeeves-local` brings the new version to
 everyone. Without a clone, skills report the new fact and the edit they would
 make.
+
+Skills edit the clone as it is on disk: its branch, working tree and `master`
+stay as you left them, with no `pull`, `switch`, `reset` or `stash`. To open a
+PR against claude-config itself, work in a separate `git worktree` cut from
+`origin/master`.
+
+Timing samples stay on your machine, in `~/.claude/org-memory/jeevesinc/`,
+since they change with every run:
+
+| Skill | File |
+|---|---|
+| `git-preferences`, `jaidev` | `ci-check-timing.md` |
+| `jenkins` | `jenkins-deploy-timings.md` |
+| `jaidev` | `jaidev-run-timings.md` |
+
+A skill reads its file when it exists and creates it with the first sample.

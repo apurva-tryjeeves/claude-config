@@ -1,4 +1,4 @@
-"""Read the per-repo CI cadence from git-preferences' `ci-check-timing.md`."""
+"""Read the per-repo CI cadence from the org-memory `ci-check-timing.md`."""
 
 from __future__ import annotations
 
@@ -11,13 +11,30 @@ from typing import Final
 
 from jaidev_watch.models import CiTiming
 
-# scripts/jaidev_watch/ci_timing.py → skills/git-preferences/references/ci-check-timing.md
-DEFAULT_PATH: Final = (
-    Path(__file__).resolve().parents[3] / "git-preferences" / "references" / "ci-check-timing.md"
+PATH_ENV: Final = "JEEVES_CI_TIMING"
+DEFAULT_PATH: Final = Path.home() / ".claude" / "org-memory" / "jeevesinc" / "ci-check-timing.md"
+TEMPLATE: Final = "\n".join(
+    (
+        "---",
+        "name: ci-check-timing",
+        "description: Per-repo PR check settle times (long-pole workflow, check names,"
+        " min/max/mean, first check, interval); read before starting a checks poller or"
+        " a Jaidev CI watch, and add or refine a repo's row after its checks settle",
+        "metadata:",
+        "  type: reference",
+        "---",
+        "",
+        "# CI check timing",
+        "",
+        'One row per JeevesInc repo; the git-preferences skill\'s "Checks poller" section'
+        " derives and refines rows.",
+        "",
+        "| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean"
+        " | Sample size | First check | Interval |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+        "",
+    )
 )
-SOURCE_ENV: Final = "JEEVES_PLUGIN_SRC"
-SOURCE_DEFAULT: Final = Path.home() / "github" / "apurva-tryjeeves" / "claude-config"
-TABLE_IN_SOURCE: Final = Path("jeeves/skills/git-preferences/references/ci-check-timing.md")
 _PIPE: Final = re.compile(r"(?<!\\)\|")
 _DURATION: Final = re.compile(r"^(?:(\d+)m(?:in)?)?(?:(\d+)s)?$")
 _COLUMNS: Final = (
@@ -55,11 +72,6 @@ def _cells(line: str) -> list[str]:
     return [part.strip().replace("\\|", "|") for part in parts]
 
 
-def source_table_path() -> Path:
-    """The source clone's copy of the timing table."""
-    return Path(os.environ.get(SOURCE_ENV) or SOURCE_DEFAULT) / TABLE_IN_SOURCE
-
-
 def _names(cell: str) -> tuple[str, ...]:
     return tuple(re.findall(r"`([^`]+)`", cell))
 
@@ -94,15 +106,17 @@ def parse_table(text: str) -> dict[str, CiTiming]:
     return timings
 
 
-def load(path: Path = DEFAULT_PATH) -> Mapping[str, CiTiming]:
-    """Read and parse the timing file."""
+def table_path() -> Path:
+    """The timing table: `$JEEVES_CI_TIMING` when set, else the org-memory file."""
+    return Path(os.environ.get(PATH_ENV) or DEFAULT_PATH)
+
+
+def load(path: Path | None = None) -> Mapping[str, CiTiming]:
+    """Read and parse the timing file; an absent file holds no rows yet."""
+    path = path or table_path()
+    if not path.exists():
+        return {}
     try:
         return parse_table(path.read_text(encoding="utf-8"))
     except OSError as error:
         raise CiTimingError(f"cannot read {path}: {error}") from error
-
-
-def table_path() -> Path:
-    """The source clone's copy of the table when it exists, else the installed one."""
-    source = source_table_path()
-    return source if source.exists() else DEFAULT_PATH

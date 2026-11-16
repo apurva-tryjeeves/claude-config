@@ -155,7 +155,7 @@ class CiRows:
             written = self._write(row) if self._write else False
         except OSError as error:
             return f"{repo} (not written: {error.strerror or error}) {line}"
-        return repo if written else f"{repo} (source clone absent) {line}"
+        return repo if written else f"{repo} (not written) {line}"
 
     def _failures(self) -> dict[str, str]:
         if self._hold is None:
@@ -358,11 +358,11 @@ def stop_on_signals() -> Iterator[None]:
             signal.signal(sig, old)
 
 
-def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming]) -> Pollers:
+def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming], table: Path) -> Pollers:
     """Pollers that run claude, gh and git, and derive missing CI rows."""
     deriver = RowDeriver(
         derive=ci_derive.derive_row,
-        write=lambda row: ci_derive.write_row(row, ci_timing.source_table_path()),
+        write=lambda row: ci_derive.write_row(row, table),
         hold=path.with_suffix(".ci-hold.json"),
     )
     rows = CiRows(timings, deriver)
@@ -382,7 +382,7 @@ def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming]) -> Poll
 def cmd_watch(args: argparse.Namespace) -> int:
     """Tick until events, idle or a stop signal."""
     path: Path = args.state_file
-    pollers = live_pollers(path, args.tool, ci_timing.load(args.ci_timing))
+    pollers = live_pollers(path, args.tool, ci_timing.load(args.ci_timing), args.ci_timing)
     try:
         with stop_on_signals():
             while True:

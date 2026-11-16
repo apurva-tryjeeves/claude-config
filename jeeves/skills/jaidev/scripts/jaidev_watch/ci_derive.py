@@ -3,7 +3,7 @@
 The steps follow git-preferences' "Checks poller" and "Write back a timing
 row": time the last 10 successful PR runs of each PR-check workflow, take the
 long pole, read the check names from a recent PR's rollup, and write the row
-into the plugin's source clone, uncommitted.
+into the org-memory timing table, creating the table on its first row.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Final
 
-from jaidev_watch import state_store
+from jaidev_watch import ci_timing, state_store
 from jaidev_watch.models import CiTiming, parse_time
 
 ORG: Final = "JeevesInc"
@@ -278,14 +278,13 @@ def _table_lock(path: Path) -> Path:
 
 
 def write_row(row: DerivedRow, path: Path) -> bool:
-    """Add the row to the table once, under a lock, atomically; False when the table is absent.
+    """Add the row to the table once, under a lock, atomically; create the table when absent.
 
-    The lock file sits in the system temp directory, so the clone gains no file.
+    The lock file sits in the system temp directory, beside nothing it would clutter.
     """
-    if not path.exists():
-        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
     with state_store.lock_file(_table_lock(path)):
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8") if path.exists() else ci_timing.TEMPLATE
         if not _has_row(text, row.timing.repo):
             state_store.write_text_atomic(path, insert_row(text, format_row(row)))
     return True

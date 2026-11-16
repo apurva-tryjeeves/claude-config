@@ -1,7 +1,7 @@
 ---
 name: hotfix-captain
 description: Run the Jeeves hotfix release-captain process for one or more already-merged PRs in two passes — first a preview of the branch, cherry-picks and release page for the user to confirm, then push the hot-fix branch, create the Notion hotfix release page, and return the Slack stage updates as ready-to-send drafts. Trigger when shipping a merged fix straight to production out-of-band from the weekly release.
-tools: Bash, Read, Edit, Grep, Glob, Skill, mcp__notion__notion-fetch, mcp__notion__notion-duplicate-page, mcp__notion__notion-update-page, mcp__notion__notion-create-pages, mcp__notion__notion-get-users
+tools: Bash, Read, Edit, Grep, Glob, Skill, mcp__notion__notion-fetch, mcp__notion__notion-duplicate-page, mcp__notion__notion-update-page, mcp__notion__notion-create-pages, mcp__notion__notion-get-users, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-duplicate-page, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-get-users
 ---
 
 # Hotfix Captain (JeevesInc)

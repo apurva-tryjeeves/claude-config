@@ -1,8 +1,9 @@
 # Jaidev reference
 
 Observed behaviour of Jaidev ("Jeeves AI Developer", `@jaidev` on Linear),
-from real tickets. Check here first; when Jaidev shows something new, update
-this file in the same turn.
+from real tickets. Check here first; when Jaidev shows something new, write it
+back to the source clone's copy of this file in the same turn (SKILL.md →
+write-back rule).
 
 Sections 1–5 hold stable behaviour and are safe to reuse across runs.
 Section 6 points to the local file that holds timings and costs, which vary
@@ -239,5 +240,6 @@ allocated develop environments (see At a glance).
 
 ## 6. Timings and costs
 
-Kept outside the plugin, in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`. Read it
-to estimate a run and add the new run's row to its cost table when it closes out.
+Kept outside the plugin, in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`. When it
+exists, read it to estimate a run; otherwise skip the estimate. Add the new run's row to its cost
+table when the run closes out, creating the file with that first row when it doesn't exist yet.

@@ -70,8 +70,9 @@ code — even when the task brief doesn't mention Linear:
 3. For a missing **estimate** or **project**, fetch live options, narrow them
    as described in "Team, project, estimate, cycle" below, and ask with one
    `AskUserQuestion` call.
-4. Save everything in one `mcp__linear__save_issue` call, then continue with
-   the work.
+4. Show the field changes as one list — state, cycle, assignee, and any
+   estimate or project — and wait for the user's yes. Then save them in one
+   `mcp__linear__save_issue` call and continue with the work.
 
 ### Finish work on a ticket
 

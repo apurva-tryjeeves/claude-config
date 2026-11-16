@@ -16,7 +16,7 @@ keeps the user's approvals, and the agents do the ticket work.
 | Reports | Fetch origin and check any disputed or surprising claim in an agent's report against the latest parent branch yourself before you approve a scope |
 | Approvals | The agent approves and merges a PR only when the user authorized both for that flow; otherwise it reports and the user decides. A pre-approval to merge a named set of PRs once CI passes covers only those PRs: after the agent reports a clean review and the head still matches, send the agent "merge" yourself; ask the user when a finding, a failed check or a moved head appears |
 | Stop | A third failed revision round, a Blocked run, a rejected merge or a missing approval stops the agent, and it reports to the coordinator |
-| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to that file in the same turn |
+| Repo facts | Fill the brief template's "Repo facts" section from `references/repo-notes.md`; after each merge, append the agent's "Repo facts learned" to the source clone's copy of that file in the same turn (SKILL.md → write-back rule) |
 | Cleanup | After each merge, run `state set <state-file> <ticket> merged true`; the watcher prints `ALL MERGED` once every ticket is done, and exits |
 
 ### Color coding
@@ -109,8 +109,8 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `pr-revising` | off | every 1 min until a new head | `FIX LATE` at 2 min +1 min per review comment, capped at 10 min |
 
 - PR due after `plan:approved`: 4 min for 1 or 2 points, 6 min for 3, 8 min for 5 or more.
-- CI cadence comes from `git-preferences/references/ci-check-timing.md` (the source clone's copy first); a new head restarts the CI clock. The repo is the one `git remote get-url origin` names in the ticket's `repoDir`.
-- A repo without a row gets one derived the git-preferences way when its first ticket reaches a CI stage; the watcher writes it into the source clone, uncommitted, and prints `CI ROW ADDED <repo>`.
+- CI cadence comes from `~/.claude/org-memory/jeevesinc/ci-check-timing.md` (`$JEEVES_CI_TIMING` overrides the path); a new head restarts the CI clock. The repo is the one `git remote get-url origin` names in the ticket's `repoDir`.
+- A repo without a row gets one derived the git-preferences way when its first ticket reaches a CI stage; the watcher adds it to that table, creating the file on its first row, and prints `CI ROW ADDED <repo>`.
 - CI counts as settled once every check completed and every `Settles on` check is present.
 - While Jaidev's timeline shows "Queued" or "API provider overloaded — retrying", every deadline pauses.
 - A deadline fires after one last read at the deadline, once per stage.
@@ -135,7 +135,7 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `<ticket> CI LATE …` | Read the PR's checks with `gh pr view`; tell the user which check is stuck |
 | `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
 | `LINEAR POLL ERROR <ticket> missing from the reply` | Restart the watcher; the ticket counts as unread, so no deadline fires from it |
-| `CI ROW ADDED <repo> …` | Tell the user the new `ci-check-timing.md` row is ready to review and push; restart the watcher |
+| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; restart the watcher |
 | `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' "Checks poller", add it, and restart the watcher. The watcher retries the derivation 2 min after a failure (`<state-file stem>.ci-hold.json`) |
 | `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |

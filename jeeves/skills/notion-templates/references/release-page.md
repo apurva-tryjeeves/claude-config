@@ -20,6 +20,7 @@ then record the row (see the skill's "Record what you resolve").
 | Month | Month page ID | Quarter page ID | `(template)` child ID |
 |---|---|---|---|
 | September 2026 | `3c31edd5ce8c80559cb1c9fe9afaf471` | `3881edd5ce8c80bdae2ad2be6c7d91fc` | `3df1edd5ce8c800483f3c8fdd0a64eaa` |
+| November 2026 | `3eb1edd5ce8c8021acc2c66cb0c7ca26` | `3c31edd5ce8c802399ffc8dc0171812c` | `3eb1edd5ce8c80a791edca1f9098eee2` |
 
 The `(template)` child is re-created per month, so confirm the ID in the table
 still resolves to a `(template)` page before duplicating it, and refresh the

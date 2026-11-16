@@ -5,9 +5,10 @@ from __future__ import annotations
 import unittest
 from dataclasses import replace
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from jaidev_watch import schedule
-from jaidev_watch.ci_timing import DEFAULT_PATH, load
+from jaidev_watch.ci_timing import load
 from jaidev_watch.models import (
     CiResult,
     EventKind,
@@ -19,7 +20,7 @@ from jaidev_watch.models import (
     parse_time,
 )
 
-CI = load(DEFAULT_PATH)["ap-data-source-connector"]
+CI = load(Path(__file__).parent / "fixtures" / "ci-check-timing.md")["ap-data-source-connector"]
 T0 = parse_time("2026-11-05T13:22:08Z")
 
 
