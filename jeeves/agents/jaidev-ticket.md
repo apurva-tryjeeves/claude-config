@@ -26,7 +26,7 @@ You carry one Jaidev ticket from briefing to close-out. The shared brief in the 
 - `jeeves:typescript-naming` for every identifier the briefing introduces.
 - `jeeves:sonar-proactive-rules` when you write or review TypeScript.
 - `jeeves:structured-logging` for every `logger.*` call in briefed code.
-- `authoring-guide` for every comment, briefing and report.
+- the `authoring-guide` skill when it is installed, for every comment, briefing and report.
 
 ## Rules
 

@@ -14,7 +14,7 @@ The caller gives you:
 
 - A repo/service to investigate.
 - A flow/feature/issue description.
-- Any identifiers in play — `traceId`, `jeeves-trace-id`, transaction/company
+- Any identifiers in play — `traceId`, `jeeves_trace_id`, transaction/company
   id, table names.
 
 ## Hard rules
@@ -46,7 +46,7 @@ Trace the flow through this service and report, concisely:
 2. **Code path** — the controller→service→repository→model chain for this flow; note key branching/validation.
 3. **Data** — tables/models read or written, and the columns/keys that matter for this flow.
 4. **External calls & queues** — other Jeeves services called (`integrations.*`), third-party providers, SQS queues produced/consumed, idempotency keys.
-5. **Log signatures** — the `app_name` this runs under (`<service>-api` / `-worker`) and the distinctive log lines/messages it emits for this flow (so logs can be searched in OpenSearch).
+5. **Log signatures** — the `app_name` this runs under (read the names from the chart) and the distinctive log lines/messages it emits for this flow (so logs can be searched in OpenSearch).
 6. **Involvement verdict** — how (and how much) this service is implicated in the flow/issue, plus anything that looks wrong or worth a closer look.
 7. **Open questions** — what you couldn't determine from code alone (needs DB/log/runtime confirmation by the orchestrator).
 
