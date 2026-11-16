@@ -25,7 +25,7 @@ On a fix request, bring every doc that mentions a renamed identifier in line wit
 
 ## 4. Verify
 
-On a fix request, run the repo's typecheck, lint and tests (see `package.json` scripts) and confirm they pass.
+Run the repo's typecheck, lint and tests (see `package.json` scripts) and confirm they pass.
 
 ## Reporting results
 
