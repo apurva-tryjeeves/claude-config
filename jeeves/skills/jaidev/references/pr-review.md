@@ -52,6 +52,9 @@ Review against the head SHA you record:
 - the effect beyond the PR: the deploy build (e.g. the Dockerfile's
   `npm run build`) and other open PRs against the same base;
 - the diff is clean of secrets and internal hostnames;
+- engineering soundness: the code-review list in the
+  `jeeves:fullstack-typescript` skill's `references/review-checklist.md`
+  (correctness, failure paths, security, data, types, structure, runtime);
 - each finding traced through its call sites before it is reported.
 
 ## Commands
