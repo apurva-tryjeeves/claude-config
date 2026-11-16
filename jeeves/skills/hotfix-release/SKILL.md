@@ -1,6 +1,6 @@
 ---
 name: hotfix-release
-description: Cut a hot-fix branch off a Jeeves service's production branch (main/master), cherry-pick one or more already-merged development commits onto it, and push it to origin. Trigger on hotfix, urgent release, or shipping a fix out-of-band from the normal development→release flow.
+description: Cut a hot-fix branch off a Jeeves service's production branch (main/master), cherry-pick already-merged development commits onto it, and push it to origin. Trigger when asked to cut, cherry-pick or push a hot-fix branch; for the full hotfix release (branch, Notion release page, Slack drafts) use the hotfix-captain agent.
 ---
 
 # Hotfix Release
@@ -9,16 +9,30 @@ Ship one or more already-merged fixes straight to production, bypassing the
 normal release train. Run this from inside the target service's local repo
 (`${JEEVES_REPOS_DIR:-$HOME/github/JeevesInc}/<repo>`); a hotfix spanning
 several repos gets one branch per repo.
-The flow ends at a pushed `hot-fix/…` branch, with no pull request into
-`main`/`master`.
+The pushed `hot-fix/…` branch is the finished hotfix: deployment ships it as it
+stands, with no pull request into `main`/`master`, so the flow stops at the push.
+
+For the full release-captain process — branch, Notion release page and Slack
+drafts — run the `hotfix-captain` agent; it calls this skill for the branch.
 
 ## 1. Find the production branch
 
-Start from a clean working tree. When `git status --short` lists changes, stash
-them and note the stash so step 5 restores it:
+Record the current branch as `PREV_BRANCH`, so step 4 can return to it, and
+list any local changes:
+
+```bash
+PREV_BRANCH=$(git branch --show-current)
+```
 
 ```bash
 git status --short
+```
+
+Start from a clean working tree. When `git status --short` lists changes, show
+the user that list, then wait for the user's yes before stashing them; step 4
+restores the stash:
+
+```bash
 git stash push -u -m "before hot-fix <ticket-id>"
 ```
 
@@ -76,10 +90,14 @@ convention:
 - `<context>` — a short kebab-case slug from `<description>`, e.g.
   `add-accounting-category-filters`. Keep it to 3-5 words.
 
-For multiple PRs, ask the user for a combined `<ticket-id>` (e.g.
-`ACC-1497_ACC-1494`) and a `<context>` slug covering all the fixes — the
-branch name can't be derived automatically once more than one commit is
-involved.
+For multiple PRs, derive a default and confirm it with the user:
+
+- `<ticket-id>` — each commit's ticket id joined with `_` in merge order, e.g.
+  `ACC-1497_ACC-1494`.
+- `<context>` — a 3-5 word slug from the first commit's subject.
+
+Show the resulting branch name, then wait for the user's yes or a
+replacement before creating it.
 
 If a commit subject doesn't carry a bracketed ticket ID, ask the user for
 the ticket ID and context slug directly.
@@ -118,17 +136,32 @@ and the picked commits, and push once they confirm:
 git push -u origin hot-fix/<ticket-id>_<context>
 ```
 
-When step 1 stashed changes, switch back to the branch they came from and
-restore them:
+After the push, switch back to `PREV_BRANCH`, and restore the stash when
+step 1 made one:
 
 ```bash
-git switch <previous-branch>
+git switch "$PREV_BRANCH"
+```
+
+```bash
 git stash pop
 ```
 
-**The pushed branch is the finished hotfix.** Deployment ships
-`hot-fix/<ticket-id>_<context>` as it stands, without a pull request into
-`main`/`master`, so stop at the push.
+When the user declines the push, return the repo to where it started: switch
+back to `PREV_BRANCH`, delete the local hot-fix branch, and restore the stash
+when step 1 made one:
+
+```bash
+git switch "$PREV_BRANCH"
+```
+
+```bash
+git branch -D hot-fix/<ticket-id>_<context>
+```
+
+```bash
+git stash pop
+```
 
 ## 5. Report the result
 
@@ -143,6 +176,6 @@ Icons, linking and value-rendering vocabulary live in the shared
 - **Link the branch** so it opens in one click:
   `https://github.com/JeevesInc/<repo>/tree/hot-fix/<ticket-id>_<context>`.
 
-That hands the branch off to deployment. Answer with the verdict, the table and
+Answer with the verdict, the table and
 the branch link, then stop — leave out the git commands run, diff stats, and
 "want me to open the PR?" follow-ups.

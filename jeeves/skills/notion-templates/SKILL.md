@@ -34,9 +34,13 @@ only as native Notion blocks: header-column tables, fixed column widths,
 callout background colours, and the embed block.
 
 1. Resolve the month page from the reference file's month-ID table, fetch it
-   with `notion-fetch`, and pick the child page whose title ends in
-   `(template)`. When the lookup was resolved live, record the month's row
-   (see "Record what you resolve" below).
+   with `notion-fetch`, and scan its children for a page with this release's
+   date (and, for a hotfix, the same service) — someone else shipping that day
+   may have created it. When one exists, show the user its title and URL, then
+   wait for the user's choice of which page the release runs on. Otherwise
+   pick the child page whose title ends in `(template)`. When the lookup was
+   resolved live, record the month's row (see "Record what you resolve"
+   below).
 2. Duplicate it with `notion-duplicate-page`. Duplication finishes
    asynchronously, so re-fetch the new page until its content is present
    before editing it.
