@@ -6,7 +6,7 @@ keeps the user's approvals, and the agents do the ticket work.
 
 | Piece | Rule |
 |---|---|
-| Agents | One `jeeves:jaidev-ticket` agent per ticket for the ticket work, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round. The agent type sets model sonnet, effort medium |
+| Agents | One `jeeves:jaidev-ticket` agent per ticket for the ticket work, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round, started with the prompt in "Starting a PR reviewer". Model and effort come from the agent definition |
 | Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only the skills their agent type names besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
@@ -26,7 +26,7 @@ Give every agent an identity color and every message a status circle. The identi
 1. When you spawn an agent, pick the next unused emoji from the palette and record it:
 
    ```bash
-   cd <skill-dir>/scripts && python3 -m jaidev_watch state set <state-file> <ticket> color <emoji>
+   cd "${CLAUDE_SKILL_DIR}/scripts" && python3 -m jaidev_watch state set <state-file> <ticket> color <emoji>
    ```
 2. Start every message you relay about that agent or its ticket with the identity emoji and the ticket id. Tickets batched under one agent share its emoji.
 3. Mark the status with one circle:
@@ -60,7 +60,7 @@ stage expects an answer, so the coordinator wakes only for an event. Run every
 command from the skill's `scripts` directory, with an absolute state-file path:
 
 ```bash
-cd <skill-dir>/scripts
+cd "${CLAUDE_SKILL_DIR}/scripts"
 python3 -m jaidev_watch state init <state-file> <ticket> <agent-id> <repo-dir>
 python3 -m jaidev_watch watch <state-file>
 ```
@@ -153,6 +153,26 @@ the user's "merge", or a pre-approval naming that PR.
 #### Agent tools
 
 Linear tools may be `mcp__claude_ai_Linear__*` or `mcp__linear__*`. Tell each agent which server is connected when you spawn it.
+
+### Starting a PR reviewer
+
+Start a fresh `jeeves:jaidev-pr-reviewer` for each review round once the
+ticket agent reports the settled head. Fill this prompt; the agent's "Inputs"
+list names each field. Point the checklist at the source clone's
+`pr-review.md` when the clone exists, else at this skill's own copy:
+
+```text
+Review Jaidev PR <org/repo>#<n> for <ticket-id>, review round <N>.
+- Head SHA: <sha the ticket agent reported>
+- Repo checkout: <main checkout; run gh from inside it>
+- Briefing: <scratchpad>/<ticket-id>-briefing.md
+- Names comment: <scratchpad>/<ticket-id>-names-comment.md
+- Plan feedback: <scratchpad>/<ticket-id>-plan-feedback.md, or "none"
+- Design doc: <URL>, or "none"
+- Checklist: <absolute path of skills/jaidev/references/pr-review.md>
+- Linear server: <mcp__claude_ai_Linear__* or mcp__linear__*>
+- Scratchpad: <directory>; write <ticket-id>-review-r<N>.md there.
+```
 
 ### Preparing the next ticket
 

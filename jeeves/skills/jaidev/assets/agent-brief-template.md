@@ -27,45 +27,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 
 ## Briefing format
 
-Fill this format; include Manual follow-up only when it has items, and then add "A human makes the items under Manual follow-up." to the workflows Constraint.
-
-````markdown
-@jaidev start
-
-Please pick up this ticket in <org/repo>. Start your branch from <start-branch> and open the PR against <base-branch>.
-
-## 🎯 Goal
-
-<1–3 sentences: what this achieves and which tickets it unblocks>
-
-## 📋 Context
-
-- <current state of the code, in words>
-- <precedent PRs to follow and what they did>
-- <known CI or environment limitations>
-- <related tickets in flight and the files they touch>
-
-## 🛠️ Changes
-
-- <every change in prose: what changes and why; the exact names, paths and values are in the names comment just above the start comment>
-
-## 🚧 Constraints
-
-- <what stays unchanged; scope boundaries with other tickets>
-- Secrets stay out of code; coverage thresholds stay as they are.
-- Report known CI failures as they stand.
-- Your changes stay outside .github/workflows.
-
-## 🧑‍🔧 Manual follow-up
-
-- <changes a human makes on your branch, e.g. .github/workflows edits; they sit outside your definition of done>
-
-## ✅ Acceptance criteria
-
-- [ ] <checkable items your branch alone can satisfy: commands that must pass, behaviour to verify, evidence to paste in the PR description; the full test suite and coverage gate as the CI check that runs them, e.g. "CI test / Unit Test passes">
-
-The exact names and code are in the comment just above this one; use them as written. Copy every acceptance criterion into your plan's Done when, word for word. Name any you fail to meet in the plan, before you start. Quote back at the top of your plan one key code signature (if this briefing gives code) and acceptance criterion #1. Write any code this briefing gives out in full in your plan's Implementation Sequence. Ask here if anything is unclear.
-````
+{{PASTE_THE_FORMAT_FROM_assets/briefing-format.md}}
 
 ## Phase 1: prepare (do now, post nothing)
 
@@ -75,7 +37,7 @@ The exact names and code are in the comment just above this one; use them as wri
 4. Write these files to {{SCRATCHPAD}}:
    - <ticket-id>-briefing.md: the start comment, in the format under "Briefing format".
      - First line exactly: @jaidev start.
-     - Write it as prose and short lists. Identifiers, branch names, file paths, PR titles, code and inline backticks go in the names comment, because they arrive blank in a start comment.
+     - Write it as prose and short lists. Identifiers, branch names, file paths, PR titles, code and inline backticks go in the names comment, because they arrive blank in a start comment (the three-post split, jaidev skill `references/jaidev-reference.md` §5).
      - State the start branch and the PR base as {{PARENT_BRANCH}} in the opening paragraph and again under Constraints.
      - Keep every .github/workflows change out of Jaidev's scope and in the user's manual follow-up.
      - Acceptance criteria are commands Jaidev can run (ts-lint, lint, named single test files with --coverage=false) plus the CI check names: test / Unit Test, test / Code Analysis, SonarCloud Code Analysis. Jaidev's sandbox has no Docker, so brief tests that mock the DB layer.
@@ -83,8 +45,8 @@ The exact names and code are in the comment just above this one; use them as wri
    - <ticket-id>-names-comment.md: the top-level comment you post before the start comment.
      - It holds a Names table, every code block up to ~20 lines, the exact acceptance-criteria commands, the base branch, the start branch and the PR title, all inside plain fenced blocks, with every section expanded (no `+++` collapsibles).
      - PR title format: {{PR_TITLE_FORMAT, e.g. fix: [<ticket-id>] - <ticket title in the imperative>}}.
-     - Open each section with a `## <emoji>` header, as the doc-format hook requires, and end the file with a line that sends questions to the replies under the `@jaidev start` comment.
-   - <ticket-id>-plan-feedback.md, when any code block runs over ~20 lines: those blocks and the base branch, in plain fenced blocks, for plan v1's thread. A longer block reaches Jaidev empty even in the names comment (ACC-1670).
+     - Open each section with a `## <emoji>` header, and end the file with a line that sends questions to the replies under the `@jaidev start` comment.
+   - <ticket-id>-plan-feedback.md, when any code block runs over ~20 lines: those blocks and the base branch, in plain fenced blocks, for plan v1's thread, the third post of the split.
 5. Compare the files with the design doc section by section: names, file paths, signatures, behaviour and log messages. Fix clear mismatches.
 6. Reply to the coordinator, then stop and wait: the file paths, every difference from the design doc you left as a decision for the user, the Names table, the renames list, every place the briefing differs from the ticket text (with the reason), the files your ticket changes, the golden tests that change, and anything that depends on another ticket. Post nothing to Linear in this phase.
 
