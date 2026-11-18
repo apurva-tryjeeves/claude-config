@@ -1,6 +1,6 @@
 ---
 name: notion-templates
-description: Create Jeeves Notion pages from the stored template library — currently the weekly/hotfix release page under Engineering > Releases. Trigger when asked to create, set up, or scaffold a Notion release page (or another catalogued template) for a given date. Also load it before creating or editing any Notion page written from markdown; it holds the default formatting (heading icons, callouts, toggles).
+description: Create Jeeves Notion pages from the template library, such as the weekly or hotfix release page under Engineering > Releases. Trigger when asked to create or scaffold a release page or another catalogued Notion page for a date, and load before writing any Notion page from markdown for its default formatting.
 ---
 
 # Jeeves Notion Templates

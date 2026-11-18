@@ -7,7 +7,7 @@ metadata:
 
 # CI check timing
 
-One row per JeevesInc repo; the git-preferences skill's "Checks poller" section derives and refines rows.
+One row per JeevesInc repo; the git-preferences skill's references/pr-pollers.md "Checks poller" section derives and refines rows.
 
 | Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval |
 |---|---|---|---|---|---|---|---|---|---|

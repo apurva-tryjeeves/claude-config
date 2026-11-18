@@ -79,7 +79,7 @@ Fix the SonarCloud quality gate for a pull request end to end.
 
 6. **Commit exactly the files you edited**, staged explicitly by path. Follow the `jeeves:git-preferences` skill for commit message style and the co-author trailer. Show the staged files and the commit message, then wait for the user's yes before committing.
 
-7. **Push** once the user confirms — show the branch and the commit(s) first. Then follow the `jeeves:git-preferences` skill's PR Post-Create Polling section: ask which poller(s) to start, and for the Checks poller use its per-repo cadence and stop rule until the `SonarCloud Code Analysis` check reaches a terminal state, then report pass/fail. Re-read the gate (step 2) and iterate against the live result to confirm each fix worked.
+7. **Push** once the user confirms — show the branch and the commit(s) first. Then follow the `jeeves:git-preferences` skill's `references/pr-pollers.md`: ask which poller(s) to start, and for the Checks poller use its per-repo cadence and stop rule until the `SonarCloud Code Analysis` check reaches a terminal state, then report pass/fail. Re-read the gate (step 2) and iterate against the live result to confirm each fix worked.
 
 ## Notes
 - SonarCloud projects here are private: the GitHub check annotations carry locations only — the API (with the token) is the only reliable source of the actual issue text.
