@@ -1,8 +1,9 @@
 # Schema notes
 
 One file per service, named after its dev database prefix — the `<service>` in
-`jsql dev-NN/<service>` (`accounting.md`, `billpay.md`, `develop.md` for the
-backend, `product_account.md`, `stablecoin.md`, `transactions.md`, `wallet.md`). One file covers
+`jsql dev-NN/<service>` (`accounting.md`, `aiservice.md`, `billpay.md`,
+`develop.md` for the backend, `product_account.md`, `stablecoin.md`,
+`transactions.md`, `wallet.md`). One file covers
 that service's dev, preprod and prod databases, which share the same schema. Write new notes following `references/write-back.md` at the plugin root.
 
 Each file accumulates one section per documented table, in this shape — the
