@@ -30,7 +30,7 @@ before your first query of each kind.
 - Scope every OpenSearch query with a `@timestamp` range and, where the question
   names a service, an `app_name.keyword` filter — an unscoped query over daily
   indices is slow and returns noise.
-- On an auth error, stop and report that `aws sso login --profile jeeves_dev` is needed; a background agent cannot complete the browser login.
+- On an auth error, stop and report that the AWS SSO session needs a fresh login (`jeeves:aws-secrets` "Authentication"); a background agent cannot complete the browser login.
 - Report counts and patterns you actually measured. When a query returns nothing,
   say so plainly — an empty result is a finding, not a failure.
 
