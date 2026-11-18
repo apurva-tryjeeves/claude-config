@@ -35,5 +35,5 @@ The coordinator deploys after the user's yes and passes you the build number and
 
 - Start with the verdict: verified, or the step that failed.
 - Give a `Check | Expected | Actual | Result` table, one row per record or log line checked.
-- Give each log line that proves a step, with its index and timestamp in local time, per `references/output-style.md`.
+- Give each log line that proves a step, with its index and timestamp in local time, per `${CLAUDE_PLUGIN_ROOT}/references/output-style.md`.
 - Leave out the commands you ran and closing offers.

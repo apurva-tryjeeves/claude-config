@@ -189,7 +189,9 @@ Several skills record facts they discover back into their own files:
 |---|---|
 | `jaidev` | `skills/jaidev/references/jaidev-reference.md`, `skills/jaidev/references/repo-notes.md` |
 | `jenkins` | `skills/jenkins/scripts/modules.py`, `skills/jenkins/references/deploy-develop-environment.md`, `skills/jenkins/references/deploy-develop-environment-stages.md` |
-| `mysql`, `trace-tx`, `feature-plan`, `post-deploy-verify` | `references/queries.md`, `skills/mysql/references/schema/` |
+| `mysql` | `skills/mysql/references/schema/`, `skills/mysql/references/common-lookups.md`, `skills/mysql/references/cross-service-links.md` |
+| `trace-tx` | `skills/mysql/references/schema/` |
+| `prod-debug`, `feature-plan`, `post-deploy-verify` | `references/queries.md` |
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
 | `notion-templates` | `skills/notion-templates/references/release-page.md` |
 | `opensearch` | `skills/opensearch/SKILL.md` (`app_name` examples), `skills/opensearch/references/alerting-api.md` |
