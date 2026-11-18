@@ -1,7 +1,7 @@
 {
   "tickets": {
     "ACC-1668": {
-      "repoDir": "/Users/apurvasingh/github/JeevesInc/ap-data-source-connector",
+      "repoDir": "/x/ap-data-source-connector",
       "prNumber": 94,
       "lastCiHead": "92cbccb",
       "lastTimeline": "ap-data-source-connector#94: addressing review feedback",
@@ -13,7 +13,7 @@
       "mergeCommit": "f36b431"
     },
     "ACC-1669": {
-      "repoDir": "/Users/apurvasingh/github/JeevesInc/ap-data-source-connector",
+      "repoDir": "/x/ap-data-source-connector",
       "prNumber": 95,
       "lastCiHead": "565d50b",
       "lastTimeline": "2026-11-05T13:33:41Z — Complete",
@@ -25,7 +25,7 @@
       "mergeCommit": "da1da44"
     },
     "ACC-1670": {
-      "repoDir": "/Users/apurvasingh/github/JeevesInc/ap-data-source-connector",
+      "repoDir": "/x/ap-data-source-connector",
       "prNumber": 96,
       "merged": true,
       "agent": "a40bb3fcdbb02da5b",

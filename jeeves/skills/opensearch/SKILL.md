@@ -5,17 +5,17 @@ description: Search JeevesInc application logs on the OpenSearch clusters, and m
 
 # OpenSearch — application logs and alerting monitors
 
-| Environment | MCP server | AWS profile | Region |
-| --- | --- | --- | --- |
-| prod | `opensearch-prod` | `jeeves_prod` | `us-east-1` |
-| dev | `opensearch-dev` | `jeeves_dev` | `us-east-2` |
+| Environment | MCP server | Endpoint | AWS profile | Region |
+| --- | --- | --- | --- | --- |
+| prod | `opensearch-prod` | `https://opensearch.prod.jeeves.vpn` | `jeeves_prod` | `us-east-1` |
+| dev | `opensearch-dev` | `https://opensearch.dev.tryjeeves.vpn` | `jeeves_dev` | `us-east-2` |
 
 Every profile shares one `sso-session`; log in as `jeeves:aws-secrets` "Authentication" describes.
 
 | Operation | Reach it with | Depth |
 | --- | --- | --- |
-| Search logs | the `opensearch-*` MCP tools; `awscurl` fallback once the user approves | this file |
-| Manage alerting monitors | `awscurl --service es` | `references/alerting-api.md` |
+| Search logs | the `opensearch-*` MCP tools; `awscurl` fallback once the user approves | this file; `references/awscurl.md` for the `awscurl` fallback |
+| Manage alerting monitors | `awscurl --service es` | `references/alerting-api.md`, `references/awscurl.md` |
 
 ## Search logs
 
@@ -25,10 +25,10 @@ All Jeeves services ship app logs into **daily indices `logs-YYYY.MM.DD`**
 ### Key fields
 
 - `@timestamp` — for a date-range filter.
-- `app_name` / `app_name.keyword` — the emitting pod's `app` label, taken from each service's deployment names in `jenkins-library` `vars/jeevesPlatformInfo.groovy`. Examples: `accounting-api`, `accounting-worker`, `accounting-jobexecutor`, `wallet-api`, `wallet-worker`, `stablecoin-service`, `stablecoin-service-worker`, `stablecoin-service-cron`. Filter on `.keyword` to scope to one service.
+- `app_name` / `app_name.keyword` — the emitting pod's `app` label, taken from each service's deployment names in `jenkins-library` `vars/jeevesPlatformInfo.groovy`. Examples: `accounting-api`, `accounting-worker`, `accounting-jobexecutor`, `wallet-api`, `wallet-worker`, `stablecoin-service`, `stablecoin-service-worker`, `stablecoin-service-cron`, `ai-service-api` (jeeves-ai). Filter on `.keyword` to scope to one service. Add a service's `app_name` here the first time you confirm it, following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 - `log` — text field holding the full JSON log line **and** raw SQL.
 - `pid` — set by the application logger, absent from OpenTelemetry SDK lines.
-- `traceId` / `trace_id` and `jeeves_trace_id` — two distinct per-request correlation ids, present on request/response-cycle logs (absent on background jobs, startup logs, etc). Both persist identically across every service a single request touches — group by either to pull the whole cross-service chain for one request in a single query, no need to query service-by-service.
+- `traceId` / `trace_id` and `jeeves_trace_id` — two distinct per-request correlation ids, present on request/response-cycle logs. Both persist identically across every service a single request touches — group by either to pull the whole cross-service chain for one request in a single query.
   - `traceId` / `trace_id` — the OTel W3C trace-context id (hex format), propagated via the standard `traceparent` header. Use this to cross-reference with APM/tracing tooling.
   - `jeeves_trace_id` — Jeeves's own application-level request id (UUID-hex format), generated independently of OTel. Use this when a caller or client-facing log references "the request trace id."
 
@@ -94,17 +94,11 @@ the user which way to go:
 
 1. Ask the user to reconnect the server with `/mcp`, or to approve the
    `awscurl` fallback.
-2. For the fallback, ask the user to log in to AWS with the env's profile from
-   the table at the top:
-
-   ```bash
-   aws sso login --profile jeeves_prod   # prod
-   aws sso login --profile jeeves_dev    # dev
-   ```
-
-3. Once the user approves and has logged in, send the same query DSL the MCP
-   tool would take. Run the setup block in `references/alerting-api.md` (CA
-   bundle, `export-credentials`, endpoint) and the request in one Bash call:
+2. For the fallback, ask the user to log in to AWS first, as the line under
+   the environment table says.
+3. Once the user approves and has logged in, send the request with the setup
+   block in `references/awscurl.md`. The body is only the `query_dsl` value
+   from the MCP example above, and the index goes in the URL:
 
    ```bash
    uvx awscurl --service es --region "$REGION" \
@@ -117,7 +111,7 @@ the user which way to go:
 ### Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
-`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it rather than inventing a format.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — use its icons, links and value rendering.
 
 - **Lead with a verdict line** — icon, what was found, the hit count, and the
   window searched. Example: `❌ 43 hits — wallet-worker, 6 Aug 00:00–23:59`.
@@ -138,7 +132,8 @@ window that hit the result-size cap so the counts are a floor.
 
 Monitors and notification channels are cluster config, held in OpenSearch rather
 than in a repo. The MCP tools read logs only, so reach the Alerting API with
-`awscurl --service es`, which signs each request with SigV4.
+`awscurl --service es`, which signs each request with SigV4; its setup is in
+`references/awscurl.md`.
 
 Before any create, update, delete or `_execute`, state the cluster, the monitor
 (name and id) and the action, and get the user's go-ahead — these change shared
@@ -148,7 +143,6 @@ Read `references/alerting-api.md` before creating, updating, listing or deleting
 a monitor, wiring a Slack channel, or deep-linking an alert into Discover. It
 carries:
 
-- the `awscurl` invocation, credential export and CA bundle each request needs
 - the Alerting and Notifications endpoints, and what `_execute` does
 - monitor body notes — `{{period_end}}` date math, `severity`, `throttle` units,
   alert auto-resolve, and Slack's `<url|text>` link syntax
