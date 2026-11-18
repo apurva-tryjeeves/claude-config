@@ -1,6 +1,6 @@
 ---
 name: notion-templates
-description: Create Jeeves Notion pages from the template library, such as the weekly or hotfix release page under Engineering > Releases. Trigger when asked to create or scaffold a release page or another catalogued Notion page for a date, and load before writing any Notion page from markdown for its default formatting.
+description: Create Jeeves Notion pages from the template library: the weekly or hotfix release page under Engineering > Releases, and design docs. Trigger when asked to create or scaffold a release page, a design doc or another catalogued Notion page, and load before writing any Notion page from markdown for its default formatting.
 ---
 
 # Jeeves Notion Templates
@@ -14,6 +14,7 @@ page from one. More templates land here over time — see
 | Template | Reference file | Creates |
 |---|---|---|
 | Release page | `references/release-page.md` | A weekly or hotfix release page under Engineering > Releases |
+| Design doc | `references/design-doc.md` | A design doc under the owning team's technical-docs page |
 
 ## Pick the template
 

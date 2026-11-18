@@ -78,7 +78,7 @@ Write the title without a scope, so every PR title reads the same (`references/p
    gh pr create --repo JeevesInc/<repo> --base <default-branch> --head <branch> \
      --title "<type>: [<TICKET>] - <outcome>" --body-file <body.md>
    ```
-4. Add a `## 🔗 Related PRs` section when the change spans repos (below).
+4. Add a `## 🧷 Related PRs` section when the change spans repos (below).
 5. Offer the pollers (see `references/pr-pollers.md`).
 
 ### PR body format
@@ -90,7 +90,7 @@ Write the PR title and the description's sections to the structure in `reference
 - Wrap long logs in `<details>`.
 - Put a merge or deploy gate in a GitHub alert (`> [!IMPORTANT]` or `> [!WARNING]`) at the top of `## 🚦 Rollout`, followed by its checklist.
 - Describe the change itself. Keep rebase and cherry-pick mechanics, stacking banners and commit SHAs in the branch graph.
-- Point to PRs in other repos only through `## 🔗 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.
+- Point to PRs in other repos only through `## 🧷 Related PRs`. A parent-ticket PR lists its sub-ticket PRs in its Solution tables.
 
 ## Sync a feature branch onto the default branch
 
@@ -116,10 +116,10 @@ git push --force-with-lease origin <feature>
 
 ## Cross-Repo Related PRs
 
-When a change spans PRs in different repos, link each PR to the others in its description. Add a `## 🔗 Related PRs` table listing every sibling PR as a full link, what it covers, and its state:
+When a change spans PRs in different repos, link each PR to the others in its description. Add a `## 🧷 Related PRs` table listing every sibling PR as a full link, what it covers, and its state:
 
 ```markdown
-## 🔗 Related PRs
+## 🧷 Related PRs
 
 | PR | Covers | State |
 |---|---|---|

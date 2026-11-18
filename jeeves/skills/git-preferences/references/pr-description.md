@@ -2,8 +2,13 @@
 
 Write the PR title and body to this structure. It follows accounting-service
 PR #584 (ACC-1587), the reference for a parent-ticket PR.
-`SKILL.md` ("PR body format") holds the style rules: emoji headers, bold lead
-terms, code formatting, tables.
+`${CLAUDE_PLUGIN_ROOT}/references/output-style.md` ("Posted markdown style")
+holds the style rules: emoji headers, bold lead terms, code formatting, tables;
+`SKILL.md` ("PR body format") adds the GitHub-only elements.
+
+Section headers and order follow ${CLAUDE_PLUGIN_ROOT}/references/doc-spine.md;
+the PR-only sections (Code review, Related PRs, Deployed to) sit where this file places
+them.
 
 ## Title
 
@@ -52,7 +57,8 @@ outcome as the line a reader of `git log` needs:
    - A parent PR adds one `### <emoji> <Phase> · [<TICKET>](<url>): <title>`
      sub-heading per phase or sub-ticket, each with its own bullets.
 2. `## 🛠️ Solution`
-   - Open with one line naming the design doc, when there is one.
+   - Open with one line that names and links the design doc, when there is
+     one.
    - One bold-lead bullet per design decision, stated as the behaviour it
      gives (`- **Ports in, Codat out:** each service asks …`).
    - Name key paths in backticks; describe changes by behaviour, not as a
@@ -72,18 +78,18 @@ outcome as the line a reader of `git log` needs:
      migrations, flags); tick an item once it is confirmed.
    - `### 🚀 On deploy`, `### 👀 First 48 hours` (what to watch and where)
      and `### ↩️ Rollback`.
-5. `## 🔗 Related PRs` (when sibling PRs exist)
+5. `## 🧷 Related PRs` (when sibling PRs exist)
    - A table: `| PR | Covers | State |`, full GitHub URL per row, State as
      `🟢 open` or `✅ merged`.
 6. `## 🔗 References`
-   - Bold-lead bullets: parent ticket, related tickets, design doc (Notion
-     link), next phases.
+   - Bold-lead bullets: the PR's own ticket, parent ticket, related tickets,
+     design doc (Notion link), next phases.
    - Link tickets inline: `[ACC-1558](https://linear.app/jeeves/issue/ACC-1558)`.
 7. `## 🧪 How to test`
    - `### 🤖 Automated`: `- [x]` items for what passed, e.g. CI on the head
      commit and local lint commands in backticks.
-   - `### 🧑‍🔬 Manual`, when a person tests: `- [ ]` steps with the expected
-     result.
+   - `### 🧑‍🔬 Manual`, when a person tests: `- [ ]` steps, one per ticket
+     acceptance criterion, each with its expected result.
 8. `## 🚀 Deployed to`
    - One bullet per environment, e.g. `` - `develop-07` ``; `- Not deployed`
      before deploy.

@@ -42,10 +42,12 @@ table carrying its own instruction to delete it once the priority is chosen;
 follow that, so the shipped ticket keeps only the priority that applies.
 
 Once a native template's body is on the issue, restyle its section headers
-with the `## <emoji> Header` convention from `SKILL.md` using `patch`, keeping
-the template's wording.
+with the `## <emoji> Header` convention from `${CLAUDE_PLUGIN_ROOT}/references/output-style.md`
+using `patch`, keeping the template's wording.
 
 ## Shapes for the types Linear has no template for
+
+Section headers and order follow ${CLAUDE_PLUGIN_ROOT}/references/doc-spine.md.
 
 Use these when no native template fits. Linear's own guidance is to write only
 as much as the task needs rather than fill out a form
@@ -53,6 +55,27 @@ as much as the task needs rather than fill out a form
 [Creating issues](https://linear.app/docs/creating-issues)) — description is
 optional, and only title + status are required. Drop any section that adds
 nothing for the ticket at hand.
+
+### Task / sub-ticket
+
+The everyday engineering ticket: one change in one repo, often a sub-ticket of a
+parent. Write the Solution when the approach is decided; leave it out when the
+assignee chooses it.
+
+```markdown
+## ❗ Problem
+- **<Lead>:** <what is missing or broken today>
+
+## 🛠️ Solution
+- **<Decision>:** <behaviour it gives>, in `<service>` `<key/path>`.
+
+## ✅ Acceptance criteria
+- [ ] **<Check>:** <observable result a reviewer can verify>
+
+## 🔗 References
+- **Parent:** <PARENT-ID>
+- **Design doc:** <Notion link>
+```
 
 ### Feature / initiative (engineering-initiated)
 
@@ -63,20 +86,28 @@ problem with several symptoms stays scannable.
 
 ```markdown
 ## ❗ Problem
-* <fact/cause #1 — what's missing or broken>
-* <fact/cause #2 — why it matters / what it causes>
+- **<Lead>:** <fact or cause — what's missing or broken>
+- **<Lead>:** <why it matters — what it causes>
 
 ## 🎯 Goal
-<what success looks like, one or two sentences>
+<what success looks like, in one or two sentences>
 
 ## 📐 Scope
-* <in-scope item>
+- **<Area>:** <in-scope item>
 
-**Out (this phase):** <explicitly excluded, only if there's real ambiguity>
+**Out (this phase):** <excluded item, only when the edge is ambiguous>
+
+## ✅ Acceptance criteria
+- [ ] **<Check>:** <observable result a reviewer can verify>
 
 ## ❓ Open questions
 1. <question> — owner: <name>
+
+## 🔗 References
+- **Design doc:** <Notion link>
 ```
+
+A parent ticket's sub-tickets live in Linear's Sub-issues section; the description holds context and done-when.
 
 ### Post-mortem / incident
 
@@ -108,7 +139,7 @@ interim and permanent fixes.
 ## 🕳️ What let it through
 * <the gap — missing alert, untested path, silent failure mode>
 
-## ✅ Follow-ups
+## 📌 Follow-ups
 - [ ] <action> — <owner>, filed as <ticket link>
 ```
 
@@ -121,10 +152,10 @@ For turning a known body of work into tasks. A SPIKE answers an open question;
 this plans work already understood.
 
 ```markdown
-## 🎯 Outcome
+## 🎯 Goal
 <what exists at the end that doesn't today>
 
-## 🔬 Approach
+## 🛠️ Solution
 <the chosen shape, in a few sentences — and the option rejected, when the
 choice is one a reviewer would otherwise ask about>
 
@@ -155,7 +186,7 @@ in a cycle.
 ## 💸 Cost of leaving it
 * <what it slows down, breaks, or hides today>
 
-## 🎯 Target state
+## 🎯 Goal
 <what it looks like once done>
 
 ## 📐 Scope
@@ -163,8 +194,8 @@ in a cycle.
 
 **Behaviour change:** none — <or name exactly what changes>
 
-## ✅ Verification
-<how a reviewer confirms nothing regressed: tests, a dev-NN run, a log check>
+## ✅ Acceptance criteria
+- [ ] **<Check>:** <how a reviewer confirms nothing regressed: tests, a dev-NN run, a log check>
 ```
 
 The **Behaviour change** line matters most on a refactor: a reviewer's first

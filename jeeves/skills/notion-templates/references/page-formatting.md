@@ -7,7 +7,7 @@ be asked. A duplicated `(template)` page keeps the formatting it already has.
 | Content | Element |
 | --- | --- |
 | Page identity | An emoji `icon` on `notion-create-pages` |
-| Top of page | A `gray_bg` `<callout>` with a one-line purpose, then `<table_of_contents/>` |
+| Top of page | A `gray_bg` `<callout>` with a one-line purpose, then `<table-of-contents />` |
 | Section headings | One leading emoji per `##` / `###` that names the content (`## 🧪 Safety net`); numbered headings keep the number first (`## 1. 📋 TL;DR`) |
 | Warning or priority groups | A sub-heading carrying a signal icon — `### 🚨 Money safety`, `### 🔑 Decides order of work` |
 | Long code, before/after sketches | A `<toggle heading="h3">` block: the title on the line after the opening tag, a blank line, then the children unindented, code in fenced blocks, and `</toggle>` right after the last child |
