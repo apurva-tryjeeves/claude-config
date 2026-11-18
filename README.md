@@ -167,7 +167,7 @@ chmod 600 ~/.config/jeeves/jenkins/dev.env
 In Claude Code:
 
 ```text
-! jsql dev-01 "SELECT 1;"
+! jsql dev-01 'SELECT 1'
 ! jenkins-api queue
 /mcp
 ```
