@@ -76,6 +76,8 @@ rather than every row:
 
 ## Posted markdown style (tickets, PR descriptions, comments)
 
+Section names and order come from ${CLAUDE_PLUGIN_ROOT}/references/doc-spine.md; this section holds how the text looks.
+
 Write every Linear ticket and comment, PR description, PR comment and review
 summary in this style. The platform skill adds its own sections and
 collapsible form.
@@ -87,4 +89,5 @@ collapsible form.
 - Use a table for anything with repeating columns.
 - Put names, paths and commands in `code`; fence SQL, logs, stack traces, config and command output with a language tag (`text`, `bash`, `sql`).
 - Wrap a long log dump in the platform's collapsible: `+++ <title>` … `+++` in Linear, `<details>` in GitHub.
+- Reserve `---` rules for structure that genuinely needs separating.
 

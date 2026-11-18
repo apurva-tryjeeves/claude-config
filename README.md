@@ -193,7 +193,7 @@ Several skills record facts they discover back into their own files:
 | `trace-tx` | `skills/mysql/references/schema/` |
 | `prod-debug`, `feature-plan`, `post-deploy-verify` | `references/queries.md` |
 | `linear` | `skills/linear/references/repo-team-project-map.md` |
-| `notion-templates` | `skills/notion-templates/references/release-page.md` |
+| `notion-templates` | `skills/notion-templates/references/release-page.md`, `skills/notion-templates/references/design-doc.md` |
 | `opensearch` | `skills/opensearch/SKILL.md` (`app_name` examples), `skills/opensearch/references/alerting-api.md` |
 | `aws-secrets` | `skills/aws-secrets/references/secrets-manager.md` |
 | `invite-dev-company-user` | `skills/invite-dev-company-user/references/confirmed-envs.md` |

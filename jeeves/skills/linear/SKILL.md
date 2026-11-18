@@ -172,11 +172,7 @@ a wall of text. The shared rules are in `${CLAUDE_PLUGIN_ROOT}/references/output
 
 | Content | Element | Why it earns its place |
 | --- | --- | --- |
-| Section headings (`Problem`, `Ask`, `Acceptance criteria`) | `## <emoji> Header` — e.g. `## 🔬 Approach`, `## 📦 Deliverables`, `## ✅ Exit criteria` | Linear gives a real header its own visual weight, and the icon makes the header row scannable at a glance; bold text renders at body size and blends in |
-| Sub-sections within a section | `### <emoji> Header` — e.g. `### 🗄️ Repository / data-access layer` | Breaks a long section into labelled blocks instead of bold-only lines |
-| Named things the reader scans for (patterns, key types, a flow) | Bold inline — `**Strategy**`, `**branded types**`, `**route → controller → service**` | Picks the key concepts out of a dense bullet |
 | A long log dump or stack trace | `+++ <title>` … `+++` collapsible section | Keeps the ticket scannable while the detail stays available |
-| Status of a service, check, or environment | The icons from `${CLAUDE_PLUGIN_ROOT}/references/output-style.md` | A reader scans for the one that isn't ✅ |
 
 Two Linear behaviours worth using deliberately:
 
@@ -185,10 +181,6 @@ Two Linear behaviours worth using deliberately:
   the relations without a second `save_issue` call.
 - **@mention by display name** (`@johndoe`) to pull a person in; `@` also
   resolves projects, documents and PRs.
-
-Put emoji on headers only — one per `##`/`###`, chosen to name the section's
-content — and keep body text plain apart from bolded lead terms. Reserve `---`
-rules for structure that genuinely needs separating.
 
 ### Restyle an existing ticket
 
