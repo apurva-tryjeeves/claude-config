@@ -14,7 +14,7 @@ Every profile shares one `sso-session`; log in as `jeeves:aws-secrets` "Authenti
 
 | Operation | Reach it with | Depth |
 | --- | --- | --- |
-| Search logs | the `opensearch-*` MCP tools | this file |
+| Search logs | the `opensearch-*` MCP tools; `awscurl` fallback once the user approves | this file |
 | Manage alerting monitors | `awscurl --service es` | `references/alerting-api.md` |
 
 ## Search logs
@@ -85,6 +85,34 @@ PY
 ```
 
 For a service's DB tables, use the `jsql` wrapper with that service's database (see the `jeeves:mysql` skill).
+
+### Search logs through `awscurl`
+
+Use this route when an `opensearch-*` server reports `CONNECT_TIMEOUT`, or a
+retry through `ToolSearch` still lists it as failed. Pause the search and ask
+the user which way to go:
+
+1. Ask the user to reconnect the server with `/mcp`, or to approve the
+   `awscurl` fallback.
+2. For the fallback, ask the user to log in to AWS with the env's profile from
+   the table at the top:
+
+   ```bash
+   aws sso login --profile jeeves_prod   # prod
+   aws sso login --profile jeeves_dev    # dev
+   ```
+
+3. Once the user approves and has logged in, send the same query DSL the MCP
+   tool would take. Run the setup block in `references/alerting-api.md` (CA
+   bundle, `export-credentials`, endpoint) and the request in one Bash call:
+
+   ```bash
+   uvx awscurl --service es --region "$REGION" \
+     -X POST "$ENDPOINT/logs-YYYY.MM.DD/_search" \
+     -H 'Content-Type: application/json' -d '<query_dsl JSON>'
+   ```
+
+   A wildcard index (`logs-2026.11.1*`) covers several days in one request.
 
 ### Reporting results
 

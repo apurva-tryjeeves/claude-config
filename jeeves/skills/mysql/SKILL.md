@@ -98,6 +98,14 @@ each statement succeeds exactly as far as that env's MySQL user permits.
 Errors surface on stderr and the wrapper propagates mysql's exit code, so
 empty output means an empty result rather than a hidden failure.
 
+To save a result to a file, send stderr to `/dev/null` and keep stdout whole.
+The `<env> · <database>` header goes to stderr and the column-name row is the
+first line of stdout, so the file starts with the column names:
+
+```bash
+jsql prod/aiservice 'SELECT ...' 2>/dev/null > result.tsv
+```
+
 ## Selecting the service database
 
 Each env hosts one MySQL database **per service**, named `<service>_<envNum>`.
@@ -129,7 +137,7 @@ production DMS config; substitute the env number for `<n>`):
 | risk-service | `risk_<n>` | `preprod_risk` | confirm with `SHOW DATABASES` |
 | transactions-service | `transactions_<n>` | `preprod_transactions` | `transactions` |
 | underwriting-service | `underwriting_<n>` | `preprod_underwriting` | `underwriting` |
-| jeeves-ai | `aiservice_<n>` | `preprod_aiservice` | confirm with `SHOW DATABASES` |
+| jeeves-ai | `aiservice_<n>` | `preprod_aiservice` | `aiservice` |
 | jumanji | `flows_<n>` | `preprod_flows` | `flows` |
 | rfi-agent-service | `rfi_agent_<n>` | `preprod_rfi_agent` | `rfi_agent` |
 
@@ -188,6 +196,7 @@ One file per service covers its dev, preprod and prod databases.
 | File | Database |
 | --- | --- |
 | `references/schema/accounting.md` | `accounting_<n>` |
+| `references/schema/aiservice.md` | `aiservice_<n>` (jeeves-ai) |
 | `references/schema/billpay.md` | `billpay_<n>` |
 | `references/schema/develop.md` | backend `develop_<n>` |
 | `references/schema/product_account.md` | `product_account_<n>` |
