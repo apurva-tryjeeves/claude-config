@@ -1,45 +1,12 @@
 # OpenSearch Alerting API — monitors and notification channels
 
-| Environment | Endpoint | AWS profile | Region |
-| --- | --- | --- | --- |
-| prod | `https://opensearch.prod.jeeves.vpn` | `jeeves_prod` | `us-east-1` |
-| dev | `https://opensearch.dev.tryjeeves.vpn` | `jeeves_dev` | `us-east-2` |
-
-Both domains authenticate with AWS SigV4 and serve a certificate issued by the
-private `CN=tryjeeves` CA.
-
-## Send requests with awscurl
-
-Set the CA bundle, load the SSO session into environment variables, then call
-`awscurl --service es`:
-
-```bash
-# pick the row you need from the environment table above
-ENDPOINT="https://opensearch.prod.jeeves.vpn"
-PROFILE="jeeves_prod"
-REGION="us-east-1"
-
-export SSL_CERT_FILE="$HOME/zscaler-merged-ca-bundle.pem"
-export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"
-eval "$(aws configure export-credentials --profile "$PROFILE" --format env)"
-
-uvx awscurl --service es --region "$REGION" \
-  -X GET "$ENDPOINT/_plugins/_alerting/monitors/<monitor_id>"
-```
-
-- Supply the SSO session with `aws configure export-credentials` — `awscurl`
-  reads credentials from environment variables.
-- Point both CA variables at `~/zscaler-merged-ca-bundle.pem`, which carries the
-  `tryjeeves` root CA (build it per the marketplace README). A run against the stock trust store or
-  `~/zscaler-root-ca.pem` reports `unable to get local issuer certificate`.
-- Sign every request with `awscurl --service es`; the domain answers an unsigned
-  `curl` with `HTTP 401`.
+Send every request with the setup block in `references/awscurl.md`; the
+endpoint, profile and region per env are in the `SKILL.md` environment table.
 
 ## Send a monitor body from a file
 
-Shell variables are lost between Bash calls, so run the setup block above and
-this request in one Bash call. Pass the JSON through `-d "$(cat file)"` so
-escape sequences arrive verbatim:
+Run it in the same Bash call as the `awscurl.md` setup block, and pass the JSON
+through `-d "$(cat file)"` so escape sequences arrive verbatim:
 
 ```bash
 uvx awscurl --service es --region "$REGION" \
