@@ -86,11 +86,8 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    ```
 
    - The mail goes out when every invitee's domain is `@tryjeeves.com` or listed, and the tag query is empty.
-   - For a domain missing from the list, tell the user before inviting and hand them these steps; the user makes each change:
-     1. Append the domain to `ALLOWED_EMAIL_DOMAINS` in `/develop-NN/notification-service/notification-secrets` (AWS Secrets Manager, profile `jeeves_dev`).
-     2. Sync the External Secrets Operator copy. It refreshes the pod's Kubernetes Secret every 1 h (`infra-helm-charts/AGENTS.md`), and a pod started before the sync keeps the old value.
-     3. Redeploy `notification` on that env with `development:latest`. When the user asks you to run the redeploy, use Skill `jeeves:jenkins` and its confirmation.
-   - Confirm the new value took effect by inviting one person first: an empty `emailsNotSent` proves it.
+   - For an invitee domain outside the list, read `references/allow-mail-domain.md` before
+     inviting: the user adds the domain, syncs the secret and redeploys `notification`.
    - Record each env's list in `confirmed-envs.md` → "Mail delivery per env" (see "Confirmed envs").
 
 3. **Confirm, then log in and invite in one Bash call.** The invite mails
@@ -129,7 +126,7 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    - Success is `"status": true` with `"msg": "Invitation mail successfully sent."`; the invite rows exist from here on.
    - **Mail sent check:** an empty `data.emailsNotSent` confirms every invite mail went out.
    - notification-service logs each send as `Sending email result: [{"status":true,...}]` with an SES `MessageId`; search `app_name.keyword` `notification-service` for that phrase (Skill `jeeves:opensearch`) to confirm a send.
-   - Each address in `emailsNotSent` still has its invite row, without a mail. Report the list; to re-send, cancel those invites (see "Cancel an invite") and rerun this step, confirmation included, for those people.
+   - Each address in `emailsNotSent` still has its invite row, without a mail. Report the list; to re-send, cancel those invites (see `references/status-and-cancel.md` → "Cancel an invite") and rerun this step, confirmation included, for those people.
    - When `TOKEN` comes back `null`, check the Keychain item's email and password, then rerun the call.
 
 4. **Confirm the invite rows and their mail.** Look the invites up by `normalizedEmail`, the address as typed, listing every invited address. The join reads each invite's mail from `notification_audits`:
@@ -181,64 +178,11 @@ security add-generic-password -U -s jeeves-cms-dev -a '<cms-admin-email>' -w
    - Success is one row with `inviteStatus` and `userStatus` both `active`, and the invite's `email`.
    - An empty result means no user exists for the invite yet; rerun step 4 to show its `status`.
 
-## Check invite status
+## Check or cancel invites
 
-Answer "were the invites sent, and has anyone signed up?" for one or more
-companies with one query: `invite_users` for the invite, `notification_audits`
-for its mail, `users` for its acceptance.
-
-```bash
-jsql dev-NN/develop '
-SELECT i.id, i.companyId, i.email, i.role, i.status,
-       IF(a.awsMessageId IS NOT NULL, "sent", "not sent") AS mail, a.id AS auditId,
-       u.id AS userId, u.status AS userStatus, i.createdAt
-FROM invite_users i
-LEFT JOIN notification_audits a
-  ON a.toEmail = i.normalizedEmail
- AND a.emailType = "INVITE_USERS"
- AND a.createdAt BETWEEN i.createdAt AND i.createdAt + INTERVAL 10 SECOND
-LEFT JOIN users u ON u.id = i.createdUserId
-WHERE i.companyId IN (<companyId>)
-  AND i.deletedAt IS NULL
-ORDER BY i.companyId, i.id
-'
-```
-
-- `mail` `sent`: notification-service wrote an audit row with an SES `awsMessageId`.
-- `mail` `not sent`: the mail stopped before SES, which on a dev env means a recipient domain outside `ALLOWED_EMAIL_DOMAINS` (step 2).
-- `status` `pending` with `userId` `NULL`: invited, sign-up still open.
-- `status` `active` with `userId` set: accepted; `userStatus` is the new user's status.
-- The invite API answers `"Invitation mail successfully sent."` whether or not a mail went out, so this query (or `emailsNotSent`) is the record of what was sent.
-
-## Cancel an invite
-
-Cancel a `pending` invite to re-send its mail or to drop it. Show the env,
-the company and one row per invite with `id`, `email` and `role`, then wait
-for the user's yes. Then run step 3's `API`, `ITEM`, `CMS_*` and `TOKEN`
-lines and post each invite `id` in the same Bash call:
-
-```bash
-for id in <inviteId1> <inviteId2>; do
-  curl -sS "${API}/v2/admin/cancel-user-invitation" \
-    -H 'content-type: application/json' -H 'platform-type: admin' \
-    -H 'x-client-address: 127.0.0.1' \
-    -H "x-auth-token: ${TOKEN}" \
-    --data "{\"id\":${id}}"
-  echo
-done
-```
-
-- Success is `{"msg":"Success.","status":true}` per id.
-- The row turns `in-active` with `deletedAt` set:
-
-  ```bash
-  jsql dev-NN/develop '
-  SELECT id, status, deletedAt FROM invite_users
-  WHERE id IN (<inviteId1>, <inviteId2>)
-  '
-  ```
-
-- A cancelled invite frees its address: the next invite for that person keeps the typed address.
+To answer whether invites were sent or accepted, or to cancel a pending invite (to drop
+it or re-send its mail), read `references/status-and-cancel.md`: the one status query,
+the cancel call and their report tables.
 
 ## Reporting results
 
@@ -246,8 +190,6 @@ Answer with the row from the step just run and stop:
 
 - After the invite (step 4): one markdown table with a row per invite, every value from step 4's query: `id`, `companyId`, `email`, `role`, `status`, Email (`✅ sent (audit <auditId>)` or `❌ not sent`), `createdAt` (in local time).
 - After acceptance (step 5): one markdown table of the joined row, with `uuid` in full and `createdAt` in local time.
-- After a cancel: one markdown table of `id`, `status`, `deletedAt` (in local time).
-- After a status check: one markdown table with a row per invite: `id`, `companyId`, `email`, `role`, `status`, Email (`✅ sent (audit <auditId>)` or `❌ not sent`), acceptance (`userId` or `pending`), `createdAt` (in local time).
 - When `email` differs from `normalizedEmail`, add one line saying the invitee signs up with the alias.
 - Add a line only for addresses in `emailsNotSent` or an invited address with no row.
 - Leave out the API response body, the token, the curl commands and next-step suggestions.

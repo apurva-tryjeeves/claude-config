@@ -23,62 +23,10 @@ this file, following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
 
 ### Parent ticket whose sub-issues ship together
 
-When a Linear parent ticket's sub-issues go live together (e.g. `ACC-1555` with sub-issues `ACC-1557`, `ACC-1561`, …), collect them on one integration branch named after the parent, and ship that branch to the default branch as one PR. A ticket without such a parent branches off the default branch as above.
-
-- Give each phase of a design doc one parent ticket and one PR; keep the doc's step numbers (4.1–4.4) as sections of that PR, not as tickets.
-- Make work that ships on its own timeline a standalone ticket with blocked-by relations: another repo, a DevOps change, or a removal behind a release gate.
-
-| Branch | Created from | PR base | Merge |
-|---|---|---|---|
-| `feat/<PARENT>` (e.g. `feat/ACC-1555`) | the default branch | the default branch, once every sub-issue is in | Squash |
-| `feat/<SUB>` (e.g. `feat/ACC-1557`) | `feat/<PARENT>` | `feat/<PARENT>` | Squash |
-
-1. Show the parent branch name, then wait for the user's yes. Then create and push the parent branch once, from the updated local default branch:
-   ```bash
-   git switch <default-branch>
-   git pull --ff-only origin <default-branch>
-   git switch -c feat/<PARENT>
-   git push -u origin feat/<PARENT>
-   ```
-2. Start each sub-ticket from the updated local parent branch:
-   ```bash
-   git switch feat/<PARENT>
-   git pull --ff-only origin feat/<PARENT>
-   git switch -c feat/<SUB>
-   ```
-3. Open each sub-ticket PR against the parent branch, titled with the sub-ticket's id (see **Create a PR**):
-   ```bash
-   gh pr create --repo JeevesInc/<repo> --base feat/<PARENT> --head feat/<SUB> \
-     --title "feat: [<SUB>] - <description>" --body-file <body.md>
-   ```
-4. Keep the parent branch current by rebasing it onto the default branch, then rebase every open sub-branch onto the new parent tip. Record the parent's tip before the rebase, so each sub-branch replays only its own commits:
-   ```bash
-   git switch <default-branch>
-   git pull --ff-only origin <default-branch>
-
-   git switch feat/<PARENT>
-   OLD_PARENT=$(git rev-parse feat/<PARENT>)
-   git rebase <default-branch>
-   ```
-   Confirm with the user before each force-push — the parent branch carries every merged sub-PR and is the base of every open one:
-   ```bash
-   git push --force-with-lease origin feat/<PARENT>
-   ```
-   Then, for each open sub-branch, rebase and (after confirming) force-push:
-   ```bash
-   git switch feat/<SUB>
-   git rebase --onto feat/<PARENT> "$OLD_PARENT"
-   git push --force-with-lease origin feat/<SUB>
-   ```
-5. Once every sub-issue PR is squashed into the parent branch, open the parent PR against the default branch, titled with the parent's id, and list each sub-issue PR in its description. Squash-merge it after the user says to merge.
-
-**Stacked-branch gotchas:**
-- Parallel sub-branches that each inject the same dependency into one service merge cleanly but break `tsc`. After each merge, rebase the remaining sub-branches and run `tsc` before merging the next.
-- Retarget dependent PRs before deleting their base branch; deleting the base closes them:
-  ```bash
-  gh pr edit <n> --base <new-base>
-  ```
-- To reopen a closed PR whose branch was force-pushed: push the branch back to its SHA at close, reopen the PR, then push the new SHA.
+When a Linear parent ticket's sub-issues go live together, collect them on one
+`feat/<PARENT>` integration branch and ship it to the default branch as one PR. Read
+`references/parent-ticket-branches.md` before creating, rebasing or merging a parent or
+sub-ticket branch.
 
 ## Conventional Commits
 
@@ -131,7 +79,7 @@ Write the title without a scope, so every PR title reads the same (`references/p
      --title "<type>: [<TICKET>] - <outcome>" --body-file <body.md>
    ```
 4. Add a `## 🔗 Related PRs` section when the change spans repos (below).
-5. Offer the pollers (see **PR Post-Create Polling**).
+5. Offer the pollers (see `references/pr-pollers.md`).
 
 ### PR body format
 
@@ -186,90 +134,20 @@ gh pr edit <n> --repo JeevesInc/<repo> --body-file <updated-body.md>
 
 ## PR Post-Create Polling
 
-After creating a pull request, or pushing to a branch that already has an open PR, ask before starting any background poller. Each poller runs per-PR and stops itself.
-
-### Ask which poller(s) to start
-
-Call `AskUserQuestion` (multiSelect) offering **Comments poller** and **Checks poller**, and start only the one(s) picked.
-
-### Comments poller
-
-Watches for review/PR comments that need a response.
-
-- Cadence: every 2 hours, 10:00–22:00 in the user's local time. Create it with `CronCreate` using `0 10-22/2 * * *` — cron fires in the machine's local timezone, so the window follows the user.
-- On a new comment needing a response (review comment, requested change, question), notify with a summary.
-- On-demand: when asked "any PR comments?", pull status immediately regardless of schedule.
-- Stop when the PR is merged or closed.
-- Detect new comments by diffing all three sources against the last check — conversation comments and review summaries:
-  ```bash
-  gh pr view <n> --repo JeevesInc/<repo> --json state,comments,reviews
-  ```
-  and inline code-review comments, which live on a separate endpoint paged at 30 — `--paginate` returns all of them:
-  ```bash
-  gh api --paginate repos/JeevesInc/<repo>/pulls/<n>/comments --jq '.[] | {id, user: .user.login, path, line, body, created_at}'
-  ```
-
-### Checks poller
-
-Watches CI/check status until it settles.
-
-- Cadence is per-repo. When `~/.claude/org-memory/jeevesinc/ci-check-timing.md` exists, look there for a row matching the target repo; when one exists, use its `First check`/`Interval` columns directly.
-- For a repo with no row yet, or no table yet, derive the cadence from that repo's own CI history with a background `Agent` instead of asking the user. Pull the last 10 successful PR runs of each PR-check workflow:
-  ```bash
-  gh run list --repo JeevesInc/<repo> --workflow <file> --status success --event pull_request --limit 10 --json createdAt,updatedAt \
-    --jq '[.[] | ((.updatedAt|fromdateiso8601) - (.createdAt|fromdateiso8601)) | select(. < 7200)] | "n=\(length) min=\(min)s max=\(max)s mean=\(add/length|floor)s"'
-  ```
-  Time only the long-pole workflow, the slowest PR-check workflow; faster workflows and non-Actions checks (SentinelOne CNS scans) leave the cadence unchanged. Copy the check names from a recent PR's rollup (`gh pr view <n> --json statusCheckRollup`): repos on the shared `infra-reusable-workflows` unit-test workflow prefix each job with `test / `, and jeeves-web uses unprefixed names.
-  Set `First check` a little under the fastest duration and `Interval` from the spread between fastest and slowest, then add the row (repo, long-pole workflow, check name, min/max/mean, sample size, first check, interval) per **Write back a timing row** below, and start polling once the agent reports back.
-- After checks settle, if the actual settle time differs noticeably from the remembered cadence, refine that repo's row in the same turn, per **Write back a timing row**.
-- Start the poller by invoking the `loop` skill with no interval (dynamic mode), passing the
-  poll prompt: the PR, the repo, its `First check` and `Interval` from the timing row, and the
-  `Settles on` checks. Each tick then schedules the next one with `ScheduleWakeup`. Use this for
-  "run in the background" too; a hand-written shell loop or `Monitor` replaces it only when the
-  user asks for one.
-- Several PRs: one poller per PR, each on its own repo's `First check` and `Interval`.
-- Poll with `statusCheckRollup`, which exits 0 while checks are still running:
-  ```bash
-  gh pr view <n> --repo JeevesInc/<repo> --json statusCheckRollup --jq '.statusCheckRollup[] | {name, status, conclusion}'
-  ```
-- Stop once every check has `status: COMPLETED` **and** every check in the row's `Settles on` column is in the list — on repos using the shared unit-test workflow that is `test / Scan for secrets` and `SonarCloud Code Analysis`. The workflow creates `test / Code Analysis` and `test / Scan for secrets` only after the job before them finishes, so an all-COMPLETED list missing them is mid-handoff — keep polling. Then report per **Reporting results** below.
-- A failing check here often traces back to the SonarCloud quality gate — see the `jeeves:sonar-proactive-rules` skill for what triggers it, and `/jeeves:sonar-fix` to clear it.
-
-### Write back a timing row
-
-The table lives in your org memory, outside the plugin, at
-`~/.claude/org-memory/jeevesinc/ci-check-timing.md`, so each person's samples
-build up locally.
-
-Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval |`, then index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`.
+After creating a PR, or pushing to a branch with an open PR, ask before starting any
+background poller, then follow `references/pr-pollers.md`: the comments and checks
+pollers, their cadence, the CI timing rows in
+`~/.claude/org-memory/jeevesinc/ci-check-timing.md`, and the poller report format.
 
 ## Reporting results
 
 Icons, linking and value-rendering vocabulary live in the shared
 `${CLAUDE_PLUGIN_ROOT}/references/output-style.md` — follow it for every report.
 
-**Checks poller:**
-
-- **Lead with the PR** — its number as a link, carrying the state icon:
-  `✅ [#534](https://github.com/JeevesInc/<repo>/pull/534) merged`.
-- **Table the checks** — columns `Check`, `Status` (icon + conclusion) and
-  `Duration` (human-readable, `4m12s`), one row per check.
-- **On a failure, list only the failing checks** and fence the handful of log
-  lines naming the cause; the passing ones stay off the table.
-- **While checks still run**, give elapsed against the expected settle time from
-  the timing row, when the repo has one: `⏳ 2m10s elapsed · ~6m expected`.
-  Without a row, give the elapsed time alone.
-
 **PR status:**
 
 - When the approving review's `commit_id` predates the head, say so: the approval was given on
   `<sha>` before the latest commits.
-
-**Comments poller:**
-
-- **Lead with the PR** as a link and the count of new comments.
-- **One bullet per new comment** — author, `file:line` for inline comments, and
-  a one-line summary of what it asks for.
 
 Answer with the verdict line and the table or bullets, then stop — leave out the
 `gh` commands run, the diff summary, and "want me to keep polling?" follow-ups.
