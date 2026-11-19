@@ -67,23 +67,38 @@ open; the user's "release" is the approval.
    ```
    Unstaged edits from step 2 travel with the switch and stay uncommitted.
 
-8. **Update the plugin.** Ask the user to run these in the prompt, in order:
-   ```text
-   /plugin marketplace update jeeves-local
-   /reload-plugins
-   ```
-   Then confirm the new version is installed:
-   ```bash
-   ls ~/.claude/plugins/cache/jeeves-local/jeeves/
-   ```
+8. **Update the plugin.** `jeeves` is installed at `local` scope, once per
+   JeevesInc project, so it stays out of other repos; each install updates on
+   its own.
+   1. Ask the user to run this in the prompt, which fetches the new version
+      into the marketplace:
+      ```text
+      /plugin marketplace update jeeves-local
+      ```
+   2. Update every local install, run in the background (about 2 minutes for
+      50 projects):
+      ```bash
+      python3 .claude/skills/release/scripts/update_local_installs.py
+      ```
+      It runs `claude plugin update --scope local` inside each project and
+      uninstalls the plugin from projects whose folder is gone. Pass
+      `--remove <project-path>` to uninstall from a folder that still exists.
+      Each failure is listed at the end with its reason, and the run exits 1;
+      rerun it to retry.
+   3. Ask the user to restart Claude Code (or run `/reload-plugins`) so the
+      session loads the new version.
 
 ## Reporting results
 
-Report in one short block:
-- the merged PR link and its squash commit on `master`;
-- the version, old → new;
-- files left uncommitted;
-- whether the new version shows under the plugin cache.
+Report as a table with one row per item, then one **TL;DR** line:
+
+| Item | Result |
+|---|---|
+| PR | merged PR link and its squash commit on `master` |
+| Version | old → new |
+| Uncommitted | files left out, or "none" |
+| Plugin installs | counts updated / removed / failed |
+| Failures | one row per failed project with its reason (omit when none) |
 
 Leave out the diff, the PR body and the commands run. A blocked merge leads
 the report, with its reason.
