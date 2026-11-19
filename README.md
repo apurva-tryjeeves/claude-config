@@ -211,11 +211,11 @@ git clone git@github.com:apurva-tryjeeves/claude-config.git ~/github/apurva-tryj
 Set `JEEVES_PLUGIN_SRC` when the clone lives elsewhere. Skills follow
 [`jeeves/references/write-back.md`](jeeves/references/write-back.md): they read
 the clone's copy of these files when it exists, leave their edits uncommitted
-there, and tell you when one is ready. Review it, then commit, push and open
-a PR that bumps the plugin version (`CLAUDE.md` → "Pull requests"). Once it
-merges, `/plugin marketplace update jeeves-local` brings the new version to
-everyone. Without a clone, skills report the new fact and the edit they would
-make.
+there, and tell you when one is ready. Review it, then say "release" in a
+session in this repo: the project skill `.claude/skills/release` commits it,
+bumps the plugin version, and opens and squash-merges the PR. Once it merges,
+`/plugin marketplace update jeeves-local` brings the new version to everyone.
+Without a clone, skills report the new fact and the edit they would make.
 
 Timing samples stay on your machine, in `~/.claude/org-memory/jeevesinc/`,
 since they change with every run:

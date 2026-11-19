@@ -59,3 +59,6 @@ git diff origin/master -- jeeves/.claude-plugin/plugin.json | grep '"version"'
 ```
 
 When it prints nothing, bump the version, commit it, then open the PR.
+
+For the full flow — branch, commit, PR, squash-merge, plugin update — use the
+project skill `.claude/skills/release/SKILL.md`.
