@@ -175,12 +175,6 @@ In Claude Code:
 A row from `jsql`, a queue listing from `jenkins-api`, and every server above
 marked connected in `/mcp` means the plugin is ready.
 
-## Optional: PRD-to-release workflows
-
-`feature-plan` and `post-deploy-verify` hand off to the `prd-split`,
-`prd-implement` and `release-test` workflows when they are installed in your
-`.claude/workflows/`. Both skills run on their own without them.
-
 ## Contributing, and keeping what skills learn
 
 Several skills record facts they discover back into their own files:

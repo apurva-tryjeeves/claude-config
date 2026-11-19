@@ -244,6 +244,8 @@ independently.
    ticket's children instead of `relatedTo` — parent/child expresses "this
    tracks that work," while `relatedTo` expresses "these are peers, done
    together."
+4. Title each per-repo ticket `[<repo-name>] <title>` and leave the
+   multi-repo parent unprefixed (`SKILL.md` → "Title").
 
 Show each ticket's whole draft (the `SKILL.md` "Create or update an issue"
 rule) and wait for the user's yes before creating any of them.

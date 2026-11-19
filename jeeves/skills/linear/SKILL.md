@@ -152,9 +152,24 @@ ticket carries links to its siblings rather than standing alone; see
 ### Title
 
 Write it short, verb-first, and scannable on its own in a list — `Fix
-calendar loading bug`, `Add Stripe webhook`, not a full sentence. Keep it
-plain — the team prefix (`WAL-`, `ACC-`) already appears on the issue
-identifier automatically.
+calendar loading bug`, `Add Stripe webhook`, not a full sentence. The team
+prefix (`WAL-`, `ACC-`) already appears on the issue identifier, so the title
+carries only the repo:
+
+| Ticket's work | Title |
+|---|---|
+| In one git repo — including a parent whose sub-issues all sit in that repo | `[<repo-name>] <title>`, e.g. `[accounting-service] Add GL code sync job` |
+| Across several repos — a parent tracking per-repo children | `<title>`, e.g. `Add vendor auto-categorisation` |
+| In no repo (design, research spike, console-only change) | `<title>` |
+
+A multi-repo plan splits into one ticket per repo
+(`references/ticket-templates.md`), so each of those tickets takes its own
+repo's prefix. Commit and PR titles keep the `<type>: [<TICKET>] - <outcome>`
+form from the `git-preferences` skill, and branches keep `feat/<TICKET>`.
+
+After a `save_issue` that patches the description, check the returned title
+still starts with the plain `[<repo-name>]` prefix (see "Restyle an existing
+ticket").
 
 ### Description and multi-repo ticket sets
 

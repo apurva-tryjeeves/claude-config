@@ -13,10 +13,8 @@ fix it where it doesn't.
 | dev-01…dev-20 | `jsql dev-NN/<service> '<sql>'` | `mcp__opensearch-dev__*` | Succeed |
 | preprod | `jsql preprod/<database> '<sql>'` | `mcp__opensearch-dev__*` | Succeed — shared data, confirm first |
 
-**Hand-off:** when the user already has an approved test plan to execute and
-the `release-test` workflow is installed (listed in `.claude/workflows/`), it runs the plan and returns a merge
-verdict. This skill covers the
-looser "I just deployed it, does it work?" pass. For a per-ticket background
+**Hand-off:** this skill covers the "I just deployed it, does it work?" pass.
+For a per-ticket background
 verification, hand off to the `jeeves:jeeves-verifier` agent, which applies
 this skill's procedure.
 
