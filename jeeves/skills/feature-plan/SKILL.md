@@ -44,10 +44,8 @@ and data look like today. Work against a **dev-xx** environment (step 4 asks whi
 
 ## Hand-off
 
-Once the plan is approved and the work needs Linear tickets, hand it to the
-`prd-split` workflow (one ticket per repo) and then `prd-implement` when those
-workflows are installed; otherwise hand the plan back to the user. This skill
-produces the plan those read from.
+Once the plan is approved, hand it back to the user. When the work needs
+Linear tickets, create one per repo with the `linear` skill.
 
 ## Reporting results
 
