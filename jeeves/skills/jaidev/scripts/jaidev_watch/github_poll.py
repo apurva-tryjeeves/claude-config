@@ -75,17 +75,27 @@ def parse_checks(rollup: object) -> tuple[Check, ...]:
     return tuple(checks)
 
 
-def ci_result(checks: Sequence[Check], settles_on: Sequence[str] | None) -> CiResult:
+def known_failed(checks: Sequence[Check], known_failures: Sequence[str]) -> tuple[str, ...]:
+    """Names of the known-failure checks that failed on this head."""
+    return tuple(c.name for c in checks if c.name in known_failures and c.conclusion in FAILED)
+
+
+def ci_result(
+    checks: Sequence[Check],
+    settles_on: Sequence[str] | None,
+    known_failures: Sequence[str] = (),
+) -> CiResult:
     """Settled only when every check completed and every `Settles on` check is present.
 
-    Without a timing row (`settles_on` None) CI stays pending.
+    Without a timing row (`settles_on` None) CI stays pending. A failed check named
+    in `known_failures` still has to complete, but does not make the head FAILED.
     """
     if settles_on is None or not checks or any(check.status in PENDING for check in checks):
         return CiResult.PENDING
     names = {check.name for check in checks}
     if any(name not in names for name in settles_on):
         return CiResult.PENDING
-    if any(check.conclusion in FAILED for check in checks):
+    if any(c.conclusion in FAILED and c.name not in known_failures for c in checks):
         return CiResult.FAILED
     return CiResult.PASSED
 
@@ -95,7 +105,9 @@ def sonar_findings(checks: Sequence[Check]) -> bool:
     return any(c.name == SONAR_CHECK and c.conclusion not in SONAR_CLEAN for c in checks)
 
 
-def parse_pr_list(stdout: str, settles_on: Sequence[str] | None) -> GithubObservation | None:
+def parse_pr_list(
+    stdout: str, settles_on: Sequence[str] | None, known_failures: Sequence[str] = ()
+) -> GithubObservation | None:
     """Turn `gh pr list` JSON into the newest PR's observation, or None without a PR."""
     try:
         prs = json.loads(stdout or "[]")
@@ -117,8 +129,9 @@ def parse_pr_list(stdout: str, settles_on: Sequence[str] | None) -> GithubObserv
         number=number,
         head=head,
         state=state,
-        ci=ci_result(checks, settles_on),
+        ci=ci_result(checks, settles_on, known_failures),
         sonar_findings=sonar_findings(checks),
+        known_failed=known_failed(checks, known_failures),
     )
 
 
@@ -126,6 +139,7 @@ def read_pr(
     ticket_id: str,
     repo_dir: Path,
     settles_on: Sequence[str] | None,
+    known_failures: Sequence[str] = (),
     *,
     runner: Runner = subprocess.run,
 ) -> GithubObservation | None:
@@ -144,4 +158,4 @@ def read_pr(
     if out.returncode != 0:
         lines = (out.stderr or "gh failed").strip().splitlines()
         raise GithubPollError(lines[-1] if lines else "gh failed")
-    return parse_pr_list(out.stdout, settles_on)
+    return parse_pr_list(out.stdout, settles_on, known_failures)

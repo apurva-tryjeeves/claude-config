@@ -33,3 +33,24 @@ Facts agents found while running tickets, one section per repo. Paste the repo's
 - **Non-enumerable fields:** `useDefineForClassFields` is off, so a declared class field without an initializer emits nothing. `readonly cause?: unknown` plus a guarded `Object.defineProperty` stays non-enumerable, and ts-lint needs no `override`. `ErpProviderError` carries `cause` (ACC-1636) next to the non-enumerable `providerCause`.
 - **Plan reviews of cleanups:** check each import change against the whole file (ACC-1645 v1 would have dropped an `ErpPlatform` import that `resolveForNewConnection` still uses, which fails ts-lint).
 - **Repository methods:** `getTransactionsByTransactionIds(companyId, ids)` and `getByIdOrCode(companyId, value)` are the company-scoped lookups; the older `getTransactionById` and `getById` are unscoped.
+
+## jeeves-web
+
+- **Coverage gate:** `jest.config.js` holds a 100% global threshold, and CI runs `npm run test:cov` as **Unit Test** (~38 min per push). A single uncovered line fails the PR even when every suite passes (ACC-1697: 99.99%).
+- **Single test file:** coverage off, so the global threshold does not fail a one-file run.
+
+  ```bash
+  npx jest --ci --coverage=false --runTestsByPath <file>
+  ```
+
+- **ts-lint memory:** Jaidev's sandbox ran out of heap at 2 GB; brief the larger heap.
+
+  ```bash
+  NODE_OPTIONS=--max-old-space-size=6144 npm run ts-lint
+  ```
+
+- **CI check names:** `Lint and Type Check`, `Unit Test`, `SonarCloud Code Analysis`, `Validate Localization`, `lint / Validate PR title`, `test / Scan for secrets`. `test / Unit Test` and `test / Code Analysis` show as skipped.
+- **Validate Localization:** compares locale files with Crowdin and fails on new pt-BR or es-MX strings until a human runs `npm run crowdin-push`. It is not required to merge; brief it as a known failure.
+- **SonarCloud:** scans `src` only, so keep logic out of `app/`. S2068 flags any object key containing "password" set to a string literal, even in a mock (ACC-1697 renamed `submitPassword` to `submitCredentials`).
+- **Repo rules:** follow jeeves-web's CLAUDE.md (react-i18next copy, CSS modules with CSS variables and no fallbacks, `renderWithContext`, regex accessible queries, `userEvent`, no mocking of react-i18next or TanStack Query). `src/utils/config.ts` imports bootstrap data-access hooks, so a server `page.tsx` reads env flags through a small server-safe helper instead.
+- **Parallel sibling tickets:** give each screen its own folder test and find steps in shared tests by an accessible region name, not placeholder text, so siblings edit no shared test.

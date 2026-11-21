@@ -26,15 +26,16 @@ TEMPLATE: Final = "\n".join(
         "",
         "# CI check timing",
         "",
-        'One row per JeevesInc repo; the git-preferences skill\'s references/pr-pollers.md'
+        "One row per JeevesInc repo; the git-preferences skill's references/pr-pollers.md"
         ' "Checks poller" section derives and refines rows.',
         "",
         "| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean"
-        " | Sample size | First check | Interval |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        " | Sample size | First check | Interval | Known failures |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
         "",
     )
 )
+KNOWN_COLUMN: Final = "Known failures"
 _PIPE: Final = re.compile(r"(?<!\\)\|")
 _DURATION: Final = re.compile(r"^(?:(\d+)m(?:in)?)?(?:(\d+)s)?$")
 _COLUMNS: Final = (
@@ -86,13 +87,15 @@ def parse_table(text: str) -> dict[str, CiTiming]:
         raise CiTimingError("no table with the columns " + ", ".join(_COLUMNS))
     header = _cells(lines[header_index])
     column = {name: header.index(name) for name in _COLUMNS}
+    known_at = header.index(KNOWN_COLUMN) if KNOWN_COLUMN in header else None
     timings: dict[str, CiTiming] = {}
     for line in lines[header_index + 1 :]:
         cells = _cells(line)
-        if set("".join(cells)) <= set("-: ") or len(cells) < len(header):
+        if set("".join(cells)) <= set("-: ") or len(cells) <= max(column.values()):
             continue
         repo = cells[column["Repo"]]
         check_names = _names(cells[column["Check name"]])
+        known = _names(cells[known_at]) if known_at is not None and known_at < len(cells) else ()
         timings[repo] = CiTiming(
             repo=repo,
             check_name=check_names[0] if check_names else "",
@@ -102,6 +105,7 @@ def parse_table(text: str) -> dict[str, CiTiming]:
             mean=parse_duration(cells[column["Mean"]]),
             first_check=parse_duration(cells[column["First check"]]),
             interval=parse_duration(cells[column["Interval"]]),
+            known_failures=known,
         )
     return timings
 

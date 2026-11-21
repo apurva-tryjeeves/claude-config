@@ -105,6 +105,7 @@ class CiTiming:
     mean: timedelta
     first_check: timedelta
     interval: timedelta
+    known_failures: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,6 +136,7 @@ class LinearObservation:
     status: str | None
     timeline: str | None
     attempt: int | None = None
+    updated_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +148,7 @@ class GithubObservation:
     state: PrState
     ci: CiResult
     sonar_findings: bool
+    known_failed: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,6 +181,7 @@ class TicketState:
     paused_seconds: int = 0
     ack_at: datetime | None = None
     sonar_findings: bool | None = None
+    last_activity_at: datetime | None = None
     last_linear_at: datetime | None = None
     last_github_at: datetime | None = None
     last_linear_error_at: datetime | None = None

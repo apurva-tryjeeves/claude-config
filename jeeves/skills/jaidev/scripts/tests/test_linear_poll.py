@@ -27,6 +27,26 @@ def envelope(result: str) -> str:
     )
 
 
+class UpdatedAtTest(unittest.TestCase):
+    def test_updated_at_is_parsed_or_none(self) -> None:
+        rows = [
+            {
+                "ticket": "A-1",
+                "status": "s",
+                "timeline": "t",
+                "updatedAt": "2026-11-21T10:00:00.000Z",
+            },
+            {"ticket": "A-2", "status": "s", "timeline": "t", "updatedAt": None},
+            {"ticket": "A-3", "status": "s", "timeline": "t", "updatedAt": "garbage"},
+            {"ticket": "A-4", "status": "s", "timeline": "t"},
+        ]
+        seen = linear_poll.parse_result(json.dumps(rows))
+        self.assertEqual(
+            [o.updated_at for o in seen],
+            [parse_time("2026-11-21T10:00:00Z"), None, None, None],
+        )
+
+
 class FakeRunner:
     def __init__(self, stdout: str, returncode: int = 0) -> None:
         self.stdout, self.returncode = stdout, returncode

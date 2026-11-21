@@ -12,25 +12,37 @@ When Jaidev opens the PR:
 2. Wait until every check has completed, SonarCloud included. Jaidev pushes
    fixes for bot findings on its own, so review the head that remains after
    that fix.
-3. Review the PR against "Review checklist", in a fresh
+3. When the round only rebased or resolved conflicts, check it yourself:
+   the range-diff shows only the conflict resolution, the merge with the
+   parent is clean, and the touched config or locale files keep identical
+   key sets.
+
+   ```bash
+   git fetch origin <parent> <branch>
+   git range-diff <old-base>..<old-head> origin/<parent>..origin/<branch>
+   git merge-tree --write-tree --name-only origin/<parent> origin/<branch>
+   ```
+
+   Start a reviewer for every round that changed code.
+4. Review the PR against "Review checklist", in a fresh
    `jeeves:jaidev-pr-reviewer` agent when background agents run the batch:
    the ticket agent reports the settled head, the reviewer writes the draft
    to the scratchpad, and the ticket agent posts it after the user approves.
    `references/background-agents.md` ("Starting a PR reviewer") holds the
    spawn prompt.
-4. Trace each finding through the code path and its call sites. Report
+5. Trace each finding through the code path and its call sites. Report
    verified findings as issues and the rest as questions.
-5. Give the user a verdict, the issues, and draft specific, actionable
+6. Give the user a verdict, the issues, and draft specific, actionable
    GitHub review comments, all in one review. Show the user the review, then
    wait for the user's yes, and post it — Jaidev picks up PR review comments
    as a revision.
-6. When nothing needs changing, confirm the head still matches the SHA you
+7. When nothing needs changing, confirm the head still matches the SHA you
    reviewed, and propose an Approve review. Show the user the proposal, then
    wait for the user's yes, and submit it. The approval goes out under the
    user's account.
-7. Read the merge box and tell the user any requirement still missing, such
+8. Read the merge box and tell the user any requirement still missing, such
    as another required reviewer.
-8. Draft follow-ups that belong outside the PR as new tickets for the user,
+9. Draft follow-ups that belong outside the PR as new tickets for the user,
    each blocked by this ticket.
 
 ## Review checklist

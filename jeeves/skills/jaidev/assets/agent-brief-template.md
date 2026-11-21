@@ -37,7 +37,7 @@ You run one Jaidev ticket end to end for the user, {{USER_NAME}}. {{N}} agents r
 4. Write these files to {{SCRATCHPAD}}:
    - <ticket-id>-briefing.md: the start comment, in the format under "Briefing format".
      - First line exactly: @jaidev start.
-     - Write it as prose and short lists. Identifiers, branch names, file paths, PR titles, code and inline backticks go in the names comment, because they arrive blank in a start comment (the three-post split, jaidev skill `references/jaidev-reference.md` §5).
+     - Write it as prose and short lists. Identifiers, branch names, file paths, PR titles, code and inline backticks go in the names comment, because Jaidev strips backticks, fences and `>` lines from the start comment (the three-post split, jaidev skill `references/jaidev-reference.md` §5).
      - State the start branch and the PR base as {{PARENT_BRANCH}} in the opening paragraph and again under Constraints.
      - Keep every .github/workflows change out of Jaidev's scope and in the user's manual follow-up.
      - Acceptance criteria are commands Jaidev can run (ts-lint, lint, named single test files with --coverage=false) plus the CI check names: test / Unit Test, test / Code Analysis, SonarCloud Code Analysis. Jaidev's sandbox has no Docker, so brief tests that mock the DB layer.

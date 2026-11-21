@@ -68,6 +68,10 @@ For a parent feature:
 - Merge tickets that edit the same files one at a time (for example a
   worker start file, or one block of the config files). Merge the first,
   then ask the next ticket's PR to catch up with the parent.
+- When parallel sibling tickets would each delete entries from one shared
+  block (a placeholder list, a registry, an enum), give the deletions to the
+  last ticket or the parent PR, so every sibling PR adds lines only and
+  merges cleanly.
 - When a sub-ticket PR falls behind the parent, ask Jaidev to rebase onto
   the parent. Jaidev's default is to merge the base into its branch, and the
   rebase keeps the PR history linear. Post the request as a PR comment:
@@ -109,13 +113,14 @@ progress after every step.
 6. Show the user the batch, why it was chosen, and what each blocked ticket
    waits on.
 
-### 2. Write the briefing
+### 2. Start the run
 
-Research the ticket against the code, draft a names comment and an
-`@jaidev start` comment in the one format in `assets/briefing-format.md`,
-and post both after the user's yes. Read `references/briefing.md` before the
-first briefing of a session: it holds the research list, the drafting rules,
-the three-post split and the posting order.
+Draft a bare start by default, show it to the user, and post it after the
+user's yes. For a ticket that spans repositories, contradicts the code or
+names a precedent outside the repository, research the ticket and write a
+briefing in the format in `assets/briefing-format.md`. Read
+`references/briefing.md` before the first start of a session: it holds the
+choice, the research list, the drafting rules and the posting order.
 
 ### 3. Watch the run
 

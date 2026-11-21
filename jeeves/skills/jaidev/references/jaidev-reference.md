@@ -18,7 +18,7 @@ by ticket.
 | PR author | `jaidev-jeeves` |
 | Branch | `jai-dev/<ticket-id-lowercase>` (e.g. `jai-dev/wal-6298`) |
 | Implementation attempts | Up to 5 per run, before it posts Blocked |
-| PR revision attempts | 3 per PR; each review round uses one, SonarCloud findings included |
+| PR revision attempts | Each review comment, rebase request, CI failure or SonarCloud finding starts a numbered revision; ACC-1701 reached Revision #4 (21 Nov 2026), so a PR takes more than 3. Jaidev's code caps CI-failure revisions at 2 per PR |
 | GitHub token scope | Pushes code; `.github/workflows/*` goes through a human |
 
 Develop environments per team, from Jaidev's deploy comment. For a team with
@@ -40,8 +40,8 @@ no row, read its deploy comment, then add a row.
 
 ## 1. Lifecycle
 
-1. **Start**: a user posts the names comment, then `@jaidev start` as a second
-   new top-level comment (§5).
+1. **Start**: a user posts `@jaidev start` as a new top-level comment, after
+   a names comment when the start is briefed (§5).
 2. **Analysis**: Jaidev reads the ticket, its comments and its knowledge base
    (`PRODUCT.md`, `PLATFORM.md`, `SERVICE.md`, one file per repository) and
    explores the repositories.
@@ -159,10 +159,11 @@ allocated develop environments (see At a glance).
   HelmRelease).
 - Knowledge-base files cover existing repositories. For a new repository
   Jaidev explores the code directly, so give the briefing extra context.
-- The start comment loses identifiers, inline backticks and fenced code
-  (WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive
+- Jaidev strips backticks, fenced code and `>` lines from the start comment
+  before reading it (`stripBlockquotesAndCode` in jai-dev-agent-service;
+  WAL-6301, ACC-1588, ACC-1638). Thread replies and plan feedback arrive
   intact. Jaidev plans v1 as soon as the start comment lands, without
-  waiting for a thread reply. Split every briefing across three posts, in
+  waiting for a thread reply. Split a briefed start across three posts, in
   this order, and ask Jaidev to quote key lines back:
 
   | Post | Holds | Where and when |
@@ -203,7 +204,7 @@ allocated develop environments (see At a glance).
   (ACC-1637, ACC-1638). A PR comment asking it to rebase onto the parent works:
   on ACC-1591 it replied in about 2 minutes, rebased with no conflicts,
   force-pushed and ran ts-lint and build. The request counts as a revision round
-  ("Revision #3" there, the last of 3 attempts).
+  (ACC-1591, ACC-1699, ACC-1701).
 - A second PR into the parent can be refused with "Base branch was modified"
   right after a sibling PR merges (ACC-1630 and ACC-1633). One retry works when the
   files differ.
@@ -218,6 +219,9 @@ allocated develop environments (see At a glance).
 - Plan code blocks can carry literal `\n` text (ACC-1645 plan v2). Check the opened PR's source for stray `\n` sequences.
 - Open GitHub approval bodies and Linear comments with `## <emoji>` section
   headers; comments starting with `@jaidev` follow the briefing format.
+- A failed CI check starts a revision with no human comment, like SonarCloud findings do: on ACC-1697 a Unit Test coverage failure (99.99% of a 100% gate) drew a fix 38 min later as "Revision #3"; ACC-1701 did the same for coverage and SonarCloud. Jaidev's code caps CI-failure revisions at 2 per PR, so fix a third CI failure manually, with the user's approval.
+- During a revision it can push a "WIP checkpoint" commit before the final push (ACC-1697); the PR is squash-merged, so review the final head only.
+- After a GitHub review, the status comment changes to "Addressing PR Feedback..." within ~10 s, while the watcher's `pr-review-sent` stage can still fire `NO ACK` (ACC-1697). Read the status comment before acting on that event.
 
 ### Evidence
 

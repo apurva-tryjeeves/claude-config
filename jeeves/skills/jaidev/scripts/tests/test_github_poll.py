@@ -41,6 +41,36 @@ class CiResultTest(unittest.TestCase):
             with self.subTest(names=[c.name for c in checks], expected=expected):
                 self.assertIs(github_poll.ci_result(checks, SETTLES_ON), expected)
 
+    def test_known_failures_do_not_fail_the_head(self) -> None:
+        unit, secrets, sonar = (
+            done("test / Unit Test"),
+            done("test / Scan for secrets"),
+            done("SonarCloud Code Analysis"),
+        )
+        locale = done("Validate Localization", "FAILURE")
+        known = ("Validate Localization",)
+        cases = [
+            ([unit, secrets, sonar, locale], known, CiResult.PASSED),
+            ([unit, secrets, sonar, locale], (), CiResult.FAILED),
+            ([done("test / Unit Test", "FAILURE"), secrets, sonar, locale], known, CiResult.FAILED),
+            (
+                [unit, secrets, done("SonarCloud Code Analysis", "FAILURE"), locale],
+                known,
+                CiResult.FAILED,
+            ),
+            (
+                [unit, secrets, sonar, Check("Validate Localization", "IN_PROGRESS", "")],
+                known,
+                CiResult.PENDING,
+            ),
+        ]
+        for checks, known_failures, expected in cases:
+            with self.subTest(expected=expected, known=known_failures):
+                result = github_poll.ci_result(checks, SETTLES_ON, known_failures)
+                self.assertIs(result, expected)
+        self.assertEqual(github_poll.known_failed([unit, locale], known), known)
+        self.assertEqual(github_poll.known_failed([unit, done("Validate Localization")], known), ())
+
     def test_sonar_findings(self) -> None:
         self.assertTrue(github_poll.sonar_findings([done("SonarCloud Code Analysis", "FAILURE")]))
         self.assertFalse(github_poll.sonar_findings([done("SonarCloud Code Analysis")]))
@@ -48,6 +78,26 @@ class CiResultTest(unittest.TestCase):
 
 
 class ParsePrListTest(unittest.TestCase):
+    def test_known_failure_is_reported_on_the_observation(self) -> None:
+        rollup = [
+            {"name": "test / Unit Test", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "test / Scan for secrets", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "SonarCloud Code Analysis", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "Validate Localization", "status": "COMPLETED", "conclusion": "FAILURE"},
+        ]
+        payload = [
+            {"number": 3, "headRefOid": "ee05750abc", "state": "OPEN", "statusCheckRollup": rollup}
+        ]
+        seen = github_poll.parse_pr_list(
+            json.dumps(payload), SETTLES_ON, ("Validate Localization",)
+        )
+        assert seen is not None
+        self.assertIs(seen.ci, CiResult.PASSED)
+        self.assertEqual(seen.known_failed, ("Validate Localization",))
+        failed = github_poll.parse_pr_list(json.dumps(payload), SETTLES_ON)
+        assert failed is not None
+        self.assertIs(failed.ci, CiResult.FAILED)
+
     def test_completed_rollup_without_a_settles_on_check_is_pending(self) -> None:
         payload = [
             {
