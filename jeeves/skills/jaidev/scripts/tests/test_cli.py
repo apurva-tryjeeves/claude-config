@@ -62,7 +62,11 @@ class FakePollers:
         ]
 
     def read_github(
-        self, ticket_id: str, repo_dir: Path, settles_on: Sequence[str]
+        self,
+        ticket_id: str,
+        repo_dir: Path,
+        settles_on: Sequence[str] | None,
+        known_failures: Sequence[str] = (),
     ) -> GithubObservation | None:
         self.github_calls.append(ticket_id)
         return None

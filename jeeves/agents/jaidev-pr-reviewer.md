@@ -52,6 +52,7 @@ Apply the `authoring-guide` skill to the draft review when it is available.
 ## Rules
 
 - Use `gh` for reads only: `gh pr view`, `gh pr diff`, `gh pr checks` and `gh api` GET requests, run from inside the repo.
+- Rely on the CI result for tests when it is green, and review by reading the code and tracing call sites.
 - Write the draft review to the scratchpad as `<ticket-id>-review-r<N>.md`; the coordinator posts it after the user's OK.
 - Open each section of the draft with a `## <emoji>` header.
 - Record the head SHA you reviewed.

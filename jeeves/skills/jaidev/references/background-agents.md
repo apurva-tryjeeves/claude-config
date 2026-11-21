@@ -6,7 +6,7 @@ keeps the user's approvals, and the agents do the ticket work.
 
 | Piece | Rule |
 |---|---|
-| Agents | One `jeeves:jaidev-ticket` agent per ticket for the ticket work, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round, started with the prompt in "Starting a PR reviewer". Model and effort come from the agent definition |
+| Agents | The coordinator runs bare-start tickets itself; one `jeeves:jaidev-ticket` agent per briefed ticket, started with the shared brief; a fresh `jeeves:jaidev-pr-reviewer` agent for each PR review round that changed code, started with the prompt in "Starting a PR reviewer". Model and effort come from the agent definition |
 | Waiting | Ticket agents wait for the coordinator's wake-up. The coordinator learns of events from the watcher (see "Poll events") and wakes an agent with `SendMessage` |
 | Shared brief | One file in the scratchpad, filled from `assets/agent-brief-template.md`; each agent reads it and its own ticket. The template is self-contained, so agents load only the skills their agent type names besides it |
 | Phase 1: prepare | The agent reads the ticket and the code, settles the names with `jeeves:typescript-naming`, writes its briefing to a file, reports back and posts nothing |
@@ -102,12 +102,13 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `questions`, `plan-ready`, `blocked` | off | off | the `STATUS` line on entry |
 | `plan-feedback` | +30 s; after the ack, +1 min then every 30 s | off | `NO ACK` at 1 min; after the ack, `PLAN LATE` at 4 min +1 min per 5 KB of feedback |
 | `approved` | +30 s | off | `NO START` at 1 min |
-| `implementing` | every 3 min from PR due | from PR due: every 1 min, every 2 min after 2× PR due | `PR LATE` at 3× PR due, +1× per attempt after the first |
+| `implementing` | every 3 min from PR due | from PR due: every 1 min, every 2 min after 2× PR due | `PR LATE` at 3× PR due, +1× per attempt after the first, and only after 5 min without a status-comment update |
 | `pr-ci` | off | the repo's `First check`, then its `Interval` | `CI LATE` at 1.5× the repo's `Max` |
-| `pr-ready` | +1 min, only after SonarCloud findings | off, or every 15 min with `--merge-watch` | none |
+| `pr-ready` | off | off, or every 15 min with `--merge-watch` | none |
 | `pr-review-sent` | +30 s, then every 1 min | off | `NO ACK` at 2 min |
-| `pr-revising` | off | every 1 min until a new head | `FIX LATE` at 2 min +1 min per review comment, capped at 10 min |
+| `pr-revising` | every 3 min | every 1 min until a new head | `FIX LATE` at 2 min +1 min per review comment, capped at 10 min, and only after 5 min without a status-comment update |
 
+- A head that settles with a failed check outside the repo's `Known failures` enters `pr-revising`: Jaidev fixes CI and SonarCloud failures on its own.
 - PR due after `plan:approved`: 4 min for 1 or 2 points, 6 min for 3, 8 min for 5 or more.
 - CI cadence comes from `~/.claude/org-memory/jeevesinc/ci-check-timing.md` (`$JEEVES_CI_TIMING` overrides the path); a new head restarts the CI clock. The repo is the one `git remote get-url origin` names in the ticket's `repoDir`.
 - A repo without a row gets one derived the git-preferences way when its first ticket reaches a CI stage; the watcher adds it to that table, creating the file on its first row, and prints `CI ROW ADDED <repo>`.
@@ -126,7 +127,8 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `<ticket> STATUS "Awaiting Plan Approval"` or a plan in `TIMELINE` | Wake the ticket's agent to review the plan |
 | `<ticket> STATUS "Gathering Info…"` or `"Blocked…"` | Wake the ticket's agent |
 | `<ticket> STATUS` for any other change | Update the progress; it is no agent event |
-| `<ticket> CI passed #<n> head=<sha>` or `CI failed …` | Wake the agent: CI finished on that head |
+| `<ticket> CI passed #<n> head=<sha>`, with `(known: <checks>)` when known failures ran | Start the PR review on that head |
+| `<ticket> CI failed #<n> head=<sha>` | Read `gh pr checks`; Jaidev starts a revision on its own, and the ticket waits in `pr-revising` |
 | `<ticket> MERGED #<n>`, `<ticket> CLOSED unmerged #<n>` | Tell the user |
 | `<ticket> NO ACK stage=plan-feedback …` | Post `@jaidev please revise the plan per the feedback reply above` in the same thread, after the user's OK; stamp `feedbackAt` |
 | `<ticket> NO ACK stage=pr-review-sent …` | Check the PR's review threads and Jaidev's status comment; tell the user |
@@ -169,6 +171,7 @@ Review Jaidev PR <org/repo>#<n> for <ticket-id>, review round <N>.
 - Plan feedback: <scratchpad>/<ticket-id>-plan-feedback.md, or "none"
 - Design doc: <URL>, or "none"
 - Checklist: <absolute path of skills/jaidev/references/pr-review.md>
+- Tests: rely on the CI result when it is green, and review by reading the code.
 - Linear server: <mcp__claude_ai_Linear__* or mcp__linear__*>
 - Scratchpad: <directory>; write <ticket-id>-review-r<N>.md there.
 ```

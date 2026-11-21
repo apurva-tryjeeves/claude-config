@@ -73,6 +73,7 @@ FIELDS: Final[Mapping[str, tuple[str, Kind]]] = {
     "paused_seconds": ("pausedSeconds", Kind.INT),
     "ack_at": ("ackAt", Kind.TIME),
     "sonar_findings": ("sonarFindings", Kind.BOOL),
+    "last_activity_at": ("lastActivityAt", Kind.TIME),
     "last_linear_at": ("lastLinearAt", Kind.TIME),
     "last_github_at": ("lastGithubAt", Kind.TIME),
     "last_linear_error_at": ("lastLinearErrorAt", Kind.TIME),

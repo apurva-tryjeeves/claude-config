@@ -1,9 +1,27 @@
 # Writing the briefing
 
-Step 2 of the loop in `SKILL.md`: research the ticket, draft the names
-comment and the start comment, and post both after the user's approval.
+Step 2 of the loop in `SKILL.md`: choose the start, draft it, and post it
+after the user's approval.
 
-## Research
+## Choose the start
+
+- **Bare start (default):** one top-level comment, `@jaidev start` on the
+  first line, then one plain sentence naming the repository and the base
+  branch, for example "Repository: jeeves-web. Base branch: feat/ACC-1696 —
+  cut jai-dev/acc-1702 from it and open the PR against it." Write it as plain
+  words: Jaidev strips backticks, fences and `>` lines from start comments.
+  Jaidev reads the ticket and the code itself, and every correction goes into
+  the plan v1 review (`references/plan-review.md`). Bare starts needed one
+  plan correction and no question round each (ACC-1700, ACC-1701,
+  21 Nov 2026).
+- **Briefed start:** for a ticket that spans repositories, contradicts the
+  code, or names a precedent outside the repository, research and draft the
+  briefing below. With the ticket owner's OK, put it in the ticket
+  description, the text Jaidev reads unmodified from analysis to
+  implementation, and post the bare start comment. Otherwise post it as the
+  three-post split.
+
+## Research (briefed start)
 
 Research first. Jaidev plans from the ticket and its comments, so every
 verified fact in the briefing becomes a correct assumption in its plan:

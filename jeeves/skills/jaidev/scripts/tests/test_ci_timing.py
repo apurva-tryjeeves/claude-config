@@ -36,6 +36,31 @@ class CiTimingTest(unittest.TestCase):
                 self.assertTrue(row.settles_on)
                 self.assertLessEqual(row.minimum, row.maximum)
 
+    def test_known_failures_column(self) -> None:
+        timings = ci_timing.load(FIXTURE)
+        self.assertEqual(timings["jeeves-web"].known_failures, ("Validate Localization",))
+        self.assertEqual(timings["ap-data-source-connector"].known_failures, ())
+
+    def test_known_failures_column_absent_or_short(self) -> None:
+        head = (
+            "| Repo | Check name | Settles on | Min | Max | Mean | First check"
+            " | Interval{extra} |\n"
+            "|---|---|---|---|---|---|---|---|{sep}\n"
+        )
+        row = "| a | `U` | `S` | 1m | 2m | 90s | 1min | 2min |"
+        cases = [
+            (head.format(extra="", sep="") + row + "\n", ()),
+            (head.format(extra=" | Known failures", sep="---|") + row + "\n", ()),
+            (head.format(extra=" | Known failures", sep="---|") + row + "  |\n", ()),
+            (
+                head.format(extra=" | Known failures", sep="---|") + row + " `X`, `Y` |\n",
+                ("X", "Y"),
+            ),
+        ]
+        for text, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(ci_timing.parse_table(text)["a"].known_failures, expected)
+
     def test_missing_columns_raise(self) -> None:
         with self.assertRaises(ci_timing.CiTimingError):
             ci_timing.parse_table("| Repo | Max |\n|---|---|\n| a | 1m |\n")

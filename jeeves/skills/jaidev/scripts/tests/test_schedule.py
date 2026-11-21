@@ -29,9 +29,12 @@ def at(seconds: float) -> datetime:
 
 
 def obs(
-    status: str | None, timeline: str | None = None, attempt: int | None = None
+    status: str | None,
+    timeline: str | None = None,
+    attempt: int | None = None,
+    updated_at: datetime | None = None,
 ) -> LinearObservation:
-    return LinearObservation("ACC-1", status, timeline, attempt)
+    return LinearObservation("ACC-1", status, timeline, attempt, updated_at)
 
 
 def pr(
@@ -242,11 +245,42 @@ class CadenceTest(unittest.TestCase):
         self.assertTrue(ticket.merged)
         self.assertEqual([e.render() for e in events], ["MERGED #96"])
 
-    def test_pr_ready_reads_linear_once_only_after_sonar_findings(self) -> None:
-        for findings, expected in ((True, at(60)), (False, None)):
+    def test_failed_head_enters_pr_revising_and_polls_github(self) -> None:
+        ticket, _ = schedule.apply_github(
+            TicketState(stage=Stage.IMPLEMENTING, stage_since=T0), pr("aaaaaaa"), T0
+        )
+        ticket, events = schedule.apply_github(ticket, pr("aaaaaaa", CiResult.FAILED), at(120))
+        self.assertEqual(
+            [e.render() for e in schedule.with_ticket_id(events, "ACC-1")],
+            ["ACC-1 CI failed #96 head=aaaaaaa"],
+        )
+        self.assertIs(ticket.stage, Stage.PR_REVISING)
+        self.assertEqual(ticket.stage_since, at(120))
+        self.assertEqual(schedule.decide(ticket, at(120), CI).ticket.next_github_at, at(180))
+        # Jaidev's fix push restarts the CI clock.
+        ticket, events = schedule.apply_github(ticket, pr("bbbbbbb"), at(300))
+        self.assertIs(ticket.stage, Stage.PR_CI)
+        self.assertEqual(events, ())
+
+    def test_known_failures_show_in_the_ci_event(self) -> None:
+        ticket, _ = schedule.apply_github(
+            TicketState(stage=Stage.IMPLEMENTING, stage_since=T0), pr("aaaaaaa"), T0
+        )
+        settled = replace(
+            pr("aaaaaaa", CiResult.PASSED), known_failed=("Validate Localization", "Lint")
+        )
+        ticket, events = schedule.apply_github(ticket, settled, at(120))
+        self.assertEqual(
+            [e.render() for e in schedule.with_ticket_id(events, "ACC-1")],
+            ["ACC-1 CI passed #96 head=aaaaaaa (known: Validate Localization, Lint)"],
+        )
+        self.assertIs(ticket.stage, Stage.PR_READY)
+
+    def test_pr_ready_reads_no_linear_even_with_sonar_findings(self) -> None:
+        for findings in (True, False):
             with self.subTest(findings=findings):
                 ticket = TicketState(stage=Stage.PR_READY, stage_since=T0, sonar_findings=findings)
-                self.assertEqual(schedule.decide(ticket, T0, CI).ticket.next_linear_at, expected)
+                self.assertIsNone(schedule.decide(ticket, T0, CI).ticket.next_linear_at)
         merge_watch = schedule.decide(
             TicketState(stage=Stage.PR_READY, stage_since=T0), T0, CI, merge_watch=True
         )
@@ -281,6 +315,61 @@ class DeadlineTest(unittest.TestCase):
                 deadline = schedule.pending_deadline(replace(ticket, stage_since=T0), CI)
                 assert deadline is not None
                 self.assertEqual((deadline.at, deadline.kind), (at(seconds), kind))
+
+    def test_late_waits_for_five_quiet_minutes(self) -> None:
+        cases = [
+            # (stage, base deadline, last status-comment update, expected deadline)
+            (Stage.IMPLEMENTING, 1080, None, 1080),
+            (Stage.IMPLEMENTING, 1080, 100, 1080),
+            (Stage.IMPLEMENTING, 1080, 1000, 1300),
+            (Stage.PR_REVISING, 120, None, 120),
+            (Stage.PR_REVISING, 120, 60, 360),
+            (Stage.PR_REVISING, 120, 10, 310),
+        ]
+        for stage, base, updated, expected in cases:
+            with self.subTest(stage=stage, updated=updated):
+                ticket = TicketState(
+                    stage=stage,
+                    stage_since=T0,
+                    estimate=3,
+                    last_activity_at=None if updated is None else at(updated),
+                )
+                deadline = schedule.pending_deadline(ticket, CI)
+                assert deadline is not None
+                self.assertEqual(deadline.at, at(expected))
+                self.assertEqual(
+                    schedule.pending_deadline(replace(ticket, last_activity_at=None), CI).at,  # type: ignore[union-attr]
+                    at(base),
+                )
+
+    def test_other_deadlines_ignore_comment_activity(self) -> None:
+        ticket = TicketState(stage=Stage.PLANNING, stage_since=T0, last_activity_at=at(590))
+        deadline = schedule.pending_deadline(ticket, CI)
+        assert deadline is not None
+        self.assertEqual(deadline.at, at(600))
+
+    def test_status_comment_update_moves_the_late_deadline(self) -> None:
+        ticket = TicketState(stage=Stage.IMPLEMENTING, stage_since=T0, estimate=3)
+        ticket, _ = schedule.apply_linear(
+            ticket, obs("Implementing...", "x", updated_at=at(1000)), at(1010)
+        )
+        self.assertEqual(ticket.last_activity_at, at(1000))
+        # An older or equal update does not move it back.
+        ticket, _ = schedule.apply_linear(
+            ticket, obs("Implementing...", "x", updated_at=at(900)), at(1100)
+        )
+        self.assertEqual(ticket.last_activity_at, at(1000))
+        decision = schedule.decide(replace(ticket, last_github_at=at(1100)), at(1200), CI)
+        self.assertEqual(decision.events, ())
+        self.assertEqual(decision.ticket.deadline, at(1300))
+        quiet = schedule.decide(replace(ticket, last_github_at=at(1300)), at(1300), CI)
+        self.assertEqual([e.kind for e in quiet.events], [EventKind.PR_LATE])
+
+    def test_pr_revising_reads_linear_every_three_minutes(self) -> None:
+        ticket = TicketState(stage=Stage.PR_REVISING, stage_since=T0)
+        self.assertEqual(schedule.decide(ticket, T0, CI).ticket.next_linear_at, at(180))
+        ticket = replace(ticket, last_linear_at=at(200))
+        self.assertEqual(schedule.decide(ticket, at(200), CI).ticket.next_linear_at, at(380))
 
     def test_waiting_stages_have_no_deadline_and_no_checks(self) -> None:
         for stage in (Stage.QUESTIONS, Stage.PLAN_READY, Stage.BLOCKED, Stage.DONE):

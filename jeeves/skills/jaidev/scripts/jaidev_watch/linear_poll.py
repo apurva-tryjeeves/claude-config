@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Final
 
-from jaidev_watch.models import LinearObservation, format_time
+from jaidev_watch.models import LinearObservation, format_time, parse_time
 
 DEFAULT_TOOL: Final = "mcp__claude_ai_Linear__list_comments"
 TIMEOUT_SECONDS: Final = 240
@@ -40,9 +40,11 @@ def build_prompt(ticket_ids: Sequence[str], tool: str) -> str:
         "Reply with only a JSON array, one object per issue: "
         '{"ticket": "<ID>", "status": "<text after **Status:**>", '
         '"timeline": "<last bullet under **Timeline**, without its timestamp>", '
-        '"attempt": <N from the last "attempt N/5" in that comment, as a number>}. '
+        '"attempt": <N from the last "attempt N/5" in that comment, as a number>, '
+        '"updatedAt": "<that comment\'s updatedAt, as returned>"}. '
         "Use null for status and timeline when the issue has no Jaidev status comment, "
-        "and null for attempt when the comment names no attempt."
+        "null for attempt when the comment names no attempt, "
+        "and null for updatedAt when it has none."
     )
 
 
@@ -103,6 +105,15 @@ def _attempt(value: object) -> int | None:
     return None
 
 
+def _updated_at(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return parse_time(value)
+    except ValueError:
+        return None
+
+
 def parse_result(result: object) -> tuple[LinearObservation, ...]:
     """Validate the model's text into typed observations."""
     if not isinstance(result, str):
@@ -126,6 +137,7 @@ def parse_result(result: object) -> tuple[LinearObservation, ...]:
                 status=_optional_str(row, "status"),
                 timeline=_optional_str(row, "timeline"),
                 attempt=_attempt(row.get("attempt")),
+                updated_at=_updated_at(row.get("updatedAt")),
             )
         )
     return tuple(observations)

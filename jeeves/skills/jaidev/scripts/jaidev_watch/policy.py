@@ -72,10 +72,9 @@ STAGE_POLICY: Final[Mapping[Stage, StagePolicy]] = MappingProxyType(
             deadline_event=EventKind.CI_LATE,
             deadline_source=Source.GITHUB,
         ),
-        # The Linear check runs only when SonarCloud reported findings; the
+        # No Linear check: a head with a failed check enters pr-revising. The
         # GitHub check runs only with --merge-watch.
         Stage.PR_READY: StagePolicy(
-            linear_first=_m(1),
             github_first=_m(15),
             github_every=_m(15),
         ),
@@ -86,7 +85,11 @@ STAGE_POLICY: Final[Mapping[Stage, StagePolicy]] = MappingProxyType(
             deadline_event=EventKind.NO_ACK,
         ),
         # deadline_step is per review comment posted.
+        # linear_first and linear_every read Jaidev's status comment for the
+        # quiet-before-late rule.
         Stage.PR_REVISING: StagePolicy(
+            linear_first=_m(3),
+            linear_every=_m(3),
             github_first=_m(1),
             github_every=_m(1),
             deadline=_m(2),
@@ -125,6 +128,9 @@ PR_DUE_BY_ESTIMATE: Final[tuple[tuple[int, timedelta], ...]] = (
 PR_DUE_LARGE: Final = _m(8)
 GITHUB_LATE_FACTOR: Final = 2
 PR_LATE_FACTOR: Final = 3
+
+# PR LATE and FIX LATE fire only after the status comment sat unchanged this long.
+QUIET_BEFORE_LATE: Final = _m(5)
 
 # PR CI: the deadline is this multiple of the repo's slowest observed run.
 CI_LATE_FACTOR: Final = 1.5

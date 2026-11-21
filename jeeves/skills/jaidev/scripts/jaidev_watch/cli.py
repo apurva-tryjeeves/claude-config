@@ -52,7 +52,7 @@ log = logging.getLogger("jaidev_watch")
 
 Emit = Callable[[Sequence[Event]], None]
 LinearReader = Callable[[Sequence[str]], Sequence[LinearObservation]]
-GithubReader = Callable[[str, Path, Sequence[str] | None], GithubObservation | None]
+GithubReader = Callable[[str, Path, Sequence[str] | None, Sequence[str]], GithubObservation | None]
 TimingLookup = Callable[[TicketState], CiTiming | None]
 Notices = Callable[[], Sequence[Event]]
 
@@ -197,6 +197,10 @@ def _settles_on(timing: CiTiming | None) -> Sequence[str] | None:
     return None if timing is None else timing.settles_on
 
 
+def _known_failures(timing: CiTiming | None) -> Sequence[str]:
+    return () if timing is None else timing.known_failures
+
+
 def _first_line(error: Exception) -> str:
     text = str(error).strip()
     return (text.splitlines()[0] if text else type(error).__name__)[:ERROR_CHARS]
@@ -260,8 +264,12 @@ def _read_github(
     for ticket_id in github_ids:
         ticket = wave.tickets[ticket_id]
         try:
+            timing = pollers.timing_for(ticket)
             reads.github[ticket_id] = pollers.read_github(
-                ticket_id, Path(ticket.repo_dir or "."), _settles_on(pollers.timing_for(ticket))
+                ticket_id,
+                Path(ticket.repo_dir or "."),
+                _settles_on(timing),
+                _known_failures(timing),
             )
         except github_poll.GithubPollError as error:
             reads.events.append(Event(EventKind.GITHUB_POLL_ERROR, ticket_id, _first_line(error)))
@@ -372,9 +380,12 @@ def live_pollers(path: Path, tool: str, timings: Mapping[str, CiTiming], table: 
         return linear_poll.read_statuses(ticket_ids, usage_log, utc_now(), tool=tool)
 
     def read_github(
-        ticket_id: str, repo_dir: Path, settles_on: Sequence[str] | None
+        ticket_id: str,
+        repo_dir: Path,
+        settles_on: Sequence[str] | None,
+        known_failures: Sequence[str],
     ) -> GithubObservation | None:
-        return github_poll.read_pr(ticket_id, repo_dir, settles_on)
+        return github_poll.read_pr(ticket_id, repo_dir, settles_on, known_failures)
 
     return Pollers(rows.for_ticket, read_linear, read_github, rows.notices, rows.requeue)
 

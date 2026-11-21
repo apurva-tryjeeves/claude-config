@@ -11,7 +11,7 @@ first:
 
 - the Affected Services table shows the base as `development`, the default
   branch, instead of the briefed one (ACC-1669, ACC-1670);
-- names are invented where the briefing's names arrived blank;
+- names are invented where no names comment or sibling code sets them;
 - Done-when is short of the full criteria list (4 of 8 on ACC-1669);
 - acceptance criteria arrive blank;
 - code is written as prose instead of in full (a class on ACC-1669).
@@ -30,6 +30,9 @@ briefing and the design doc, item by item:
   covered when the plan names its value; a preset that "includes most of
   it" counts as missing;
 - scope matches the ticket, and the files belong to this ticket alone;
+- after a bare start: names and shared files match the sibling tickets
+  merged or open on the parent branch; settle each shared helper once and
+  give every sibling the same code block in its plan feedback;
 - names, signatures and behaviour match the design doc; report each
   difference as a decision for the user;
 - each Key Assumption holds — verify it in the code. A revised plan may omit

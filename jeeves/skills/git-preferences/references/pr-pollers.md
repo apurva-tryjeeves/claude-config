@@ -55,7 +55,9 @@ The table lives in your org memory, outside the plugin, at
 `~/.claude/org-memory/jeevesinc/ci-check-timing.md`, so each person's samples
 build up locally.
 
-Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval |`, then index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`.
+Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval | Known failures |`, then index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`.
+
+- **Known failures:** checks that fail on every head for a known reason, comma-separated (jeeves-web: `Validate Localization` until the Crowdin push). Add a check in the same turn its reason is confirmed, and remove it the first time it passes.
 
 ## Reporting results
 

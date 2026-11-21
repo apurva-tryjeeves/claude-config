@@ -52,6 +52,8 @@ REPLY_STAGES: Final[Mapping[Stage, Stage]] = {
     Stage.APPROVED: Stage.IMPLEMENTING,
     Stage.PR_REVIEW_SENT: Stage.PR_REVISING,
 }
+# Deadlines that wait for the status comment to go quiet.
+QUIET_KINDS: Final = frozenset({EventKind.PR_LATE, EventKind.FIX_LATE})
 # Moves that keep the stage clock: planning runs from startedAt, implementing
 # from approvedAt.
 CONTINUING: Final = frozenset(
@@ -165,6 +167,7 @@ def enter(
         stage_since=at,
         fired_event=None,
         ack_at=None,
+        last_activity_at=None,
         last_linear_at=None,
         last_github_at=None,
         next_linear_at=None,
@@ -235,8 +238,6 @@ def _next_linear(ticket: TicketState) -> datetime | None:
         every = _need(rules.after_ack_every, "plan-feedback after_ack_every")
     elif stage is Stage.IMPLEMENTING:
         first = since + policy.pr_due(ticket.estimate) + _paused(ticket)
-    elif stage is Stage.PR_READY and not ticket.sonar_findings:
-        first = None
     if first is None:
         return None
     return _once(first, last) if every is None else _cadence(first, every, last)
@@ -325,6 +326,8 @@ def pending_deadline(ticket: TicketState, ci: CiTiming | None) -> Deadline | Non
     if kind is EventKind.NO_ACK:
         source = Source.LINEAR
     at = ticket.stage_since + after + _paused(ticket)
+    if kind in QUIET_KINDS and ticket.last_activity_at is not None:
+        at = max(at, ticket.last_activity_at + policy.QUIET_BEFORE_LATE)
     return Deadline(at=at, kind=kind, source=source)
 
 
@@ -413,6 +416,14 @@ def _track_pause(ticket: TicketState, observation: LinearObservation, now: datet
     return replace(ticket, queued_since=None, paused_seconds=ticket.paused_seconds + paused)
 
 
+def _note_activity(ticket: TicketState, observation: LinearObservation) -> TicketState:
+    """Remember the newest status-comment update; it moves the quiet-before-late deadline."""
+    seen = observation.updated_at
+    if seen is None or (ticket.last_activity_at is not None and seen <= ticket.last_activity_at):
+        return ticket
+    return replace(ticket, last_activity_at=seen)
+
+
 def apply_linear(
     ticket: TicketState, observation: LinearObservation, now: datetime
 ) -> tuple[TicketState, tuple[Event, ...]]:
@@ -436,6 +447,7 @@ def apply_linear(
         last_status=status_key_of(observation.status),
         last_timeline=observation.timeline,
     )
+    ticket = _note_activity(ticket, observation)
     event = _status_event(observation.ticket, observation) if changed else None
     return ticket, (event,) if event else ()
 
@@ -462,10 +474,17 @@ def apply_github(
         return ticket, ()
     events: tuple[Event, ...] = ()
     if ticket.last_ci_head != pr.head:
-        events = (Event(EventKind.CI, None, f"{pr.ci} #{pr.number} head={pr.head}"),)
+        detail = f"{pr.ci} #{pr.number} head={pr.head}"
+        if pr.known_failed:
+            detail += f" (known: {', '.join(pr.known_failed)})"
+        events = (Event(EventKind.CI, None, detail),)
     ticket = replace(ticket, last_ci_head=pr.head, sonar_findings=pr.sonar_findings)
-    ticket = replace(enter(ticket, Stage.PR_READY, now), last_github_at=now)
-    return ticket, events
+    if pr.ci is CiResult.FAILED:
+        # Jaidev fixes a failed head on its own; poll GitHub for its push.
+        ticket = replace(enter(ticket, Stage.PR_REVISING, now), review_comments=None)
+    else:
+        ticket = enter(ticket, Stage.PR_READY, now)
+    return replace(ticket, last_github_at=now), events
 
 
 def is_idle(ticket: TicketState) -> bool:
