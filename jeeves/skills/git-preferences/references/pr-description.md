@@ -64,8 +64,9 @@ outcome as the line a reader of `git log` needs:
    - Name key paths in backticks; describe changes by behaviour, not as a
      file list.
    - A parent PR adds a table per phase:
-     `| Step | Ticket | PR | State |`, with `✅ merged`, `✅ done` or
-     `⏳ to do` in State.
+     `| Step | Ticket | Change | State |`, with `✅ merged`, `✅ done` or
+     `⏳ to do` in State. Change holds the PR number (`#3967`), or a
+     commit link for a commit pushed straight to the parent branch.
 3. `## 🔍 Code review` (parent PR)
    - One intro line, then `### 🧱 Design`, `### ⚠️ Behaviour changes made in
      review` and `### 🧹 Hygiene`, 3–5 bold-lead bullets each.
