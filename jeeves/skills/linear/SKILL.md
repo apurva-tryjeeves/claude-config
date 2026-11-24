@@ -138,7 +138,7 @@ incremental form when adding to what a ticket already has:
 | Add a label, keep the rest | `addLabels` | Append-only |
 | Remove one label | `removeLabels` | Leaves the others |
 | Set the complete label set | `labels` | Replaces every existing label |
-| Link related work | `relatedTo`, `blocks`, `blockedBy` | Append-only, take issue identifiers |
+| Link related work | `relatedTo`, `blocks`, `blockedBy` | Append-only, take issue identifiers; never removes other relations. Each pair of issues holds one relation, so a new type on an already-linked pair replaces the old one |
 | Attach a URL (PR, dashboard, doc) | `links` | Append-only, `[{url, title}]` |
 | Make it a sub-issue | `parentId` | Single parent |
 
@@ -191,9 +191,10 @@ a wall of text. The shared rules are in `${CLAUDE_PLUGIN_ROOT}/references/output
 
 Two Linear behaviours worth using deliberately:
 
-- **Write a ticket id bare** (`WAL-5674`) and Linear links it *and* adds it as a
-  related issue automatically — so mentioning siblings in a description wires up
-  the relations without a second `save_issue` call.
+- **Write a ticket id bare** (`WAL-5674`) and Linear links it, and adds it as a
+  related issue when the pair has no relation yet (an existing blocking relation
+  stays). The id links only if that ticket exists when the description is saved;
+  re-save the line (a `patch` touching it) to link an id for a later ticket.
 - **@mention by display name** (`@johndoe`) to pull a person in; `@` also
   resolves projects, documents and PRs.
 

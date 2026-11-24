@@ -232,12 +232,16 @@ independently.
 
 1. Create each per-repo ticket first with `save_issue`, collecting their
    issue identifiers as they're created.
-2. Cross-link every ticket to every other ticket in the set: call `save_issue`
-   again on each one, passing `relatedTo` with the identifiers of all the
-   others. `relatedTo` is append-only, so this is safe to do after all tickets
-   exist. Naming a sibling id in a description relates it automatically too, so
-   use the explicit `relatedTo` pass to guarantee every pair is linked rather
-   than only the ones that happened to be mentioned.
+2. Cross-link the sibling pairs that have no `blocks`/`blockedBy` link: call
+   `save_issue` again on each ticket, passing `relatedTo` with the identifiers
+   of those siblings. Linear keeps one relation per pair, so `relatedTo` on a
+   blocking pair replaces the blocking relation; for such a pair, skip
+   `relatedTo` or re-apply `blockedBy` afterwards (last write wins). Then read
+   the relations back with `get_issue(id, fields: ["id", "relations"])` and
+   confirm every `blocks`/`blockedBy`/`relatedTo` link is present. A sibling id
+   written bare in a description links only when that ticket already exists at
+   save time; re-save the line (a `patch` touching it) to link an id for a
+   ticket created later.
 3. If the PRD names one ticket as the parent/tracking issue (see the `WAL-5674`
    pattern — a parent ticket with the requirements and rollout plan, with
    build work filed as sub-tasks once scoped), use `parentId` for that
