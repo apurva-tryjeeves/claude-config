@@ -16,6 +16,7 @@ by ticket.
 | Start trigger | New top-level comment, first line exactly `@jaidev start` |
 | Status comment title | **Jaidev — <TICKET-ID>** |
 | PR author | `jaidev-jeeves` |
+| Review any PR | PR comment `@jaidev-jeeves review it` on a human-authored PR; Jaidev replies "On it — I've been added as a reviewer" within ~5 s and posts a review. Each comment starts a review, so post it once per PR (ACC-1719 #606, 25 Nov 2026) |
 | Branch | `jai-dev/<ticket-id-lowercase>` (e.g. `jai-dev/wal-6298`) |
 | Implementation attempts | Up to 5 per run, before it posts Blocked |
 | PR revision attempts | Each review comment, rebase request, CI failure or SonarCloud finding starts a numbered revision; ACC-1701 reached Revision #4 (21 Nov 2026), so a PR takes more than 3. Jaidev's code caps CI-failure revisions at 2 per PR |
@@ -78,7 +79,7 @@ phase, repositories, PR links and a timeline.
 | `@jaidev start` | New top-level comment | Starts analysis |
 | Reply text | In the question's thread | Answers a question |
 | `@jaidev skip` | Ticket comment | Skips open questions |
-| `@jaidev abort` | Ticket comment | Stops the run |
+| `@jaidev abort` | Ticket comment | Pauses the run within ~3 s, replying "Jaidev paused. Reply `@jaidev start` (or `@jaidev resume`) to continue from where it left off." Its open PR stays open (ACC-1719, 24 Nov 2026) |
 | `@jaidev plan:approved` | Reply in the latest plan's thread | Approves the plan, starts implementation |
 | `@jaidev plan:approved, auto-deploy` | Reply in the latest plan's thread | Approves and provisions a dev environment |
 | Feedback text | Reply in the latest plan's thread | Requests plan changes; Jaidev acks in ~10 s, resolves the thread, posts the revised plan as a new top-level comment |
@@ -158,6 +159,17 @@ allocated develop environments (see At a glance).
   of a new repository is a manual step.
 - Deploys need the service to exist in the develop environments (Helm chart,
   HelmRelease).
+- `@jaidev deploy on develop-NN` sends a `MODULES` string with 43 service
+  triples, while `deploy-DEVELOP-environment` reads 45 (jenkins-library added
+  webdemo and apex, 30 Oct and 2 Nov 2026). The build fails in `prepare` with
+  `java.lang.ArrayIndexOutOfBoundsException` within a minute, and Jaidev posts
+  "Deploy to develop-NN ❌ failure" (ACC-1718, build #47134, 24 Nov 2026).
+  Deploy through the `jenkins` skill with `scripts/modules.py --set
+  <service>=jai-dev/<ticket-id>` until Jaidev's list catches up.
+- A plan that starts from another ticket's unmerged branch still shows
+  "⏳ Cloning `development`…" in Jaidev's progress comment; the pushed branch
+  is cut from the planned base (ACC-1719 on `jai-dev/acc-1718`, 24 Nov 2026).
+  Confirm with `git merge-base --is-ancestor <base-head> origin/jai-dev/<ticket-id>`.
 - Knowledge-base files cover existing repositories. For a new repository
   Jaidev explores the code directly, so give the briefing extra context.
 - Jaidev strips backticks, fenced code and `>` lines from the start comment
@@ -223,6 +235,8 @@ allocated develop environments (see At a glance).
 - A failed CI check starts a revision with no human comment, like SonarCloud findings do: on ACC-1697 a Unit Test coverage failure (99.99% of a 100% gate) drew a fix 38 min later as "Revision #3"; ACC-1701 did the same for coverage and SonarCloud. Jaidev's code caps CI-failure revisions at 2 per PR, so fix a third CI failure manually, with the user's approval.
 - During a revision it can push a "WIP checkpoint" commit before the final push (ACC-1697); the PR is squash-merged, so review the final head only.
 - After a GitHub review, the status comment changes to "Addressing PR Feedback..." within ~10 s, while the watcher's `pr-review-sent` stage can still fire `NO ACK` (ACC-1697). Read the status comment before acting on that event.
+
+- A start comment can draw no reply while the webhook lands: on ACC-1718 (23 Nov 2026) two `@jaidev start` comments got no status comment, and dev OpenSearch (`namespace_name: jai-dev-preprod`, `msg: Error processing webhook`) showed `POST /webhooks/linear` followed by `SequelizeDatabaseError: Can't create more than max_prepared_stmt_count statements (current value: 131056)` on jai-dev-agent-service. Cause (23 Nov 2026): the shared dev MySQL host was at its global limit (`Prepared_stmt_count` 131056 = `max_prepared_stmt_count`) because 8 stablecoin-service connections each held 16000 prepared statements; redeploying jai-dev-agent-service freed nothing. Check with `jsql development 'SHOW GLOBAL STATUS LIKE "Prepared_stmt_count"'`, then group `performance_schema.prepared_statements_instances` by owner thread. A repeat start comment adds a failed webhook. Search the logs after the first `NO START`.
 
 ### Evidence
 
