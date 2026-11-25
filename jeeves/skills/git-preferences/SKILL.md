@@ -137,7 +137,7 @@ gh pr edit <n> --repo JeevesInc/<repo> --body-file <updated-body.md>
 After creating a PR, or pushing to a branch with an open PR, ask before starting any
 background poller, then follow `references/pr-pollers.md`: the comments and checks
 pollers, their cadence, the CI timing rows in
-`~/.claude/org-memory/jeevesinc/ci-check-timing.md`, and the poller report format.
+`${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/ci-check-timing.md`, and the poller report format.
 
 ## Reporting results
 

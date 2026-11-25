@@ -133,7 +133,7 @@ choice, the research list, the drafting rules and the posting order.
   ```
 
 - Read expected stage times from
-  `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md` when it exists.
+  `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jaidev-run-timings.md` when it exists.
 - Stamp each post in the state file right after it goes up: `startedAt`,
   `feedbackAt`, `approvedAt`, `reviewAt`, with their inputs ("Stamp each
   post"). The watcher reads only where the stage expects an answer, so an
@@ -176,7 +176,7 @@ commands and the revision-round limit.
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
-- Add the run's row to the cost table in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`, creating the file with this first row when it doesn't exist yet, and widen a typical range when the run falls outside it. Add a pattern the run showed to `references/jaidev-reference.md` §7 "Run patterns".
+- Add the run's row to the cost table in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jaidev-run-timings.md`, creating the file with this first row when it doesn't exist yet, and widen a typical range when the run falls outside it. Add a pattern the run showed to `references/jaidev-reference.md` §7 "Run patterns".
 - Update the progress and return to step 1.
 
 ## Background agents

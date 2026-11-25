@@ -250,7 +250,7 @@ Runs behind the three-post split (Nov 2026):
 
 ## 6. Timings and costs
 
-Kept outside the plugin, in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`. When it
+Kept outside the plugin, in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jaidev-run-timings.md`. When it
 exists, read it to estimate a run; otherwise skip the estimate. Add the new run's row to its cost
 table when the run closes out, creating the file with that first row when it doesn't exist yet.
 

@@ -3,7 +3,7 @@
 The steps follow git-preferences' references/pr-pollers.md "Checks poller"
 and "Write back a timing row": time the last 10 successful PR runs of each
 PR-check workflow, take the long pole, read the check names from a recent PR's
-rollup, and write the row into the org-memory timing table, creating the table
+rollup, and write the row into the memory directory's timing table, creating the table
 on its first row.
 """
 

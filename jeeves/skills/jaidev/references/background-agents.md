@@ -110,7 +110,7 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 
 - A head that settles with a failed check outside the repo's `Known failures` enters `pr-revising`: Jaidev fixes CI and SonarCloud failures on its own.
 - PR due after `plan:approved`: 4 min for 1 or 2 points, 6 min for 3, 8 min for 5 or more.
-- CI cadence comes from `~/.claude/org-memory/jeevesinc/ci-check-timing.md` (`$JEEVES_CI_TIMING` overrides the path); a new head restarts the CI clock. The repo is the one `git remote get-url origin` names in the ticket's `repoDir`.
+- CI cadence comes from `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/ci-check-timing.md` (`$JEEVES_CI_TIMING` overrides the path); a new head restarts the CI clock. The repo is the one `git remote get-url origin` names in the ticket's `repoDir`.
 - A repo without a row gets one derived the git-preferences way when its first ticket reaches a CI stage; the watcher adds it to that table, creating the file on its first row, and prints `CI ROW ADDED <repo>`.
 - CI counts as settled once every check completed and every `Settles on` check is present.
 - While Jaidev's timeline shows "Queued" or "API provider overloaded — retrying", every deadline pauses.
@@ -137,7 +137,7 @@ python3 -m jaidev_watch state set <state-file> <ticket> startedAt now
 | `<ticket> CI LATE …` | Read the PR's checks with `gh pr view`; tell the user which check is stuck |
 | `LINEAR POLL ERROR …`, `GITHUB POLL ERROR <ticket> …` | Restart the watcher once; when it fails again, read the status comment with `limit: 1` and tell the user |
 | `LINEAR POLL ERROR <ticket> missing from the reply` | Restart the watcher; the ticket counts as unread, so no deadline fires from it |
-| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; when the file was just created, index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`; restart the watcher |
+| `CI ROW ADDED <repo> …` | Tell the user the repo's new `ci-check-timing.md` row; when the file was just created, index it in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/MEMORY.md`; restart the watcher |
 | `CI ROW MISSING <repo> <reason>` | That ticket's CI polling stays off; derive the row with git-preferences' `references/pr-pollers.md` → "Checks poller", add it, and restart the watcher. The watcher retries the derivation 2 min after a failure (`<state-file stem>.ci-hold.json`) |
 | `IDLE` | Every ticket waits on you; restart the watcher after your next stamp |
 | `ALL MERGED` | The wave is done; leave the watcher stopped |
