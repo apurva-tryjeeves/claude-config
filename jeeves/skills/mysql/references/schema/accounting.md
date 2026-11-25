@@ -135,3 +135,76 @@ JOIN supplier b ON b.externalSupplierId = a.externalSupplierId
 WHERE a.integrationId = "<integration A>" AND a.deletedAt IS NULL
   AND b.integrationId = "<integration B>" AND b.deletedAt IS NULL
 ```
+
+## `audit_logs`
+
+User and system actions in the accounting expense UI (filters, GL/category assignment, mapping and code changes) — answers "who changed a GL code or category, and when".
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36) PK | |
+| `companyId` | int unsigned | indexed |
+| `userId` | varchar, nullable | indexed; always set in prod so far |
+| `action` | varchar, nullable | indexed; `filters_used`, `auto_assigned_gl_category`, `gl_code_updated`, `category_assigned_to_transaction`, `gl_code_assigned_to_transaction`, `category_mapping_created`, `gl_code_created`, `tax_rate_created`, `merchant_mapping_created`, `merchant_mapping_updated`, `gl_code_upload`, `tax_rate_upload`, `export_expenses` |
+| `featureType` | varchar, nullable | only `expense` seen |
+| `flow` | varchar, nullable | `filter`, `categorization`, `import`, `export` |
+| `integrationType` / `integrationPlatformReference` / `externalCompanyId` / `connectionId` / `accountId` | enum / varchar, nullable | all NULL in prod as of 2026-11 |
+| `metaData` | json | keys vary by action: `filters_used` → `page`, `pageSize`, `posted`, `dateFrom`, `dateTo`, `rangeType`, `searchTerm`, `isZummaEnabled`; `auto_assigned_gl_category` → `glCode`, `glCodeId`, `macroCategoryId`, `transactionReferenceId`; `gl_code_updated` → `email` + `GLCode` or `taxRate`; `category_mapping_created` → `glCodeId`, `categoryId`, `createdBy` |
+| `createdAt` / `updatedAt` / `deletedAt` | datetime(3) | UTC |
+
+Action counts with metaData key sets:
+
+```sql
+SELECT action, JSON_KEYS(metaData) AS meta_keys, COUNT(*) AS n
+FROM audit_logs
+GROUP BY action, meta_keys
+ORDER BY n DESC
+```
+
+## `company_accounting_categories`
+
+A company's custom accounting fields (e.g. "Departments", "Centro de Costo"); the bulk import agent calls their values "categories". Answers "which companies have custom fields".
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36) PK | the `category_id` the import agent receives when a file is uploaded from the field's page |
+| `companyId` | int unsigned | |
+| `name` | varchar(255) | field name shown in the UI |
+| `status` | enum | `active`, `inactive` |
+| `type` | enum | `DROPDOWN`, `FREE_TEXT`; default `DROPDOWN` |
+| `showInAccounting` / `showInTransactions` / `isRequired` | tinyint(1) | |
+| `createdAt` / `updatedAt` / `deletedAt` | datetime | paranoid, filter `deletedAt IS NULL` |
+
+Companies with active dropdown fields:
+
+```sql
+SELECT companyId, COUNT(*) AS fields, GROUP_CONCAT(name SEPARATOR " | ") AS names
+FROM company_accounting_categories
+WHERE deletedAt IS NULL AND status = "active" AND type = "DROPDOWN"
+GROUP BY companyId
+```
+
+## `company_accounting_category_options`
+
+The values of a custom accounting field (`company_accounting_categories`), e.g. each cost center under "Centro de Costo". The bulk import agent's `category` items land here on approve.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36) PK | |
+| `companyAccountingCategoryId` | char(36) | FK `company_accounting_categories.id`; no `companyId` column, so join through the field |
+| `name` | varchar(255) | value shown in the dropdown |
+| `accountingCategoryOptionId` | varchar(255), nullable | the value's code (the import agent's `custom_id`); `NULL` when none was given |
+| `status` | enum | `active`, `inactive` |
+| `createdAt` / `updatedAt` / `deletedAt` | datetime | paranoid, filter `deletedAt IS NULL` |
+
+Value count per custom field for a company:
+
+```sql
+SELECT c.name AS field, COUNT(o.id) AS options,
+       SUM(o.accountingCategoryOptionId IS NOT NULL) AS withCode
+FROM company_accounting_categories c
+LEFT JOIN company_accounting_category_options o
+  ON o.companyAccountingCategoryId = c.id AND o.deletedAt IS NULL
+WHERE c.companyId = <companyId> AND c.deletedAt IS NULL
+GROUP BY c.id, c.name
+```
