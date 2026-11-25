@@ -59,3 +59,42 @@ WHERE r.company_id = <company_id>
 ORDER BY r.created_at DESC
 LIMIT 100
 ```
+
+## `accounting_settings_sessions`
+
+One row per bulk-import upload to the accounting settings agent (GL codes, tax rates, suppliers, custom-field values). Answers "what happened to this upload, and was it tied to a custom field".
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36) PK | |
+| `session_id` | varchar(36), unique | the id the UI and logs use; `accounting_settings_items.session_id` joins here |
+| `company_id` / `user_id` | int | |
+| `phase` | varchar(40) | seen: `analyzing`, `reviewing` |
+| `file_name` / `file_s3_key` | varchar | |
+| `category_id` | varchar(36), nullable | `company_accounting_categories.id` (accounting DB) when uploaded from a custom field's Import; `NULL` from the general Import. Non-null means the ACC-1692 upload-target prompt rule ran |
+| `items_total` / `items_new` / `items_existing` | int | filled when analysis ends |
+| `classification` / `apply_results` | json | |
+| `created_at` / `updated_at` / `deleted_at` | datetime | UTC |
+
+## `accounting_settings_items`
+
+One row per extracted item in a session.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36) PK | |
+| `session_id` | varchar(36) | FK `accounting_settings_sessions.session_id` |
+| `setting_type` | varchar(40) | seen: `gl_code`, `category` (custom-field value) |
+| `status` / `match_status` / `action` | varchar(40) | |
+| `data` / `raw_data` / `api_result` | json | |
+| `existing_id` | varchar(64) | |
+
+Item count per type for a company's uploads:
+
+```sql
+SELECT s.session_id, s.category_id, i.setting_type, COUNT(*) AS n
+FROM accounting_settings_items i
+JOIN accounting_settings_sessions s ON s.session_id = i.session_id
+WHERE s.company_id = <companyId>
+GROUP BY s.session_id, s.category_id, i.setting_type
+```
