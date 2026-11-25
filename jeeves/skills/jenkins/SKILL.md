@@ -137,6 +137,7 @@ before working with a job:
 | --- | --- |
 | `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (parameters, deploy flow, failure signatures; timings live in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`) |
 | `deploy-DEVELOP-environment` | `references/deploy-develop-environment-stages.md` (what each stage does and the log lines that mark it; read before saying what a deploy is doing) |
+| `debezium-connector-operations` | `references/debezium-connector-operations.md` (restart a develop-NN env's UTV connector: `stop`, then `restart-delete`; read when UTV rows stop arriving or the data pipeline fails on a dev env) |
 
 ## Scripts
 
