@@ -1,6 +1,6 @@
 ---
 name: linear
-description: Look up, create, update and query JeevesInc Linear issues, and draft replies for engineering, product or support audiences. Trigger on a Linear ticket id (e.g. WAL-1234) or URL, starting work on a ticket, creating or updating an issue, open-ticket or cycle questions, or drafting a reply; load before `save_issue` or `save_comment`. `@jaidev` comments go to the jaidev skill.
+description: Look up, create, update and query JeevesInc Linear issues, and draft replies for engineering, product or support audiences. Trigger on a Linear ticket id (e.g. WAL-1234) or URL, starting work on a ticket (including through background agents), creating or updating an issue, open-ticket or cycle questions, or drafting a reply; load before `save_issue` or `save_comment`. `@jaidev` comments go to the jaidev skill.
 ---
 
 # Linear
@@ -62,7 +62,11 @@ outside the two above.
 
 When the user starts work on a ticket (picks it up, branches for it, or asks
 to implement it), update it in the same turn, before branching or writing
-code — even when the task brief doesn't mention Linear:
+code — even when the task brief doesn't mention Linear. When the user asks
+for tickets to be implemented through background agents, subagents or a
+workflow, run these steps for each ticket in the turn the agents launch,
+before launching them: show the field list, wait for the yes, save, then
+launch:
 
 1. Fetch the ticket with `mcp__linear__get_issue`.
 2. Set `state: "In Progress"`, put it in the team's current cycle (resolve it
