@@ -102,7 +102,7 @@ environment.
 6. **Confirm before triggering.** State the exact `ENVIRONMENT` and each
    enabled service's branch and mode, and get explicit go-ahead — this is a
    shared dev environment other people may be using. Mention the expected
-   duration from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` for the service(s)
+   duration from `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jenkins-deploy-timings.md` for the service(s)
    being deployed, when that file exists and has their rows. To say what the slot runs now, use
    the user's answer or the Grafana dashboard per SKILL.md → "Name the build
    you mean"; otherwise leave it out.
@@ -243,11 +243,11 @@ for one day (`logRotator(daysToKeepStr: '1')`), so a service's earlier samples
 age out of the API while its row keeps them — merge a fresh sample into the
 existing row (widen min/max, add to the sample size) rather than replacing it.
 A service with no row yet gets one the first time a clean single-service build
-appears for it. Record rows in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
+appears for it. Record rows in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jenkins-deploy-timings.md`
 in the same turn. When the file doesn't exist yet, create it with the first row, a
 `reference` memory frontmatter (`name: jenkins-deploy-timings`) and the header
 `| Service | Min | Max | Mean | Sample size |`, then index it in
-`~/.claude/org-memory/jeevesinc/MEMORY.md`.
+`${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/MEMORY.md`.
 
 **How to derive/refine a row:** fetch recent builds' params and durations in
 one batched request, filter to
@@ -265,5 +265,5 @@ jenkins-api "job/deploy-DEVELOP-environment/api/json?tree=${TREE}" \
 deploying multiple services at once (e.g. `web` + `accounting` + `aiservice`
 together) runs them in parallel, so its total duration is closer to the
 *slowest* of the enabled services' individual times, not their sum — use the
-single-service numbers in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`
+single-service numbers in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jenkins-deploy-timings.md`
 as a per-service ceiling estimate, not an additive one.

@@ -135,7 +135,7 @@ before working with a job:
 
 | Job | Reference |
 | --- | --- |
-| `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (parameters, deploy flow, failure signatures; timings live in `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md`) |
+| `deploy-DEVELOP-environment` | `references/deploy-develop-environment.md` (parameters, deploy flow, failure signatures; timings live in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jenkins-deploy-timings.md`) |
 | `deploy-DEVELOP-environment` | `references/deploy-develop-environment-stages.md` (what each stage does and the log lines that mark it; read before saying what a deploy is doing) |
 | `debezium-connector-operations` | `references/debezium-connector-operations.md` (restart a develop-NN env's UTV connector: `stop`, then `restart-delete`; read when UTV rows stop arriving or the data pipeline fails on a dev env) |
 
@@ -202,7 +202,7 @@ concurrent-build race per `references/build-ops.md`):
 > The new `api` pod stayed unready until the deadline — an app issue in the deployed module.
 
 **A running build** — elapsed so far, alongside the service's expected duration
-from `~/.claude/org-memory/jeevesinc/jenkins-deploy-timings.md` when that file
+from `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/jenkins-deploy-timings.md` when that file
 has a row for it (elapsed alone otherwise), and the current stage named from
 the job's stages reference:
 

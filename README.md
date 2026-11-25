@@ -211,7 +211,8 @@ bumps the plugin version, and opens and squash-merges the PR. Once it merges,
 `/plugin marketplace update jeeves-local` brings the new version to everyone.
 Without a clone, skills report the new fact and the edit they would make.
 
-Timing samples stay on your machine, in `~/.claude/org-memory/jeevesinc/`,
+Timing samples stay on your machine, in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}`
+([`jeeves/references/memory-dir.md`](jeeves/references/memory-dir.md)),
 since they change with every run:
 
 | Skill | File |

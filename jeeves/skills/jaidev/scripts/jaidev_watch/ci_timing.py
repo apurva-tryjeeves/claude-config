@@ -1,4 +1,4 @@
-"""Read the per-repo CI cadence from the org-memory `ci-check-timing.md`."""
+"""Read the per-repo CI cadence from `ci-check-timing.md` in the memory directory."""
 
 from __future__ import annotations
 
@@ -12,7 +12,9 @@ from typing import Final
 from jaidev_watch.models import CiTiming
 
 PATH_ENV: Final = "JEEVES_CI_TIMING"
-DEFAULT_PATH: Final = Path.home() / ".claude" / "org-memory" / "jeevesinc" / "ci-check-timing.md"
+MEMORY_DIR_ENV: Final = "JEEVES_MEMORY_DIR"
+DEFAULT_MEMORY_DIR: Final = Path.home() / ".claude" / "memory"
+FILE_NAME: Final = "ci-check-timing.md"
 TEMPLATE: Final = "\n".join(
     (
         "---",
@@ -111,8 +113,13 @@ def parse_table(text: str) -> dict[str, CiTiming]:
 
 
 def table_path() -> Path:
-    """The timing table: `$JEEVES_CI_TIMING` when set, else the org-memory file."""
-    return Path(os.environ.get(PATH_ENV) or DEFAULT_PATH)
+    """The timing table: `$JEEVES_CI_TIMING`, else `$JEEVES_MEMORY_DIR`'s file.
+
+    `$JEEVES_MEMORY_DIR` defaults to `~/.claude/memory`.
+    """
+    if explicit := os.environ.get(PATH_ENV):
+        return Path(explicit).expanduser()
+    return Path(os.environ.get(MEMORY_DIR_ENV) or DEFAULT_MEMORY_DIR).expanduser() / FILE_NAME
 
 
 def load(path: Path | None = None) -> Mapping[str, CiTiming]:

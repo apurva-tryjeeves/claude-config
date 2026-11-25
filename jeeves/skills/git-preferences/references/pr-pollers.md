@@ -27,7 +27,7 @@ Watches for review/PR comments that need a response.
 
 Watches CI/check status until it settles.
 
-- Cadence is per-repo. When `~/.claude/org-memory/jeevesinc/ci-check-timing.md` exists, look there for a row matching the target repo; when one exists, use its `First check`/`Interval` columns directly.
+- Cadence is per-repo. When `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/ci-check-timing.md` exists, look there for a row matching the target repo; when one exists, use its `First check`/`Interval` columns directly.
 - For a repo with no row yet, or no table yet, derive the cadence from that repo's own CI history with a background `Agent` instead of asking the user. Pull the last 10 successful PR runs of each PR-check workflow:
   ```bash
   gh run list --repo JeevesInc/<repo> --workflow <file> --status success --event pull_request --limit 10 --json createdAt,updatedAt \
@@ -52,10 +52,10 @@ Watches CI/check status until it settles.
 ## Write back a timing row
 
 The table lives in your org memory, outside the plugin, at
-`~/.claude/org-memory/jeevesinc/ci-check-timing.md`, so each person's samples
+`${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/ci-check-timing.md`, so each person's samples
 build up locally.
 
-Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval | Known failures |`, then index it in `~/.claude/org-memory/jeevesinc/MEMORY.md`.
+Add or refine the repo's row there. When the file doesn't exist yet, create it with the first row, a `reference` memory frontmatter (`name: ci-check-timing`) and the table header `| Repo | Long-pole workflow | Check name | Settles on | Min | Max | Mean | Sample size | First check | Interval | Known failures |`, then index it in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/MEMORY.md`.
 
 - **Known failures:** checks that fail on every head for a known reason, comma-separated (jeeves-web: `Validate Localization` until the Crowdin push). Add a check in the same turn its reason is confirmed, and remove it the first time it passes.
 

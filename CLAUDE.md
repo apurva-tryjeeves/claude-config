@@ -11,7 +11,7 @@ skills, agents, scripts and shared references for JeevesInc engineering work.
 | `jeeves/.claude-plugin/plugin.json` | Plugin name, version, description |
 | `jeeves/skills/<name>/` | `SKILL.md`, on-demand `references/*.md`, `scripts/` with tests |
 | `jeeves/agents/*.md` | Subagents: tools, model, effort, preloaded skills |
-| `jeeves/references/` | Shared `output-style.md`, `write-back.md`, `queries.md` |
+| `jeeves/references/` | Shared `output-style.md`, `write-back.md`, `queries.md`, `memory-dir.md` |
 | `jeeves/bin/`, `jeeves/lib/` | `jsql`, `jsql-pull-secrets`, `jenkins-api`, `jeeves-sync-repos` |
 
 ## Scope

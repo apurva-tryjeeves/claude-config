@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from datetime import timedelta
 from pathlib import Path
+from unittest import mock
 
 from jaidev_watch import ci_timing
 
@@ -68,3 +70,23 @@ class CiTimingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TablePathTest(unittest.TestCase):
+    def _path(self, env: dict[str, str]) -> Path:
+        names = (ci_timing.PATH_ENV, ci_timing.MEMORY_DIR_ENV)
+        clean = {k: v for k, v in os.environ.items() if k not in names}
+        with mock.patch.dict(os.environ, {**clean, **env}, clear=True):
+            return ci_timing.table_path()
+
+    def test_defaults_to_claude_memory(self) -> None:
+        expected = Path.home() / ".claude" / "memory" / "ci-check-timing.md"
+        self.assertEqual(self._path({}), expected)
+
+    def test_memory_dir_env(self) -> None:
+        path = self._path({"JEEVES_MEMORY_DIR": "/tmp/mem"})
+        self.assertEqual(path, Path("/tmp/mem/ci-check-timing.md"))
+
+    def test_ci_timing_env_wins(self) -> None:
+        env = {"JEEVES_MEMORY_DIR": "/tmp/mem", "JEEVES_CI_TIMING": "/tmp/other.md"}
+        self.assertEqual(self._path(env), Path("/tmp/other.md"))
