@@ -176,7 +176,7 @@ commands and the revision-round limit.
   or tell them it hasn't.
 - Do manual follow-ups listed in the ticket or the briefing when the user
   asks.
-- Add the run's row to the cost table in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`, creating the file with this first row when it doesn't exist yet, and widen a typical range or edit a pattern when the run falls outside it.
+- Add the run's row to the cost table in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`, creating the file with this first row when it doesn't exist yet, and widen a typical range when the run falls outside it. Add a pattern the run showed to `references/jaidev-reference.md` §7 "Run patterns".
 - Update the progress and return to step 1.
 
 ## Background agents

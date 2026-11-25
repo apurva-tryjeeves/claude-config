@@ -37,6 +37,7 @@ no row, read its deploy comment, then add a row.
 4. What its comments look like
 5. Limits
 6. Timings and costs
+7. Run patterns
 
 ## 1. Lifecycle
 
@@ -252,3 +253,19 @@ Runs behind the three-post split (Nov 2026):
 Kept outside the plugin, in `~/.claude/org-memory/jeevesinc/jaidev-run-timings.md`. When it
 exists, read it to estimate a run; otherwise skip the estimate. Add the new run's row to its cost
 table when the run closes out, creating the file with that first row when it doesn't exist yet.
+
+## 7. Run patterns
+
+What past runs showed about revisions, start comments, merges and costs. Add or edit a pattern when a run shows something new; the per-run numbers stay in `jaidev-run-timings.md` (§6).
+
+- **Plan revisions:** every run needed one plan revision ($0.33 to $0.69; v2 lands about 1.5 min after the feedback). WAL-6301 needed 3 (lost briefing, our code defect, our forward-compat change).
+- **Blocks:** WAL-6298 only, on the workflow scope ($6.25 of its implementation cost).
+- **Bare start (ACC-1700, ACC-1701, 21 Nov 2026):** a start comment holding only the trigger and the base-branch sentence gave no question round and one plan revision each, the same as briefed runs; plan v1 found the sibling tickets' names in the code on its own.
+- **More than 3 PR revisions:** ACC-1701 ran Revision #4 (coverage CI fix, our rebase request, SonarCloud fix, then a no-op after approval), so the per-PR limit is not 3 rounds.
+- **PR revisions:** 0 on ACC-1588, ACC-1594, ACC-1595, ACC-1633, ACC-1630, ACC-1637, ACC-1667, ACC-1669 and ACC-1670 (code given in full in the names reply, copied byte for byte). One each on ACC-1666 (built from the briefing prose without the names reply), WAL-6298 (SonarCloud), WAL-6300, WAL-6301, ACC-1638, ACC-1589 and ACC-1593 (SonarCloud duplication). Three on ACC-1591 (CI failure reply, our review of a circular import, our rebase request).
+- **Prose-only start comment:** no question round (ACC-1589, ACC-1591, ACC-1594 and the follow-up wave); the names reply goes out as plan feedback. A briefing whose identifiers arrive blank costs one question round (ACC-1588).
+- **Merges:** agents merged 14 to 58 min after the PR opened; most of that is CI and waiting for the user's "merge".
+- **Estimates:** Jaidev can raise the estimate (ACC-1633, 1 to 2 points) and overwrite the Linear value.
+- **Reading costs:** read final costs from the last status comment; earlier phase figures can rise later (WAL-6300 analysis $0.15 → $0.27).
+- **Parent-branch race:** a second PR can be refused with "Base branch was modified" right after a sibling merges; one retry works when the files differ.
+- **Test commands:** a bare test path under `--selectProjects unit` runs the whole suite, so briefings use `--runTestsByPath`.
