@@ -129,6 +129,7 @@ SERVICES: Final[tuple[Service, ...]] = (
     Service("stablecoinservice", "stablecoin-service"),
     Service("jeeveserpservice", "jeeves-erp-service"),
     Service("apex", "apex"),
+    Service("webdemo", "jeeves-web-demo"),
 )
 NAMES: Final[tuple[str, ...]] = tuple(s.name for s in SERVICES)
 FIELDS_PER_SERVICE: Final = 3
@@ -137,10 +138,15 @@ FIELDS_PER_SERVICE: Final = 3
 # for the rest. The pipeline builds and deploys only enabled services, so a
 # disabled triple's branch and mode are never read.
 MAIN_BRANCH: Final = frozenset({"simulationserver", "aiweb"})
+MASTER_BRANCH: Final = frozenset({"webdemo"})
 
 
 def default_branch(name: str) -> str:
-    return "main" if name in MAIN_BRANCH else "development"
+    if name in MAIN_BRANCH:
+        return "main"
+    if name in MASTER_BRANCH:
+        return "master"
+    return "development"
 
 
 def disabled_triple(name: str) -> Triple:

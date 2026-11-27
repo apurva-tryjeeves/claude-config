@@ -35,13 +35,14 @@ class TestDefaults(unittest.TestCase):
             ("apex", "development"),
             ("aiweb", "main"),
             ("simulationserver", "main"),
+            ("webdemo", "master"),
         ]:
             with self.subTest(name=name):
                 self.assertEqual(modules.default_branch(name), expected)
 
     def test_service_table_is_consistent(self) -> None:
         self.assertEqual(len(modules.NAMES), len(set(modules.NAMES)))
-        self.assertEqual(len(modules.SERVICES), 45)
+        self.assertEqual(len(modules.SERVICES), 46)
 
 
 class TestParseSet(unittest.TestCase):
@@ -76,7 +77,7 @@ class TestRoundTrip(unittest.TestCase):
         triples = modules.build(reqs)
         packed = modules.render(triples)
         self.assertTrue(packed.endswith(","))
-        self.assertEqual(packed.count(","), 45 * 3)
+        self.assertEqual(packed.count(","), 46 * 3)
         parsed = modules.parse(packed)
         self.assertEqual(parsed, triples)
         enabled = [modules.NAMES[i] for i, t in enumerate(parsed) if t.enabled]
@@ -128,7 +129,7 @@ class TestCheckLibrary(unittest.TestCase):
     def test_in_sync(self) -> None:
         self.assertEqual(
             modules.check_library(groovy_for(list(modules.NAMES))),
-            "SERVICES matches jenkins-library (45 services)",
+            "SERVICES matches jenkins-library (46 services)",
         )
 
     def test_drift_lists_changes_and_replacement(self) -> None:
@@ -155,8 +156,8 @@ class TestCli(unittest.TestCase):
         code, out, err = run_cli("--set", "api=a")
         self.assertEqual(code, 0)
         self.assertTrue(out.startswith("true,a,rebuild,false,development,latest,"))
-        self.assertIn("45 services, enabled:", err)
-        self.assertNotIn("45 services", out)
+        self.assertIn("46 services, enabled:", err)
+        self.assertNotIn("46 services", out)
 
     def test_decode_arg_and_stdin(self) -> None:
         packed = run_cli("--set", "api=a")[1].strip()
@@ -164,13 +165,13 @@ class TestCli(unittest.TestCase):
             with self.subTest(args=args):
                 code, out, _ = run_cli(*args, stdin=stdin)
                 self.assertEqual(code, 0)
-                self.assertTrue(out.startswith("45 services, enabled:\n  position  1 api"))
+                self.assertTrue(out.startswith("46 services, enabled:\n  position  1 api"))
 
     def test_list(self) -> None:
         code, out, _ = run_cli("--list")
         lines = out.splitlines()
         self.assertEqual(code, 0)
-        self.assertEqual(len(lines), 46)
+        self.assertEqual(len(lines), 47)
         self.assertEqual(lines[0], f"{'#':>3}  {'Service':<22} {'Default':<12} Repo")
         self.assertIn("backend", lines[1])
 
