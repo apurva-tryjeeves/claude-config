@@ -10,6 +10,7 @@ Where skills keep per-person files that change with every run, such as timing sa
 | Skill | File |
 |---|---|
 | `git-preferences`, `jaidev` | `ci-check-timing.md` (`$JEEVES_CI_TIMING` overrides this one file) |
+| `ticket-workflow` | `agent-delegation.md` (background-agent limit; read only) |
 | `jenkins` | `jenkins-deploy-timings.md` |
 | `jaidev` | `jaidev-run-timings.md` |
 
