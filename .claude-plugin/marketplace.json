@@ -8,7 +8,7 @@
     {
       "name": "jeeves",
       "source": "./jeeves",
-      "description": "Skills and agents for JeevesInc engineering work — Linear, Notion release pages, Jaidev, Jenkins, MySQL, OpenSearch, AWS secrets, releases, TypeScript naming and the git/PR, logging, SQS and SonarCloud conventions."
+      "description": "Skills and agents for JeevesInc engineering work — Linear, the ticket workflow agents, Notion release pages, Jaidev, Jenkins, MySQL, OpenSearch, AWS secrets, releases, TypeScript naming and the git/PR, logging, SQS and SonarCloud conventions."
     }
   ],
   "metadata": {

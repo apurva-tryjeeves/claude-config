@@ -1,6 +1,6 @@
 {
   "name": "jeeves",
-  "version": "3.7.48",
-  "description": "Skills and agents for JeevesInc engineering work — Linear, Notion release pages, Jaidev, Jenkins, MySQL, OpenSearch, AWS secrets, releases, TypeScript naming and the git/PR, logging, SQS and SonarCloud conventions.",
+  "version": "3.7.49",
+  "description": "Skills and agents for JeevesInc engineering work — Linear, the ticket workflow agents, Notion release pages, Jaidev, Jenkins, MySQL, OpenSearch, AWS secrets, releases, TypeScript naming and the git/PR, logging, SQS and SonarCloud conventions.",
   "author": { "name": "Apurva Singh", "email": "apurva@tryjeeves.com" }
 }

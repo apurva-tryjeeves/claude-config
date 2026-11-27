@@ -87,8 +87,8 @@ under exactly this name:
 | Server | Used by |
 |---|---|
 | `opensearch-dev`, `opensearch-prod` | `opensearch`, `trace-tx`, `prod-debug`, `post-deploy-verify`, `prod-log-investigator` and `jeeves-verifier` agents |
-| `linear` | `linear`, `feature-plan`, `jaidev` |
-| `notion` | `notion-templates`, `release-notify`, `hotfix-captain` agent |
+| `linear` | `linear`, `feature-plan`, `jaidev`, `ticket-workflow` agents |
+| `notion` | `notion-templates`, `release-notify`, `hotfix-captain`, `ticket-drift-checker` and `ticket-designer` agents |
 | `github` | `feature-plan` |
 
 ```bash
@@ -193,6 +193,7 @@ Several skills record facts they discover back into their own files:
 | `invite-dev-company-user` | `skills/invite-dev-company-user/references/confirmed-envs.md` |
 | `git-preferences` | `skills/git-preferences/SKILL.md` |
 | `sonar-proactive-rules` | `skills/sonar-proactive-rules/references/sonar-ts-rules-catalog.md` |
+| `ticket-designer`, `ticket-implementer` and `stack-rebaser` agents | `references/repo-dev-setup.md` |
 
 Claude Code runs the plugin from a versioned copy under
 `~/.claude/plugins/cache/jeeves-local/jeeves/<version>/`, which each update
