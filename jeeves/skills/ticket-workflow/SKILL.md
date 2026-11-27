@@ -42,7 +42,7 @@ Start each with `jeeves:<name>`. Every brief carries the ticket id and repo path
 | `ticket-closer` | Merged PR number, parent PR number | Draft files exist; `gh pr view <n> --json state` is `MERGED` |
 
 - `jeeves:principal-engineer` gives the optional independent design or PR review; `jeeves:jeeves-verifier` verifies after a dev deploy.
-- Run at most 2 background agents at a time unless the user says otherwise.
+- Keep the number of background agents within the limit in `${JEEVES_MEMORY_DIR:-$HOME/.claude/memory}/agent-delegation.md`, when that file exists.
 
 ## Branches
 
