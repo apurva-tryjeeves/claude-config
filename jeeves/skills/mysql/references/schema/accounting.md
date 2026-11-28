@@ -46,6 +46,13 @@ The transactions imported into accounting (Card Expenses, bill pay, transfers, f
 | `tag` | enum | e.g. `cards`, `card-reversal-loc`, `card-refund-loc` (LOC); `card-purchase`, `card-reversal`, `card-refund`, `adjustment`, `iof-fee`, `bill-pay`, `self-funded-account-*` |
 | `syncStatus` | enum | default `missing_categorization`; also `pending`, `processing`, `success`, `failed`, `categorized`, `attachment_upload_*` |
 | `isExported` | tinyint(1) | `1` once exported to the ERP |
+| `accountId` | char(36), nullable | bank-feed account (`bank_feeds_account.accountId`). Each bank-feed transaction has a second row with the same `transactionReferenceId` and `accountId` NULL; filter on `accountId` for bank-feed work |
+| `fundingSourceId` | varchar(255), nullable | the funding source; shared by both rows of a transaction |
+| `bankFeedSyncStatus` | enum, nullable | `pending`, `processing`, `success`, `failed`; set on the bank-feed row only |
+| `bankFeedsErrorMessage` | json, nullable | |
+| `accountBalance` | decimal(30,6), nullable | account balance after the transaction; the bank-feed line's balance |
+| `relatedTransactionId` | varchar(255), nullable | parent payment's reference id |
+| `settledAt` | datetime, nullable | |
 | `createdAt` / `updatedAt` / `deletedAt` | datetime(3) | soft delete via `deletedAt` |
 
 SELF_FUNDED rows imported from dual-written LOC ledger rows (WAL-6448):
@@ -208,3 +215,106 @@ LEFT JOIN company_accounting_category_options o
 WHERE c.companyId = <companyId> AND c.deletedAt IS NULL
 GROUP BY c.id, c.name
 ```
+
+## `transaction_fees_charges`
+
+Fees charged on a transaction (FX conversion, bill-pay, cross-border). A bank-feed line merges a payment with its fees, and for a debit takes the smallest `accountBalance` among them (`resolveBalance` in accounting-service `src/helpers/bank-feeds.helpers.ts`).
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36), PK | uuid |
+| `companyId` | int unsigned | backend `companies.id` |
+| `transactionReferenceId` | varchar(255) | the fee's own reference id |
+| `relatedTransactionId` | varchar(255) | the payment's `transactionReferenceId` |
+| `amount` | decimal(30,6) | |
+| `accountBalance` | decimal(30,6), nullable | account balance after the fee settled |
+| `tag` | enum | e.g. `fx-conversion-fee`, `bill-pay-fee`, `cross-border-fee`, `jeeves-pay-fee` |
+| `sourceUpdatedAt` / `createdAt` / `updatedAt` | datetime | |
+
+## `bank_feeds_connection`
+
+A company's Codat bank-feed connection to its ERP, one row per integration.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36), PK | uuid |
+| `integrationId` | char(36) | FK `integration.id` |
+| `companyId` | int unsigned | backend `companies.id` |
+| `status` | enum | `pending`, `linked`, `unlinked`, `deauthorized`, `paused` |
+| `feedStartDate` | datetime(3) | first date the feed posts from |
+| `errorMessage` | varchar(255), nullable | |
+| `linkedAt` / `unlinkedAt` | datetime(3), nullable | last relink / unlink by the customer |
+
+## `bank_feeds_account`
+
+One row per Jeeves account pushed to the bank feed (e.g. a company's GBP and USD accounts). Filter by `integrationId`; the table has no `companyId`.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36), PK | = the Codat bank-feed source account id |
+| `integrationId` | char(36), nullable | FK `integration.id` |
+| `accountId` | char(36), unique, nullable | the Jeeves account (`account.id`); `account.externalAccountId` is the ERP bank account it maps to |
+| `status` | enum | `pending`, `connecting`, `connected`, `paused`, `failed`, `disconnected`, `unknown`; Codat webhooks `bankFeeds.sourceAccount.connected` / `.disconnected` set it |
+| `balance` | decimal(30,6) | |
+
+## `bank_feeds_sync_history`
+
+One row per transaction per hourly push attempt (runs at :15). A failed transaction is retried in every later batch, so rows pile up. Join `transaction` on `transactionId` for the company or account.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `jobId` / `batchId` | char(36) | one batch per push run |
+| `transactionId` | char(36) | FK `transaction.id` |
+| `status` | enum | `pending`, `processing`, `success`, `failed` |
+| `payload` | json | the bank-feed line sent: `id`, `date`, `amount`, `balance`, `reference`, `description`, `counterparty`, `transactionType` |
+| `log` | json, nullable | NULL on failed lines too; read the error from `batch.log` |
+
+Per-month sync outcome for one company:
+
+```sql
+SELECT DATE_FORMAT(h.createdAt, "%Y-%m") AS month, h.status, COUNT(*) AS n
+FROM bank_feeds_sync_history h
+JOIN transaction t ON t.id = h.transactionId
+WHERE t.companyId = <companyId>
+GROUP BY month, h.status
+```
+
+## `job`
+
+One ERP push run per account (expense sync or bank feed).
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36), PK | uuid |
+| `integrationId` | char(36) | FK `integration.id` |
+| `accountId` | char(36) | bank-feed account (`bank_feeds_account.accountId`) |
+| `status` | enum | `pending`, `processing`, `success`, `failed`, `completedWithFailures` |
+| `transactionType` | enum | `expense`, `bank_feed` |
+| `transactionCount` / `successCount` / `erroredCount` | int | |
+
+## `batch`
+
+One push call inside a `job`. `log` holds the Codat error for a failed bank-feed push.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | char(36), PK | = `bank_feeds_sync_history.batchId` |
+| `jobId` | char(36) | FK `job.id` |
+| `status` | enum | `pending`, `processing`, `success`, `failed`, `completedWithFailures`, `attachment_upload_*` |
+| `syncId` | varchar | Codat push operation key |
+| `transactionType` | enum | `expense`, `bank_feed` |
+| `transactionCount` / `successCount` / `erroredCount` | int | |
+| `log` | json array of strings | step messages; the last entry is the Codat error on a failed bank-feed push |
+
+Bank-feed accounts failing on Codat's rolling-balance check:
+
+```sql
+SELECT j.integrationId, j.accountId, COUNT(*) AS failedBatches
+FROM batch b
+JOIN job j ON j.id = b.jobId
+WHERE b.transactionType = "bank_feed" AND b.status = "failed"
+  AND JSON_SEARCH(b.log, "one", "%expected rolling balance%") IS NOT NULL
+GROUP BY j.integrationId, j.accountId
+```
+
+The full bank-feed debugging flow is in the `prod-debug` skill, `references/bank-feeds.md`.
