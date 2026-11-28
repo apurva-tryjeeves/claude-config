@@ -15,6 +15,7 @@ Read and write this file following `references/write-back.md` at the plugin root
 | Exchange rate | `develop_<n>` | `exchange_rates` | `references/schema/develop.md` → `exchange_rates` |
 | Feature flags enabled for a company | `develop_<n>` | `company_settings` | `references/schema/develop.md` → `company_settings` |
 | Accounting integrations / connections (QBO, Xero, NetSuite via Codat) — which companies have one, their status | `accounting_<n>` | `integration` | `references/schema/accounting.md` → `integration` |
+| Bank-feed (Codat → Xero) status for a company — accounts, latest batches, the Codat error (full flow: `prod-debug` skill, `references/bank-feeds.md`) | `accounting_<n>` | `bank_feeds_account`, `batch` | `references/schema/accounting.md` → `bank_feeds_account`, `batch` |
 
 ## Adding a row
 

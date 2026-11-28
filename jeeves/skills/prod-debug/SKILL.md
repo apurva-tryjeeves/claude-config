@@ -31,6 +31,9 @@ Find the root cause of a prod issue across Jeeves microservices. Prod is
 - **Reusable queries** → `${CLAUDE_PLUGIN_ROOT}/references/queries.md` — SQL and OpenSearch
   strings the user has shared. Read it when the user refers to a saved query; when the user
   shares a new one, add it to that file following `${CLAUDE_PLUGIN_ROOT}/references/write-back.md`.
+- **Bank feeds (Codat → Xero)** → `${CLAUDE_SKILL_DIR}/references/bank-feeds.md` — push flow,
+  triage queries, the rolling-balance and feed-connection errors and their fixes. Read it when a
+  company's bank feed stopped syncing or a bank-feed `batch` is failing.
 
 ## Steps
 
