@@ -23,7 +23,7 @@ Read the change for what breaks in production and what it costs to change later.
 1. **Correctness:** edge cases, empty and maximum inputs, concurrency, time zones, rounding of money.
 2. **Failure paths:** errors handled or propagated with context; partial failure leaves consistent state.
 3. **Security:** input validated at the boundary; authorization per resource; tenant in every query; secrets and personal data out of logs.
-4. **Data:** indexes for new queries, bounded result sets, short transactions, queries batched.
+4. **Data:** indexes for new queries, bounded result sets, short transactions, queries batched. For models, repositories and their types, run the checks in `data-layer-review.md`.
 5. **Types:** illegal states unrepresentable; `any` and casts replaced or justified; exhaustive handling of unions.
 6. **Structure:** module boundaries respected; dependencies point inward; one reason to change per module.
 7. **Judgement test:** each advanced construct earns its place; each pattern removes a named problem; plain code elsewhere.

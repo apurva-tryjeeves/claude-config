@@ -69,6 +69,7 @@ choose the advanced form.
 | `references/node-runtime.md` | Event loop, async control, streams, lifecycle, profiling | Backend code |
 | `references/react.md` | State placement, rendering, effects, composition, UX quality | Frontend code |
 | `references/review-checklist.md` | The principal-level review pass | Self-review, or reviewing a design or PR |
+| `references/data-layer-review.md` | 23 checks for types, repositories, naming and errors in a Sequelize data layer, and the bugs they cause | Reviewing or refactoring models, repositories or their types |
 
 ## Sibling skills
 
